@@ -1,13 +1,14 @@
 export const frontmatter = {
-  title: '一个像素是一个决定',
+  title: 'One pixel is one decision',
   date: '2026-10-09',
-  summary: '分辨率越低，每个点越要想清楚。写代码也是。',
+  summary:
+    'The lower the resolution, the more each dot has to be thought through. Code is the same.',
 };
 
-画像素画的时候，最难的不是画多，而是画少。
+When you draw pixel art, the hard part isn’t drawing more. It’s drawing less.
 
-一个 16×16 的图标只有 256 个格子。眼睛用一格还是两格，嘴角往上翘一格还是不翘，这些都会被看见。高分辨率可以靠细节糊弄过去，低分辨率不行：**每个像素都是一个决定**。
+A 16×16 icon has only 256 cells. One cell for an eye or two, whether the corner of the mouth turns up by one cell or not: all of it shows. At high resolution you can hide behind detail; at low resolution you can’t. **Every pixel is a decision.**
 
-写代码很像这样。一个函数名、一个参数的默认值、一个错误提示，都是很小的点，但用的人会一个个踩上去。我希望这个网站里的东西都是这样做出来的：不多，但每一处都想过。
+Writing code feels a lot like this. A function name, a parameter’s default, an error message: each is a tiny dot, but the people using it step on every one. I want everything on this site made that way: not much of it, but every bit thought about.
 
-所以这里的图标是一行一行用字符画出来的（`#` 是墨，`o` 是填充，`:` 是网点），放在代码里，改一个像素会出现在 diff 里。这听起来有点较真，但较真本身就挺好玩的。
+That’s why the icons here are drawn line by line in characters (`#` is ink, `o` is fill, `:` is a dither dot) and kept in the code, so changing one pixel shows up in the diff. It sounds a little fussy, but the fussiness is half the fun.

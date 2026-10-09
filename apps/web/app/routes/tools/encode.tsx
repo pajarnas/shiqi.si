@@ -10,23 +10,28 @@ import {
   urlDecode,
   urlEncode,
 } from '~/features/tools/encode';
+import { useI18n, type Strings } from '~/i18n';
+import type { Route } from './+types/encode';
 
-export const meta = () =>
-  pageMeta('编码与哈希', 'Base64、Base64URL、URL、Hex 编解码与 SHA-1/256/512 摘要。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({ title: t.entries.encode.title, description: t.encode.description }));
 
 type Mode = 'encode' | 'decode';
 
-function attempt(fn: () => string): string {
+function attempt(t: Strings, fn: () => string): string {
   try {
     return fn();
   } catch (e) {
-    return `⚠ ${e instanceof Error ? e.message : '无法解码'}`;
+    const code = e instanceof Error ? e.message : '';
+    const known = t.encode.errors[code as keyof Strings['encode']['errors']];
+    return `⚠ ${known ?? (code || t.encode.cannotDecode)}`;
   }
 }
 
 export default function EncodeTool() {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('encode');
-  const [text, setText] = useState('你好，shiqi.si');
+  const [text, setText] = useState(t.encode.sample);
   const [hashes, setHashes] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
@@ -55,29 +60,24 @@ export default function EncodeTool() {
           ...hashes,
         ]
       : [
-          { label: '从 Base64', value: attempt(() => base64Decode(text)) },
-          { label: '从 URL', value: attempt(() => urlDecode(text)) },
-          { label: '从 Hex', value: attempt(() => hexDecode(text)) },
+          { label: t.encode.fromBase64, value: attempt(t, () => base64Decode(text)) },
+          { label: t.encode.fromUrl, value: attempt(t, () => urlDecode(text)) },
+          { label: t.encode.fromHex, value: attempt(t, () => hexDecode(text)) },
         ];
 
   return (
-    <PageWindow
-      file="tools/encode"
-      eyebrow="ENCODE"
-      title="编码与哈希"
-      lede="所有文本按 UTF-8 处理。哈希用浏览器自带的 Web Crypto。"
-    >
+    <PageWindow page="encode" title={t.entries.encode.title} lede={t.encode.lede}>
       <Stack gap={5}>
         <Segmented
-          label="方向"
+          label={t.encode.direction}
           value={mode}
           onChange={setMode}
           options={[
-            { value: 'encode', label: '编码' },
-            { value: 'decode', label: '解码' },
+            { value: 'encode', label: t.encode.encode },
+            { value: 'decode', label: t.encode.decode },
           ]}
         />
-        <Field label={mode === 'encode' ? '原文' : '编码后的文本'}>
+        <Field label={mode === 'encode' ? t.encode.plain : t.encode.encoded}>
           {(p) => (
             <TextArea
               {...p}

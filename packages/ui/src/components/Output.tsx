@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react';
 import { useClipboard } from '../hooks/useClipboard';
+import { useUiStrings } from '../strings';
 
-export function CopyButton({ text, label = '复制' }: { text: string; label?: string }) {
+export function CopyButton({ text, label }: { text: string; label?: string }) {
   const copy = useClipboard();
+  const s = useUiStrings();
   return (
     <button type="button" className="ui-copy" onClick={() => void copy(text)}>
-      {label}
+      {label ?? s.copy}
     </button>
   );
 }

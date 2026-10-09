@@ -1,23 +1,24 @@
 export const frontmatter = {
-  title: '这个网站打算怎么长大',
+  title: 'How this site plans to grow',
   date: '2026-10-06',
-  summary: '从一个像素小站，长成一个什么技术都能试的 sandbox。路线图写在这里。',
+  summary:
+    'From a small pixel site to a sandbox where any technology can be tried. The roadmap lives here.',
 };
 
-这个网站不是作品集，是一个 **sandbox**：想学什么技术，就在这里搭一个真能用的小东西。
+This site isn’t a portfolio. It’s a **sandbox**: whenever I want to learn a technology, I build something small and actually useful with it here.
 
-现在的骨架：
+The skeleton today:
 
-- **`@shiqi/pixel`**：不依赖任何框架的像素绘图库：调色板、可复现的随机数、抖动、图标、壁纸和涂鸦生成器。
-- **`@shiqi/ui`**：组件库。所有主题（白天、夜晚、1984 金、抹茶）都是 CSS 变量，组件只读语义变量，所以加一个主题只要加一组变量。可以在 [组件库页面](/ui) 看到全部组件。
-- **`apps/web`**：React Router 服务端渲染。页面先以 HTML 到达，再变成可交互的 React。
-- **服务器**：一台云主机上的 k3s，网站和 Redis 都是 k8s 里的服务，HTTPS 证书自动续签。
+- **`@shiqi/pixel`**: a framework-free pixel drawing library: palette, reproducible random numbers, dithering, icons, and the wallpaper and doodle generators.
+- **`@shiqi/ui`**: the component library. Every theme (Day, Night, 1984 Gold, Matcha) is a set of CSS variables, and components only read semantic variables, so adding a theme means adding one set of variables. See every component on the [Components page](/ui).
+- **`apps/web`**: server-side rendering with React Router. Pages arrive as HTML first, then become interactive React.
+- **Server**: a small cloud VM running the site, Redis and Caddy with Docker Compose; HTTPS certificates renew themselves.
 
-接下来想做的：
+What I want to build next:
 
-1. **课程笔记**：每门课一个目录，MDX 写，里面可以直接嵌 [小测验](/notes/standards)。
-2. **在线 quiz**：题库放 Redis，记录答题情况，做间隔重复。
-3. **API**：`/api/*` 已经留好位置，先从 `/api/health` 开始。
-4. **Kafka**：等更大的机器到位，用它做事件流，比如统计每个玩具被玩了多少次（匿名的）。
+1. **Course notes**: one folder per course, written in MDX, with [quizzes](/notes/standards) embedded right in them.
+2. **Online quizzes**: a question bank in Redis, tracking answers for spaced repetition.
+3. **APIs**: `/api/*` is reserved already, starting with `/api/health`.
+4. **Kafka**: once a bigger machine is in place, use it for event streams, like counting how often each toy gets played with (anonymously).
 
-慢慢来，每一步都做成能上线的样子。
+Slowly, and every step shipped in a state that can go live.

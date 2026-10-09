@@ -13,19 +13,23 @@ import {
 } from '@shiqi/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
+import { format, useI18n } from '~/i18n';
+import type { Route } from './+types/doodle';
 
-export const meta = () => pageMeta('涂鸦墙', '把画面分成格子，每格画一个小东西，一格都不留空。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({ title: t.entries.doodle.title, description: t.doodle.description }));
 
 const SHAPES = {
-  wide: { w: 160, h: 96, label: '横幅' },
-  square: { w: 128, h: 128, label: '方形' },
-  tall: { w: 90, h: 160, label: '手机' },
+  wide: { w: 160, h: 96 },
+  square: { w: 128, h: 128 },
+  tall: { w: 90, h: 160 },
 } as const;
 type Shape = keyof typeof SHAPES;
 
 const EXPORT_SCALE = 8;
 
 export default function Doodle() {
+  const { t } = useI18n();
   const reduced = useReducedMotion();
   const [shape, setShape] = useState<Shape>('wide');
   const [word, setWord] = useState('doodle');
@@ -69,12 +73,7 @@ export default function Doodle() {
   };
 
   return (
-    <PageWindow
-      file="play/doodle"
-      eyebrow="DOODLE"
-      title="涂鸦墙"
-      lede="规则只有一条：一格都不留空。笑脸、眼睛、小房子、波浪、螺旋和小怪，随机分到每个格子里。"
-    >
+    <PageWindow page="doodle" title={t.entries.doodle.title} lede={t.doodle.lede}>
       <div className="stage">
         <div className="stage__canvas">
           <PixelCanvas
@@ -83,7 +82,7 @@ export default function Doodle() {
             width={w}
             height={h}
             framed
-            label={`涂鸦墙，共 ${cells.length} 格`}
+            label={format(t.doodle.canvas, { n: cells.length })}
             style={{
               aspectRatio: `${w} / ${h}`,
               maxHeight: '70vh',
@@ -95,27 +94,31 @@ export default function Doodle() {
         <Card padded className="stage__panel">
           <Stack gap={4}>
             <Segmented
-              label="画幅"
+              label={t.doodle.shape}
               value={shape}
               onChange={setShape}
               options={(Object.keys(SHAPES) as Shape[]).map((k) => ({
                 value: k,
-                label: SHAPES[k].label,
+                label: t.doodle.shapes[k],
               }))}
             />
-            <Field label="种子" hint={`${cells.length} 个格子。同一个词画出同一面墙。`}>
+            <Field label={t.doodle.seed} hint={format(t.doodle.seedHint, { n: cells.length })}>
               {(p) => <TextInput {...p} value={word} onChange={(e) => setWord(e.target.value)} />}
             </Field>
             <Cluster>
               <Button onClick={() => setWord(Math.random().toString(36).slice(2, 8))}>
-                再画一张
+                {t.doodle.again}
               </Button>
               <Button variant="secondary" onClick={download} disabled={shown < cells.length}>
-                下载 PNG
+                {t.doodle.download}
               </Button>
             </Cluster>
             <p className="ui-field__hint">
-              导出为 {w * EXPORT_SCALE}×{h * EXPORT_SCALE}，每个像素放大 {EXPORT_SCALE} 倍。
+              {format(t.doodle.exportHint, {
+                w: w * EXPORT_SCALE,
+                h: h * EXPORT_SCALE,
+                k: EXPORT_SCALE,
+              })}
             </p>
           </Stack>
         </Card>

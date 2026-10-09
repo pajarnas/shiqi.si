@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { CRITTER_SIZE, critterGrid, critterName } from './critter';
+import { CRITTER_SIZE, critterGrid, critterNameParts } from './critter';
 
 describe('critters', () => {
   it('are stable per seed', () => {
     expect(critterGrid(1).grid).toEqual(critterGrid(1).grid);
-    expect(critterName(1)).toBe(critterName(1));
+    expect(critterNameParts(1)).toEqual(critterNameParts(1));
   });
 
   it('fit in a 12x12 grid with an outline', () => {

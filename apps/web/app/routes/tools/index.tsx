@@ -1,29 +1,26 @@
 import { Card, List, ListItem, PixelIcon } from '@shiqi/ui';
 import { Link } from 'react-router';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
+import { useI18n } from '~/i18n';
 import { TOOLS } from '~/site';
+import type { Route } from './+types/index';
 
-export const meta = () =>
-  pageMeta('工具', '时间戳、颜色、编码、UUID、JSON：全在浏览器里算，不上传任何东西。');
+export const meta: Route.MetaFunction = ({ matches }) => pageMeta(matches, (t) => t.tools);
 
 export default function ToolsIndex() {
+  const { t } = useI18n();
   return (
-    <PageWindow
-      file="tools/"
-      eyebrow="TOOLS"
-      title="工具"
-      lede="顺手的小工具。所有计算都在你的浏览器里完成，不上传任何东西。"
-    >
+    <PageWindow page="tools" title={t.tools.title} lede={t.tools.lede}>
       <Card>
         <List>
-          {TOOLS.map((t) => (
+          {TOOLS.map((tool) => (
             <ListItem
-              key={t.path}
+              key={tool.path}
               as={Link}
-              to={t.path}
-              icon={<PixelIcon name={t.icon} />}
-              title={t.title}
-              description={t.description}
+              to={tool.path}
+              icon={<PixelIcon name={tool.icon} />}
+              title={t.entries[tool.key].title}
+              description={t.entries[tool.key].description}
               meta="›"
             />
           ))}

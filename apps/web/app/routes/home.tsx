@@ -1,42 +1,52 @@
 import { PixelIcon, List, ListItem, Window, buttonClass, useMounted } from '@shiqi/ui';
-import { critterName } from '@shiqi/pixel';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import {
   CritterCanvas,
   LiveSky,
+  critterName,
   dayOfYear,
   skyNameNow,
   todaysCritterSeed,
 } from '~/components/Toys';
 import { ToyGrid } from '~/components/ToyGrid';
 import { latestNotes } from '~/content/notes';
+import { format, useI18n } from '~/i18n';
+import { Rich } from '~/i18n/Rich';
+import { localizeNoteMeta } from '~/i18n/notes.server';
+import { metaStrings } from '~/i18n/root-data';
+import { resolveLocale } from '~/i18n/locale.server';
 import { SITE, TOOLS } from '~/site';
 import type { Route } from './+types/home';
 
-export const meta: Route.MetaFunction = () => [
-  { title: 'shiqi.si' },
-  { name: 'description', content: SITE.description },
+const LATEST = 4;
+
+export const meta: Route.MetaFunction = ({ matches }) => [
+  { title: SITE.name },
+  { name: 'description', content: metaStrings(matches).site.description },
 ];
 
-export default function Home() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const { locale } = await resolveLocale(request);
+  return { noteText: await localizeNoteMeta(latestNotes(LATEST), locale) };
+}
+
+export default function Home({ loaderData }: Route.ComponentProps) {
+  const { t } = useI18n();
   return (
     <div className="home">
-      <Window title="shiqi.si — 你好">
+      <Window title={t.home.window}>
         <div className="hello">
           <div className="hello__text">
-            <span className="ui-eyebrow">HELLO, WORLD</span>
-            <h1>你好，我是 Shiqi。</h1>
-            <p className="hello__lede">
-              在亚特兰大读书、写代码。喜欢规范，喜欢像素，喜欢刚刚好的东西。 这里是我的
-              sandbox：几个小玩具、几件顺手的工具、一些笔记，以后还会有课程笔记和在线小测验。
-            </p>
+            <span className="ui-eyebrow">{t.home.eyebrow}</span>
+            <h1>{t.home.title}</h1>
+            <p className="hello__lede">{t.home.lede}</p>
             <div className="ui-cluster hello__actions">
               <Link className={buttonClass()} to="/play/wallpaper">
-                去玩玩
+                {t.home.play}
               </Link>
               <Link className={buttonClass({ variant: 'secondary' })} to="/tools">
-                工具箱
+                {t.home.tools}
               </Link>
             </div>
           </div>
@@ -46,36 +56,36 @@ export default function Home() {
 
       <SkyWindow />
 
-      <Window title="玩具 — PLAY">
+      <Window title={t.home.playWindow}>
         <ToyGrid />
       </Window>
 
       <div className="home__pair">
-        <Window title="工具 — TOOLS">
+        <Window title={t.home.toolsWindow}>
           <List className="flush">
-            {TOOLS.map((t) => (
+            {TOOLS.map((tool) => (
               <ListItem
-                key={t.path}
+                key={tool.path}
                 as={Link}
-                to={t.path}
-                icon={<PixelIcon name={t.icon} />}
-                title={t.title}
-                description={t.description}
+                to={tool.path}
+                icon={<PixelIcon name={tool.icon} />}
+                title={t.entries[tool.key].title}
+                description={t.entries[tool.key].description}
                 meta="›"
               />
             ))}
           </List>
         </Window>
-        <Window title="笔记 — NOTES">
+        <Window title={t.home.notesWindow}>
           <List className="flush">
-            {latestNotes(4).map((n) => (
+            {latestNotes(LATEST).map((n) => (
               <ListItem
                 key={n.slug}
                 as={Link}
                 to={`/notes/${n.slug}`}
                 icon={<PixelIcon name="book" />}
-                title={n.title}
-                description={n.summary}
+                title={loaderData.noteText[n.slug]?.title ?? n.title}
+                description={loaderData.noteText[n.slug]?.summary ?? n.summary}
                 meta={n.date.slice(5)}
               />
             ))}
@@ -87,17 +97,19 @@ export default function Home() {
 }
 
 function TodaysCritter() {
+  const { t } = useI18n();
   const mounted = useMounted();
   const [frame, setFrame] = useState(0);
   const [hop, setHop] = useState(0);
   // The date is the visitor's, so render the critter only after hydration.
   const seed = mounted ? todaysCritterSeed() : 0;
+  const name = critterName(t, seed);
   return (
     <figure className="critter">
       <button
         type="button"
         className="critter__btn"
-        aria-label="摸一摸今天的小怪"
+        aria-label={t.critter.pet}
         onClick={() => {
           setFrame((f) => 1 - f);
           setHop((n) => n + 1);
@@ -105,29 +117,36 @@ function TodaysCritter() {
       >
         <span key={hop} className={hop ? 'critter__sprite hop' : 'critter__sprite'}>
           {mounted && (
-            <CritterCanvas seed={seed} frame={frame} label={`今日小怪：${critterName(seed)}`} />
+            <CritterCanvas seed={seed} frame={frame} label={format(t.critter.label, { name })} />
           )}
         </span>
       </button>
       <figcaption>
-        <span className="ui-pixel ui-muted">DAY {mounted ? dayOfYear() : '---'}</span>
-        <strong>{mounted ? critterName(seed) : '……'}</strong>
-        <span className="ui-muted">今日小怪，每天换一只</span>
+        <span className="ui-pixel ui-muted">
+          {format(t.critter.day, { n: mounted ? dayOfYear() : '---' })}
+        </span>
+        <strong>{mounted ? name : t.critter.loading}</strong>
+        <span className="ui-muted">{t.critter.caption}</span>
       </figcaption>
     </figure>
   );
 }
 
 function SkyWindow() {
+  const { t } = useI18n();
   const mounted = useMounted();
   return (
-    <Window title={`sky.app — ${mounted ? skyNameNow() : '现在'}`}>
+    <Window title={format(t.sky.window, { name: mounted ? skyNameNow(t) : t.sky.now })}>
       <div className="sky">
-        {mounted ? <LiveSky /> : <div className="sky__placeholder" />}
+        {mounted ? <LiveSky label={t.sky.canvas} /> : <div className="sky__placeholder" />}
         <p className="ui-muted">
-          这片天空跟着<strong>你</strong>
-          的时钟走：清晨是薄荷色，午后变金，夜里有萤火虫。想要一张当壁纸？去
-          <Link to="/play/wallpaper">像素壁纸</Link>。
+          <Rich
+            text={t.sky.text}
+            tags={{
+              b: (s) => <strong>{s}</strong>,
+              link: (s) => <Link to="/play/wallpaper">{s}</Link>,
+            }}
+          />
         </p>
       </div>
     </Window>

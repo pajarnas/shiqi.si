@@ -19,4 +19,5 @@ export * from './components/Window';
 export * from './hooks';
 export * from './theme';
 export { cx } from './cx';
+export * from './strings';
 export type { PolymorphicProps } from './polymorphic';

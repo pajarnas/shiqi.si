@@ -1,86 +1,62 @@
 // Site map in one place: menus, home page lists and the sitemap all read from here.
+// Words people read live in i18n/strings; this file holds the structure and the
+// fixed pixel-font labels (eyebrows, window file names) that stay the same in
+// every language.
 import type { IconName } from '@shiqi/pixel';
+import type { Strings } from '~/i18n';
 
 export const SITE = {
   name: 'shiqi.si',
   url: 'https://shiqi.si',
-  description: 'Shiqi 的像素小站：小玩具、顺手的工具和一些笔记。',
+  copyright: '© 2026 shiqi.si',
 } as const;
+
+export type EntryKey = keyof Strings['entries'];
 
 export interface Entry {
   path: string;
-  title: string;
-  en: string;
-  description: string;
+  /** Key into strings.entries for the title and description. */
+  key: EntryKey;
+  /** Pixel-font label, the same in every language. */
+  label: string;
   icon: IconName;
 }
 
 export const NAV = [
-  { path: '/', label: '首页' },
-  { path: '/play', label: '玩具' },
-  { path: '/tools', label: '工具' },
-  { path: '/notes', label: '笔记' },
-  { path: '/ui', label: '组件库' },
-] as const;
+  { path: '/', key: 'home' },
+  { path: '/play', key: 'play' },
+  { path: '/tools', key: 'tools' },
+  { path: '/notes', key: 'notes' },
+  { path: '/ui', key: 'ui' },
+] as const satisfies readonly { path: string; key: keyof Strings['nav'] }[];
 
 export const TOYS: readonly Entry[] = [
-  {
-    path: '/play/wallpaper',
-    title: '像素壁纸',
-    en: 'WALLPAPER',
-    description: '1984 图标风或像素风景，按你的屏幕尺寸生成，直接下载。',
-    icon: 'picture',
-  },
-  {
-    path: '/play/doodle',
-    title: '涂鸦墙',
-    en: 'DOODLE',
-    description: '把一面墙分成格子，每格画点什么，一格都不留空。',
-    icon: 'face',
-  },
-  {
-    path: '/play/pad',
-    title: '像素画板',
-    en: 'PIXEL PAD',
-    description: '32×32 的小画布，有镜像、填充和撤销，导出 PNG 或 SVG。',
-    icon: 'pencil',
-  },
+  { path: '/play/wallpaper', key: 'wallpaper', label: 'WALLPAPER', icon: 'picture' },
+  { path: '/play/doodle', key: 'doodle', label: 'DOODLE', icon: 'face' },
+  { path: '/play/pad', key: 'pad', label: 'PIXEL PAD', icon: 'pencil' },
 ];
 
 export const TOOLS: readonly Entry[] = [
-  {
-    path: '/tools/time',
-    title: '时间戳',
-    en: 'TIME',
-    description: 'Unix 时间 ↔ ISO 8601，顺便看 ISO 周数。',
-    icon: 'clock',
-  },
-  {
-    path: '/tools/color',
-    title: '颜色',
-    en: 'COLOR',
-    description: 'HEX、RGB、HSL、OKLCH 互转，WCAG 对比度检查。',
-    icon: 'palette',
-  },
-  {
-    path: '/tools/encode',
-    title: '编码与哈希',
-    en: 'ENCODE',
-    description: 'Base64、URL、Hex 编解码，SHA 摘要。',
-    icon: 'swap',
-  },
-  {
-    path: '/tools/uuid',
-    title: 'UUID',
-    en: 'UUID',
-    description: '生成 v4 / v7，解析任意 UUID 的版本和时间。',
-    icon: 'dice',
-  },
-  {
-    path: '/tools/json',
-    title: 'JSON',
-    en: 'JSON',
-    description: '格式化、压缩、排序键，报错带行列号。',
-    icon: 'braces',
-  },
+  { path: '/tools/time', key: 'time', label: 'TIME', icon: 'clock' },
+  { path: '/tools/color', key: 'color', label: 'COLOR', icon: 'palette' },
+  { path: '/tools/encode', key: 'encode', label: 'ENCODE', icon: 'swap' },
+  { path: '/tools/uuid', key: 'uuid', label: 'UUID', icon: 'dice' },
+  { path: '/tools/json', key: 'json', label: 'JSON', icon: 'braces' },
 ];
+
+/** Window title (shown like a file name) and eyebrow of each page. */
+export const PAGES = {
+  play: { file: 'play/', eyebrow: 'PLAY' },
+  wallpaper: { file: 'play/wallpaper', eyebrow: 'WALLPAPER' },
+  doodle: { file: 'play/doodle', eyebrow: 'DOODLE' },
+  pad: { file: 'play/pad', eyebrow: 'PIXEL PAD' },
+  tools: { file: 'tools/', eyebrow: 'TOOLS' },
+  time: { file: 'tools/time', eyebrow: 'TIME' },
+  color: { file: 'tools/color', eyebrow: 'COLOR' },
+  encode: { file: 'tools/encode', eyebrow: 'ENCODE' },
+  uuid: { file: 'tools/uuid', eyebrow: 'UUID' },
+  json: { file: 'tools/json', eyebrow: 'JSON' },
+  notes: { file: 'notes/', eyebrow: 'NOTES' },
+  ui: { file: 'ui/', eyebrow: '@shiqi/ui' },
+  notFound: { file: '404', eyebrow: '404' },
+} as const;

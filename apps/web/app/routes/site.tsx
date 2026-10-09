@@ -1,25 +1,29 @@
 import { Clock, MenuBar, PixelDesktop, ThemeSelect } from '@shiqi/ui';
 import { Link, NavLink, Outlet } from 'react-router';
+import { LanguageSwitch } from '~/components/LanguageSwitch';
 import { Logo } from '~/components/Logo';
-import { NAV } from '~/site';
+import { useI18n } from '~/i18n';
+import { NAV, SITE } from '~/site';
 
 /** Chrome shared by every page: animated desktop, menu bar, footer. */
 export default function SiteLayout() {
+  const { t } = useI18n();
   return (
     <>
       <a className="skip-link" href="#main">
-        跳到正文
+        {t.chrome.skipToContent}
       </a>
       <PixelDesktop />
       <MenuBar
         brand={
-          <Link to="/" className="brand" aria-label="shiqi.si 首页">
+          <Link to="/" className="brand" aria-label={t.chrome.homeLink}>
             <Logo />
-            <span className="ui-pixel">shiqi.si</span>
+            <span className="ui-pixel">{SITE.name}</span>
           </Link>
         }
         end={
           <>
+            <LanguageSwitch />
             <ThemeSelect />
             <Clock className="menubar-clock" />
           </>
@@ -27,7 +31,7 @@ export default function SiteLayout() {
       >
         {NAV.slice(1).map((n) => (
           <NavLink key={n.path} to={n.path} end={n.path === '/'}>
-            {n.label}
+            {t.nav[n.key]}
           </NavLink>
         ))}
       </MenuBar>
@@ -36,8 +40,8 @@ export default function SiteLayout() {
       </main>
       <footer className="site-footer ui-container">
         <p>
-          <span className="ui-pixel">© 2026 shiqi.si</span> · React + TypeScript 手写 · 无追踪、无
-          Cookie · <Link to="/ui">组件库</Link>
+          <span className="ui-pixel">{SITE.copyright}</span> · {t.chrome.footer} ·{' '}
+          <Link to="/ui">{t.chrome.components}</Link>
         </p>
       </footer>
     </>

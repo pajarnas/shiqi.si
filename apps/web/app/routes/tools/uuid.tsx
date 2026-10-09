@@ -14,13 +14,16 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { inspectUuid, uuidv4, uuidv7 } from '~/features/tools/uuid';
+import { format, useI18n } from '~/i18n';
+import type { Route } from './+types/uuid';
 
-export const meta = () =>
-  pageMeta('UUID', '生成 UUID v4 / v7（RFC 9562），解析任意 UUID 的版本、变体和时间。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({ title: t.entries.uuid.title, description: t.uuid.description }));
 
 type Version = 'v7' | 'v4';
 
 export default function UuidTool() {
+  const { t } = useI18n();
   const mounted = useMounted();
   const [version, setVersion] = useState<Version>('v7');
   const [count, setCount] = useState(5);
@@ -37,16 +40,11 @@ export default function UuidTool() {
   const info = probe ? inspectUuid(probe) : null;
 
   return (
-    <PageWindow
-      file="tools/uuid"
-      eyebrow="UUID"
-      title="UUID"
-      lede="v7 以毫秒时间戳开头，按时间排序，适合做数据库主键；v4 全随机。"
-    >
+    <PageWindow page="uuid" title={t.entries.uuid.title} lede={t.uuid.lede}>
       <Stack gap={5}>
         <Cluster gap={4}>
           <Segmented
-            label="版本"
+            label={t.uuid.version}
             value={version}
             onChange={setVersion}
             options={[
@@ -55,7 +53,7 @@ export default function UuidTool() {
             ]}
           />
           <label className="ui-cluster" style={{ minWidth: '12rem' }}>
-            <span className="ui-field__label">数量 {count}</span>
+            <span className="ui-field__label">{format(t.uuid.count, { n: count })}</span>
             <Range
               min={1}
               max={20}
@@ -64,18 +62,18 @@ export default function UuidTool() {
               style={{ flex: 1 }}
             />
           </label>
-          <Button onClick={generate}>再来一批</Button>
-          <CopyButton text={ids.join('\n')} label="全部复制" />
+          <Button onClick={generate}>{t.uuid.again}</Button>
+          <CopyButton text={ids.join('\n')} label={t.uuid.copyAll} />
         </Cluster>
         <Card>
           <pre className="uuid-list">{mounted ? ids.join('\n') : '…'}</pre>
         </Card>
-        <Field label="解析一个 UUID" error={probe && !info ? '不是合法的 UUID' : undefined}>
+        <Field label={t.uuid.inspect} error={probe && !info ? t.uuid.invalid : undefined}>
           {(p) => (
             <TextInput
               {...p}
               value={probe}
-              placeholder="粘贴任意 UUID"
+              placeholder={t.uuid.placeholder}
               onChange={(e) => setProbe(e.target.value)}
             />
           )}
@@ -84,10 +82,10 @@ export default function UuidTool() {
           <Card>
             <OutputList
               rows={[
-                { label: '规范形式', value: info.canonical },
-                { label: '版本', value: `v${info.version}` },
-                { label: '变体', value: info.variant },
-                ...(info.time ? [{ label: '创建时间 (UTC)', value: info.time.toISOString() }] : []),
+                { label: t.uuid.canonical, value: info.canonical },
+                { label: t.uuid.version, value: `v${info.version}` },
+                { label: t.uuid.variant, value: info.variant },
+                ...(info.time ? [{ label: t.uuid.created, value: info.time.toISOString() }] : []),
               ]}
             />
           </Card>

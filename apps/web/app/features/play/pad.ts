@@ -3,16 +3,17 @@ import { PALETTE, critterGrid } from '@shiqi/pixel';
 
 export const PAD_SIZE = 32;
 
+/** `name` is a key into strings.colors. */
 export const PAD_COLORS = [
-  { value: 'transparent', name: '橡皮' },
-  { value: PALETTE.ink, name: '墨' },
-  { value: PALETTE.paper, name: '纸' },
-  { value: PALETTE.gold, name: '金' },
-  { value: PALETTE.goldDeep, name: '深金' },
-  { value: PALETTE.goldPale, name: '浅金' },
-  { value: PALETTE.green, name: '绿' },
-  { value: PALETTE.greenDeep, name: '深绿' },
-  { value: PALETTE.greenPale, name: '浅绿' },
+  { value: 'transparent', name: 'eraser' },
+  { value: PALETTE.ink, name: 'ink' },
+  { value: PALETTE.paper, name: 'paper' },
+  { value: PALETTE.gold, name: 'gold' },
+  { value: PALETTE.goldDeep, name: 'goldDeep' },
+  { value: PALETTE.goldPale, name: 'goldPale' },
+  { value: PALETTE.green, name: 'green' },
+  { value: PALETTE.greenDeep, name: 'greenDeep' },
+  { value: PALETTE.greenPale, name: 'greenPale' },
 ] as const;
 
 export type Grid = Uint8Array;

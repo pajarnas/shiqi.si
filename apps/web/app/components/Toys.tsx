@@ -2,6 +2,7 @@
 import {
   CRITTER_SIZE,
   PALETTE,
+  critterNameParts,
   PATTERN_THEMES,
   dayOfYear,
   drawCell,
@@ -15,6 +16,7 @@ import {
 } from '@shiqi/pixel';
 import { PixelCanvas, type DrawFrame } from '@shiqi/ui';
 import { useCallback } from 'react';
+import type { Strings } from '~/i18n';
 
 const hourNow = () => {
   const d = new Date();
@@ -22,15 +24,21 @@ const hourNow = () => {
 };
 
 /** The landscape at the visitor's local time, with a critter walking by. */
-export function LiveSky({ label = '跟随你本地时间变化的像素风景' }: { label?: string }) {
+export function LiveSky({ label }: { label?: string }) {
   const draw = useCallback(({ ctx, w, h, t }: DrawFrame) => {
     drawScene(ctx, { w, h, seed: 7, hour: hourNow(), t, critter: true });
   }, []);
   return <PixelCanvas draw={draw} width={192} height={96} animate fps={12} label={label} />;
 }
 
-export function skyNameNow(): string {
-  return skyFor(hourNow()).name;
+export function skyNameNow(t: Strings): string {
+  return t.sky.names[skyFor(hourNow()).id];
+}
+
+/** A critter's name in the visitor's language. */
+export function critterName(t: Strings, seed: number): string {
+  const [a, b] = critterNameParts(seed);
+  return `${t.critter.first[a] ?? ''}${t.critter.joiner}${t.critter.second[b] ?? ''}`;
 }
 
 /** Today's critter: one per day, the same for everyone on that date. */

@@ -75,6 +75,18 @@ DNS 生效后，第一次访问时 Caddy 就会去拿证书。拿不到时查日
 
 之后每次推到 `main`：检查 → 构建镜像 → 自动滚动更新。
 
+## 5. 打开翻译服务（可选）
+
+笔记用英文写，中文版由 Claude 翻译。在 [console.anthropic.com](https://console.anthropic.com) 建一个 API key，然后在服务器上：
+
+```bash
+cd ~/shiqi.si/infra/server
+umask 077 && echo 'ANTHROPIC_API_KEY=sk-ant-...' >> secrets.env
+docker compose up -d web
+```
+
+`secrets.env` 不在 git 里，`bootstrap.sh` 也不会覆盖它。翻译结果缓存在 Redis，每段文字只翻一次；没有 key 时中文访客看到英文原文。
+
 ## 以后：Kafka
 
 Kafka 需要约 1 GB 内存，1 GB 的机器放不下。等有更大的节点（比如 Oracle Cloud 免费的 Arm 机器），在那台机器上：

@@ -2,17 +2,22 @@ import { Card, List, ListItem, PixelIcon } from '@shiqi/ui';
 import { Link } from 'react-router';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { NOTES } from '~/content/notes';
+import { useI18n } from '~/i18n';
+import { resolveLocale } from '~/i18n/locale.server';
+import { localizeNoteMeta } from '~/i18n/notes.server';
+import type { Route } from './+types/index';
 
-export const meta = () => pageMeta('笔记', '关于像素、标准和这个网站的一些想法。');
+export const meta: Route.MetaFunction = ({ matches }) => pageMeta(matches, (t) => t.notes);
 
-export default function NotesIndex() {
+export async function loader({ request }: Route.LoaderArgs) {
+  const { locale } = await resolveLocale(request);
+  return { noteText: await localizeNoteMeta(NOTES, locale) };
+}
+
+export default function NotesIndex({ loaderData }: Route.ComponentProps) {
+  const { t } = useI18n();
   return (
-    <PageWindow
-      file="notes/"
-      eyebrow="NOTES"
-      title="笔记"
-      lede="一些想法。以后课程笔记也会放在这里。"
-    >
+    <PageWindow page="notes" title={t.notes.title} lede={t.notes.lede}>
       <Card>
         <List>
           {NOTES.map((n) => (
@@ -21,8 +26,8 @@ export default function NotesIndex() {
               as={Link}
               to={`/notes/${n.slug}`}
               icon={<PixelIcon name="book" />}
-              title={n.title}
-              description={n.summary}
+              title={loaderData.noteText[n.slug]?.title ?? n.title}
+              description={loaderData.noteText[n.slug]?.summary ?? n.summary}
               meta={<time dateTime={n.date}>{n.date}</time>}
             />
           ))}

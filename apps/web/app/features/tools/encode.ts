@@ -1,4 +1,7 @@
 // Text <-> bytes codecs. Everything is UTF-8.
+// Decoders throw an Error whose message is an EncodeErrorCode; the page words it.
+
+export type EncodeErrorCode = 'invalid-base64' | 'invalid-hex';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder('utf-8', { fatal: true });
@@ -17,7 +20,7 @@ export function base64Encode(text: string, url = false): string {
 /** Decodes standard or URL-safe Base64, with or without padding. Throws on invalid input. */
 export function base64Decode(input: string): string {
   let s = input.trim().replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(s)) throw new Error('不是合法的 Base64');
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(s)) throw new Error('invalid-base64');
   s += '='.repeat((4 - (s.length % 4)) % 4);
   const bin = atob(s);
   return dec.decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
@@ -32,7 +35,7 @@ export function hexEncode(text: string): string {
 
 export function hexDecode(input: string): string {
   const s = input.replace(/\s+/g, '').replace(/^0x/i, '');
-  if (!/^([0-9a-fA-F]{2})*$/.test(s)) throw new Error('不是合法的十六进制');
+  if (!/^([0-9a-fA-F]{2})*$/.test(s)) throw new Error('invalid-hex');
   return dec.decode(Uint8Array.from(s.match(/../g) ?? [], (h) => parseInt(h, 16)));
 }
 

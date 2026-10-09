@@ -24,33 +24,35 @@ import {
 } from '@shiqi/ui';
 import { useCallback, useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
+import { format, useI18n } from '~/i18n';
+import type { Route } from './+types/wallpaper';
 
-export const meta = () =>
-  pageMeta('像素壁纸', '生成 1984 图标风或像素风景壁纸，按你的设备尺寸下载 PNG。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({
+    title: t.entries.wallpaper.title,
+    description: t.wallpaper.description,
+  }));
 
+// Device names are product names, the same in every language; the 4K monitor's
+// label comes from the dictionary.
 const SIZES = [
   { id: 'iphone', label: 'iPhone 16 / 17', w: 1179, h: 2556 },
   { id: 'iphone-max', label: 'iPhone Pro Max', w: 1320, h: 2868 },
   { id: 'mba13', label: 'MacBook Air 13″', w: 2560, h: 1664 },
   { id: 'mbp14', label: 'MacBook Pro 14″', w: 3024, h: 1964 },
   { id: 'ipad', label: 'iPad Air 11″', w: 2360, h: 1640 },
-  { id: '4k', label: '4K 显示器', w: 3840, h: 2160 },
+  { id: '4k', label: null, w: 3840, h: 2160 },
 ] as const;
 
 type Mode = '1984' | 'landscape';
 
-const SWATCHES: { value: PatternTheme; name: string }[] = [
-  { value: 'gold', name: '金' },
-  { value: 'green', name: '绿' },
-  { value: 'mint', name: '薄荷' },
-  { value: 'paper', name: '纸' },
-  { value: 'ink', name: '墨' },
-  { value: 'forest', name: '森林' },
-];
+/** Pattern themes offered, named by their key in strings.colors. */
+const SWATCHES: readonly PatternTheme[] = ['gold', 'green', 'mint', 'paper', 'ink', 'forest'];
 
 const PREVIEW_MAX = 720;
 
 export default function Wallpaper() {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('1984');
   const [sizeId, setSizeId] = useState<(typeof SIZES)[number]['id']>('mba13');
   const [theme, setTheme] = useState<PatternTheme>('gold');
@@ -132,12 +134,7 @@ export default function Wallpaper() {
   const mm = String(Math.round((hour % 1) * 60)).padStart(2, '0');
 
   return (
-    <PageWindow
-      file="play/wallpaper"
-      eyebrow="WALLPAPER"
-      title="像素壁纸"
-      lede="两种风格：一种是满屏同色调的小图标，一种是会随时间变色的像素山丘。选好尺寸，直接下载原尺寸 PNG。"
-    >
+    <PageWindow page="wallpaper" title={t.entries.wallpaper.title} lede={t.wallpaper.lede}>
       <div className="stage">
         <div className="stage__canvas">
           <PixelCanvas
@@ -148,7 +145,7 @@ export default function Wallpaper() {
             animate
             fps={mode === '1984' ? 24 : 8}
             framed
-            label="壁纸预览"
+            label={t.wallpaper.preview}
             style={{
               aspectRatio: `${size.w} / ${size.h}`,
               maxHeight: '70vh',
@@ -160,15 +157,15 @@ export default function Wallpaper() {
         <Card padded className="stage__panel">
           <Stack gap={4}>
             <Segmented
-              label="风格"
+              label={t.wallpaper.style}
               value={mode}
               onChange={setMode}
               options={[
-                { value: '1984', label: '1984 图标' },
-                { value: 'landscape', label: '像素风景' },
+                { value: '1984', label: t.wallpaper.styleIcons },
+                { value: 'landscape', label: t.wallpaper.styleLandscape },
               ]}
             />
-            <Field label="尺寸">
+            <Field label={t.wallpaper.size}>
               {(p) => (
                 <Select
                   {...p}
@@ -177,7 +174,11 @@ export default function Wallpaper() {
                 >
                   {SIZES.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.label}（{s.w}×{s.h}）
+                      {format(t.wallpaper.sizeOption, {
+                        label: s.label ?? t.wallpaper.monitor4k,
+                        w: s.w,
+                        h: s.h,
+                      })}
                     </option>
                   ))}
                 </Select>
@@ -186,18 +187,19 @@ export default function Wallpaper() {
             {mode === '1984' ? (
               <>
                 <div className="ui-field">
-                  <span className="ui-field__label">配色</span>
+                  <span className="ui-field__label">{t.wallpaper.palette}</span>
                   <Swatches
-                    label="配色"
+                    label={t.wallpaper.palette}
                     value={theme}
                     onChange={(v) => setTheme(v as PatternTheme)}
                     colors={SWATCHES.map((s) => ({
-                      ...s,
-                      css: `linear-gradient(135deg, ${PATTERN_THEMES[s.value].from}, ${PATTERN_THEMES[s.value].to})`,
+                      value: s,
+                      name: t.colors[s],
+                      css: `linear-gradient(135deg, ${PATTERN_THEMES[s].from}, ${PATTERN_THEMES[s].to})`,
                     }))}
                   />
                 </div>
-                <Field label={`图标大小 ${iconPx}px`}>
+                <Field label={format(t.wallpaper.iconSize, { n: iconPx })}>
                   {(p) => (
                     <Range
                       {...p}
@@ -208,7 +210,7 @@ export default function Wallpaper() {
                     />
                   )}
                 </Field>
-                <Field label={`密度 ${density}%`}>
+                <Field label={format(t.wallpaper.density, { n: density })}>
                   {(p) => (
                     <Range
                       {...p}
@@ -219,7 +221,7 @@ export default function Wallpaper() {
                     />
                   )}
                 </Field>
-                <Field label={`倾斜 ${tilt}°`}>
+                <Field label={format(t.wallpaper.tilt, { n: tilt })}>
                   {(p) => (
                     <Range
                       {...p}
@@ -232,7 +234,12 @@ export default function Wallpaper() {
                 </Field>
               </>
             ) : (
-              <Field label={`时间 ${hh}:${mm} · ${skyFor(hour).name}`}>
+              <Field
+                label={format(t.wallpaper.time, {
+                  time: `${hh}:${mm}`,
+                  sky: t.sky.names[skyFor(hour).id],
+                })}
+              >
                 {(p) => (
                   <Range
                     {...p}
@@ -245,16 +252,16 @@ export default function Wallpaper() {
                 )}
               </Field>
             )}
-            <Field label="种子" hint="同一个词永远生成同一张图。">
+            <Field label={t.wallpaper.seed} hint={t.wallpaper.seedHint}>
               {(p) => <TextInput {...p} value={word} onChange={(e) => setWord(e.target.value)} />}
             </Field>
             <Cluster>
-              <Button onClick={download}>下载 PNG</Button>
+              <Button onClick={download}>{t.wallpaper.download}</Button>
               <Button
                 variant="secondary"
                 onClick={() => setWord(Math.random().toString(36).slice(2, 8))}
               >
-                随机
+                {t.wallpaper.random}
               </Button>
             </Cluster>
           </Stack>

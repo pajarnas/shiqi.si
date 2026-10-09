@@ -1,21 +1,23 @@
 import { PageHeader, Window } from '@shiqi/ui';
 import type { ReactNode } from 'react';
+import { format, type Strings } from '~/i18n';
+import { metaStrings } from '~/i18n/root-data';
+import { PAGES } from '~/site';
 
 /** Every inner page is one window on the desktop with a standard header. */
 export function PageWindow({
-  file,
-  eyebrow,
+  page,
   title,
   lede,
   children,
 }: {
-  /** Shown in the title bar, like a file name. */
-  file: string;
-  eyebrow?: string;
+  /** Which page: sets the title bar (like a file name) and the eyebrow. */
+  page: keyof typeof PAGES;
   title: string;
   lede?: ReactNode;
   children: ReactNode;
 }) {
+  const { file, eyebrow } = PAGES[page];
   return (
     <Window title={file}>
       <PageHeader eyebrow={eyebrow} title={title} lede={lede} />
@@ -24,7 +26,15 @@ export function PageWindow({
   );
 }
 
-export const pageMeta = (title: string, description: string) => [
-  { title: `${title} · shiqi.si` },
-  { name: 'description', content: description },
-];
+/** Title and description tags for a page, in the visitor's language. */
+export function pageMeta(
+  matches: readonly unknown[],
+  pick: (t: Strings) => { title: string; description: string },
+) {
+  const t = metaStrings(matches);
+  const { title, description } = pick(t);
+  return [
+    { title: format(t.site.pageTitle, { title }) },
+    { name: 'description', content: description },
+  ];
+}

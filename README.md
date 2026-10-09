@@ -37,6 +37,7 @@ apps/web/              网站：React Router（服务端渲染）+ MDX
   app/features/        纯逻辑（工具的算法、画板模型），都有测试
   app/content/notes/   笔记，一篇一个 .mdx
   app/site.ts          导航、玩具和工具清单，首页和 sitemap 都读它
+  app/i18n/            多语言：strings/en.ts 是全部文案的原文，zh.ts 是中文；翻译服务和按 IP 选语言
 packages/ui/           @shiqi/ui 组件库：主题、tokens、React 组件
 packages/pixel/        @shiqi/pixel 像素绘图库：不依赖框架
 infra/                 服务器初始化和部署脚本；server/ 是 Docker Compose，k8s/ 留给以后的大机器
@@ -55,9 +56,22 @@ infra/                 服务器初始化和部署脚本；server/ 是 Docker Co
 
 ## 加东西
 
-- **一篇笔记**：在 `apps/web/app/content/notes/` 加一个 `.mdx`，导出 `frontmatter`（title、date、summary）。可以直接 `import { Quiz } from '@shiqi/ui'`。
+- **一篇笔记**：用英文写，在 `apps/web/app/content/notes/` 加一个 `.mdx`，导出 `frontmatter`（title、date、summary）。中文版由翻译服务自动生成。可以直接 `import { Quiz } from '@shiqi/ui'`（翻译后的版本是静态 HTML，小测验只在英文原文里能点）。
+- **一段文案**：不要写死在组件里。加到 `app/i18n/strings/en.ts`，组件里用 `const { t } = useI18n()` 读；带变量的用 `{name}` 占位再 `format()`，带链接或加粗的用 `<tag>…</tag>` 再 `<Rich>`。`zh.ts` 里补上中文；忘了补的话，翻译服务会先机器翻译顶上。
 - **一个工具**：逻辑写在 `app/features/tools/x.ts` 并配 `x.test.ts`，页面写在 `app/routes/tools/x.tsx`，在 `routes.ts` 和 `site.ts` 各加一行。
 - **一个 API**：在 `app/routes/api/` 加一个只导出 `loader` / `action` 的文件，在 `routes.ts` 的 `api` 前缀下注册。
+
+## 多语言
+
+英文是原文，中文是翻译。访客第一次来时这样选语言：网址里的 `?lang=zh|en` → 手动切换后记在 `lang` Cookie → IP 所在国家（中国大陆、台湾、香港、澳门、新加坡显示中文，查询用 [country.is](https://country.is)，按 IP 缓存 7 天）→ 浏览器的 `Accept-Language` → 英文。菜单栏右上角的按钮随时切换。
+
+翻译服务（`app/i18n/translate.server.ts`）用 Claude 把英文翻成中文，结果按内容哈希缓存在 Redis 里，同一段文字只翻一次。它负责：笔记的标题、摘要和正文；以及 `zh.ts` 里还没写的文案。没配 key 时网站照常工作，笔记显示英文原文。
+
+| 环境变量            | 作用                                                            |
+| ------------------- | --------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY` | 打开翻译服务                                                    |
+| `TRANSLATE_MODEL`   | 可选，默认 `claude-opus-5-5`                                    |
+| `GEOIP_URL`         | 可选，IP 查国家的服务，`{ip}` 会被替换；设成 `off` 就不按 IP 选 |
 
 ## 部署
 
@@ -67,6 +81,6 @@ infra/                 服务器初始化和部署脚本；server/ 是 Docker Co
 
 - 时间用 ISO 8601，UUID 用 v7，文本用 UTF-8。
 - 动画尊重 `prefers-reduced-motion`；颜色对比度按 WCAG AA。
-- 不放追踪脚本，不设 Cookie。
+- 不放追踪脚本。唯一的 Cookie 是 `lang`，记住访客手动选的语言。
 
 字体 Silkscreen 使用 SIL Open Font License（见 `apps/web/public/fonts/OFL.txt`）。

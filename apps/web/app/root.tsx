@@ -12,6 +12,10 @@ import {
   isRouteErrorResponse,
 } from 'react-router';
 import type { Route } from './+types/root';
+import { HTML_LANG, I18nProvider, useI18n, type Locale } from './i18n';
+import { useRootData } from './i18n/root-data';
+import { fillGaps } from './i18n/gaps.server';
+import { resolveLocale } from './i18n/locale.server';
 
 export const links: Route.LinksFunction = () => [
   { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
@@ -24,9 +28,17 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export async function loader({ request }: Route.LoaderArgs) {
+  const { locale, source } = await resolveLocale(request);
+  return { locale, source, extra: await fillGaps(locale) };
+}
+
+export type RootData = Awaited<ReturnType<typeof loader>>;
+
 export function Layout({ children }: { children: ReactNode }) {
+  const locale: Locale = useRootData()?.locale ?? 'en';
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang={HTML_LANG[locale]} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,7 +49,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <Links />
       </head>
       <body>
-        {children}
+        <Providers>{children}</Providers>
         <ScrollRestoration />
         <Scripts />
       </body>
@@ -45,19 +57,25 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-export default function App() {
+function Providers({ children }: { children: ReactNode }) {
+  const data = useRootData();
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        <Outlet />
-      </ToastProvider>
-    </ThemeProvider>
+    <I18nProvider locale={data?.locale ?? 'en'} extra={data?.extra}>
+      <ThemeProvider>
+        <ToastProvider>{children}</ToastProvider>
+      </ThemeProvider>
+    </I18nProvider>
   );
 }
 
+export default function App() {
+  return <Outlet />;
+}
+
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let title = '出错了';
-  let detail = '页面遇到了一个意外的问题。';
+  const { t } = useI18n();
+  let title = t.error.title;
+  let detail = t.error.detail;
   if (isRouteErrorResponse(error)) {
     title = String(error.status);
     detail = error.statusText || detail;
@@ -69,7 +87,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
       <h1>{title}</h1>
       <p>{detail}</p>
       <p>
-        <a href="/">回首页</a>
+        <a href="/">{t.error.home}</a>
       </p>
     </main>
   );
