@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1.7
 # Build from the repository root:  docker build -f apps/web/Dockerfile .
 
-FROM node:22-alpine AS base
+# Install and build on the runner's own CPU, even for the arm64 image: emulating
+# arm64 made an uncached install + build take over half an hour. The output is
+# plain JavaScript (no native addons in production dependencies), so only the
+# runtime stage below is per-platform.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable
 WORKDIR /repo
