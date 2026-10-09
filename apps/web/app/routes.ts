@@ -17,7 +17,11 @@ export default [
       route('uuid', 'routes/tools/uuid.tsx'),
       route('json', 'routes/tools/json.tsx'),
     ]),
-    ...prefix('notes', [index('routes/notes/index.tsx'), route(':slug', 'routes/notes/note.tsx')]),
+    ...prefix('notes', [
+      index('routes/notes/index.tsx'),
+      route(':folder', 'routes/notes/folder.tsx'),
+      route(':folder/:slug', 'routes/notes/note.tsx'),
+    ]),
     route('ui', 'routes/ui.tsx'),
     route('*', 'routes/not-found.tsx'),
   ]),
