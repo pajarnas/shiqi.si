@@ -1,0 +1,4 @@
+build/
+.react-router/
+pnpm-lock.yaml
+apps/web/public/fonts/

@@ -1,0 +1,121 @@
+/* Semantic tokens per theme. Components only read these.
+   Set with <html data-theme="day|night|gold|matcha">. */
+
+:root,
+[data-theme='day'] {
+  --bg: var(--c-paper);
+  --surface: var(--c-white);
+  --surface-sunken: #f3efe2;
+  --text: var(--c-ink);
+  --text-muted: #5b5a54;
+  --border: var(--c-ink);
+  --shadow: var(--c-ink);
+  --accent: var(--c-gold);
+  --accent-text: var(--c-ink);
+  --accent-soft: var(--c-gold-pale);
+  --accent-2: var(--c-green);
+  --accent-2-text: var(--c-white);
+  --link: var(--c-green-ink);
+  --code-bg: var(--c-green-pale);
+  --focus: var(--c-gold);
+  --danger: var(--c-red);
+  --success: var(--c-green-ink);
+  /* Hero wallpaper */
+  --pattern-from: #f7d36a;
+  --pattern-to: #e9a514;
+  --pattern-ink: rgba(92, 56, 0, 0.3);
+  --pattern-pop: var(--c-ink);
+  --pattern-fill: var(--c-paper);
+  color-scheme: light;
+}
+
+[data-theme='night'] {
+  --bg: var(--c-night);
+  --surface: var(--c-night-2);
+  --surface-sunken: #0b0d0b;
+  --text: var(--c-cream);
+  --text-muted: #a9a698;
+  --border: var(--c-cream);
+  --shadow: var(--c-cream);
+  --accent: var(--c-gold);
+  --accent-text: var(--c-ink);
+  --accent-soft: #3d3112;
+  --accent-2: #2fbf6f;
+  --accent-2-text: var(--c-ink);
+  --link: #4fd18a;
+  --code-bg: #1f3a2a;
+  --focus: var(--c-gold);
+  --danger: #ff8a80;
+  --success: #4fd18a;
+  --pattern-from: #14402b;
+  --pattern-to: #08130f;
+  --pattern-ink: rgba(191, 230, 200, 0.16);
+  --pattern-pop: var(--c-gold);
+  --pattern-fill: #08130f;
+  color-scheme: dark;
+}
+
+/* No JS yet and the OS is dark: show night until the theme script runs. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg: var(--c-night);
+    --surface: var(--c-night-2);
+    --text: var(--c-cream);
+    --text-muted: #a9a698;
+    --border: var(--c-cream);
+    --shadow: var(--c-cream);
+    color-scheme: dark;
+  }
+}
+
+[data-theme='gold'] {
+  --bg: #f4c64a;
+  --surface: #fbe7a6;
+  --surface-sunken: #eeb92f;
+  --text: #241800;
+  --text-muted: #5c4508;
+  --border: #241800;
+  --shadow: #241800;
+  --accent: #241800;
+  --accent-text: #fbe7a6;
+  --accent-soft: #f8d877;
+  --accent-2: var(--c-green-deep);
+  --accent-2-text: var(--c-white);
+  --link: #241800;
+  --code-bg: #f8d877;
+  --focus: var(--c-green-deep);
+  --danger: #8e1b1b;
+  --success: var(--c-green-deep);
+  --pattern-from: #fbe7a6;
+  --pattern-to: #f2b51b;
+  --pattern-ink: rgba(36, 24, 0, 0.28);
+  --pattern-pop: #241800;
+  --pattern-fill: #fbe7a6;
+  color-scheme: light;
+}
+
+[data-theme='matcha'] {
+  --bg: #d5ecd9;
+  --surface: #f1f9f1;
+  --surface-sunken: #c3e3c9;
+  --text: #0b2a1b;
+  --text-muted: #3d5c4a;
+  --border: #0b2a1b;
+  --shadow: #0b2a1b;
+  --accent: var(--c-gold);
+  --accent-text: #0b2a1b;
+  --accent-soft: #eaf3c4;
+  --accent-2: var(--c-green-deep);
+  --accent-2-text: var(--c-white);
+  --link: var(--c-green-deep);
+  --code-bg: #c3e3c9;
+  --focus: var(--c-gold-deep);
+  --danger: #a32020;
+  --success: var(--c-green-deep);
+  --pattern-from: #bfe6c8;
+  --pattern-to: #3fa66a;
+  --pattern-ink: rgba(5, 50, 25, 0.26);
+  --pattern-pop: #0b2a1b;
+  --pattern-fill: #f1f9f1;
+  color-scheme: light;
+}

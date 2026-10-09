@@ -1,0 +1,362 @@
+/* App-level layout. Reusable pieces live in @shiqi/ui; this file only arranges pages. */
+
+.skip-link {
+  position: absolute;
+  left: -999px;
+  z-index: 50;
+}
+
+.skip-link:focus {
+  left: var(--space-4);
+  top: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  text-decoration: none;
+}
+
+.menubar-clock {
+  min-width: 2.75rem;
+  text-align: right;
+}
+
+@media (max-width: 40rem) {
+  .brand span,
+  .menubar-clock {
+    display: none;
+  }
+}
+
+/* The desk: windows float over the animated wallpaper. */
+.desk {
+  display: grid;
+  gap: var(--space-6);
+  padding-block: var(--space-6) var(--space-7);
+}
+
+.site-footer {
+  padding-bottom: var(--space-6);
+}
+
+.site-footer p {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+/* ---------- Home ---------- */
+
+.home {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.hello {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.hello__lede {
+  margin-top: var(--space-3);
+  max-width: 34em;
+  font-size: var(--text-lg);
+  color: var(--text-muted);
+}
+
+.hello__actions {
+  margin-top: var(--space-5);
+  --gap: var(--space-3);
+}
+
+@media (max-width: 40rem) {
+  .hello {
+    grid-template-columns: 1fr;
+  }
+}
+
+.critter {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  text-align: center;
+}
+
+.critter__btn {
+  padding: var(--space-3);
+  background: var(--accent-soft);
+  border: var(--border-width) solid var(--border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow);
+  cursor: pointer;
+}
+
+.critter__sprite {
+  display: block;
+  width: 112px;
+  height: 112px;
+}
+
+.critter__sprite.hop {
+  animation: hop 360ms steps(4);
+}
+
+@keyframes hop {
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+.critter figcaption {
+  display: grid;
+  font-size: var(--text-sm);
+}
+
+.critter strong {
+  font-size: var(--text-lg);
+}
+
+.sky {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sky canvas,
+.sky__placeholder {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border: var(--border-width) solid var(--border);
+  background: var(--c-mint);
+}
+
+.toy-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+}
+
+.toy-card canvas {
+  aspect-ratio: 4 / 3;
+  border-bottom: var(--border-width) solid var(--border);
+}
+
+.toy-card__body {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.toy-card__body p {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.home__pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* Lists sitting directly in a window body bleed to its edges. */
+.ui-window__body > .flush {
+  margin: calc(-1 * var(--space-5));
+}
+
+@media (max-width: 40rem) {
+  .ui-window__body > .flush {
+    margin: calc(-1 * var(--space-4));
+  }
+}
+
+/* ---------- Toy pages ---------- */
+
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 18rem;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+@media (max-width: 52rem) {
+  .stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stage__canvas {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.pad-canvas {
+  width: min(100%, 32rem);
+  aspect-ratio: 1;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* ---------- Tool pages ---------- */
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5);
+}
+
+.color-well {
+  width: 2.75rem;
+  height: 2.6rem;
+  padding: 0;
+  border: var(--border-width) solid var(--border);
+  background: none;
+  cursor: pointer;
+}
+
+.contrast {
+  padding: var(--space-5);
+}
+
+.contrast__big {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.contrast__badges {
+  margin-top: var(--space-3);
+}
+
+.contrast__ratio {
+  font-size: var(--text-lg);
+}
+
+.uuid-list,
+.json-out pre {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  line-height: 1.8;
+  overflow-x: auto;
+}
+
+.json-out {
+  min-height: 12rem;
+  max-height: 32rem;
+  overflow: auto;
+}
+
+/* ---------- UI gallery ---------- */
+
+.token {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.token__chip {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: var(--border-width) solid var(--border);
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--space-3);
+}
+
+.icon-grid figure {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-3) var(--space-1);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.icon-grid figcaption {
+  font-family: var(--font-pixel);
+  font-size: 0.625rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Notes ---------- */
+
+.prose {
+  max-width: 38em;
+  margin-inline: auto;
+  font-size: 1.0625rem;
+  line-height: 1.9;
+}
+
+.prose__meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.prose h1 {
+  margin: var(--space-2) 0 var(--space-5);
+}
+
+.prose h2 {
+  margin-top: var(--space-7);
+}
+
+.prose p,
+.prose ul,
+.prose ol {
+  margin: 1em 0;
+}
+
+.prose li + li {
+  margin-top: 0.35em;
+}
+
+.prose a {
+  color: var(--link);
+}
+
+.prose code {
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  background: var(--code-bg);
+}
+
+.prose blockquote {
+  margin: 1.5em 0;
+  padding: 0.25em 1em;
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.prose .ui-quiz {
+  margin-block: var(--space-5);
+}
+
+/* Page headers sit flush with the top of their window. */
+.ui-window__body > .ui-page-header:first-child {
+  margin-top: 0;
+}
+
+@media (max-width: 40rem) {
+  .ui-theme-select select {
+    max-width: 5.75rem;
+    padding-right: 1.5rem;
+  }
+
+  .ui-menubar__nav a {
+    padding-inline: 0.375rem;
+  }
+}

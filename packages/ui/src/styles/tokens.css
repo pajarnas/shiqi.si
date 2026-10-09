@@ -1,0 +1,54 @@
+/* Primitive tokens. Never used directly by components: themes map them to roles. */
+:root {
+  /* Palette */
+  --c-ink: #121212;
+  --c-ink-soft: #2a2a28;
+  --c-paper: #fbf8ef;
+  --c-white: #ffffff;
+  --c-gold: #f2b51b;
+  --c-gold-deep: #c98a0c;
+  --c-gold-pale: #fbe7a6;
+  --c-green: #1f9d55;
+  --c-green-ink: #0d7a40;
+  --c-green-deep: #0d5c35;
+  --c-green-pale: #bfe6c8;
+  --c-mint: #9fd7c2;
+  --c-night: #101310;
+  --c-night-2: #181c18;
+  --c-cream: #f3eedf;
+  --c-red: #c62828;
+
+  /* Type */
+  --font-pixel: 'Silkscreen', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Hiragino Sans GB',
+    'Noto Sans SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.5rem;
+  --text-2xl: clamp(1.75rem, 4vw + 1rem, 2.75rem);
+
+  /* Space: a 4px grid. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  /* Pixel geometry: square corners, hard shadows. */
+  --border-width: 2px;
+  --shadow-offset: 4px;
+
+  /* Motion: stepped, like a sprite. */
+  --step-fast: 80ms steps(2);
+  --step-slow: 160ms steps(4);
+
+  --container: 60rem;
+  --gutter: 1rem;
+}

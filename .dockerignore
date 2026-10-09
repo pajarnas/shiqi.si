@@ -1,0 +1,9 @@
+**/node_modules
+**/build
+**/.react-router
+.git
+.github
+infra
+docs
+*.md
+!apps/web/app/**/*.md

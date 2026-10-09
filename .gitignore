@@ -1,0 +1,9 @@
+node_modules/
+build/
+dist/
+.react-router/
+coverage/
+*.log
+.DS_Store
+.env*
+!.env.example

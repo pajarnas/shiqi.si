@@ -1,0 +1,5 @@
+/* @shiqi/ui — import once at the app root. Order matters: tokens, themes, base, components. */
+@import './tokens.css';
+@import './themes.css';
+@import './base.css';
+@import './components.css';

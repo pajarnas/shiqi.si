@@ -1,0 +1,18 @@
+/** The site mark: a 16x16 gold critter. Same drawing as /favicon.svg. */
+export function Logo({ size = 24 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      aria-hidden="true"
+    >
+      <path fill="#f2b51b" d="M5 2h6v1h2v2h1v6h-1v2h-2v1H5v-1H3v-2H2V5h1V3h2z" />
+      <path
+        fill="#121212"
+        d="M5 1h6v1H5zM3 2h2v1H3zM11 2h2v1h-2zM2 3h1v2H2zM13 3h1v2h-1zM1 5h1v6H1zM14 5h1v6h-1zM2 11h1v2H2zM13 11h1v2h-1zM3 13h2v1H3zM11 13h2v1h-2zM5 14h6v1H5zM5 6h1v2H5zM10 6h1v2h-1zM6 10h4v1H6zM4 15h1v1H4zM11 15h1v1h-1z"
+      />
+    </svg>
+  );
+}
