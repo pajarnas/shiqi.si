@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { Button } from './Button';
 import { Card } from './Card';
+import { format, useUiStrings } from '../strings';
 
 export interface QuizQuestion {
   q: string;
@@ -16,7 +17,8 @@ export interface QuizProps {
 }
 
 /** One question at a time: pick, check, see why, move on. Score at the end. */
-export function Quiz({ title = '小测验', questions }: QuizProps) {
+export function Quiz({ title, questions }: QuizProps) {
+  const s = useUiStrings();
   const name = useId();
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
@@ -36,15 +38,15 @@ export function Quiz({ title = '小测验', questions }: QuizProps) {
     return (
       <Card className="ui-quiz">
         <div className="ui-quiz__progress">
-          <span>{title}</span>
+          <span>{title ?? s.quiz.title}</span>
           <span>DONE</span>
         </div>
         <p className="ui-quiz__q">
-          答对 {score} / {questions.length}
-          {score === questions.length ? '，满分！' : ''}
+          {format(s.quiz.score, { score, total: questions.length })}
+          {score === questions.length ? s.quiz.perfect : ''}
         </p>
         <div>
-          <Button onClick={restart}>再来一次</Button>
+          <Button onClick={restart}>{s.quiz.retry}</Button>
         </div>
       </Card>
     );
@@ -65,7 +67,7 @@ export function Quiz({ title = '小测验', questions }: QuizProps) {
   return (
     <Card className="ui-quiz">
       <div className="ui-quiz__progress">
-        <span>{title}</span>
+        <span>{title ?? s.quiz.title}</span>
         <span>
           {index + 1} / {questions.length}
         </span>
@@ -97,10 +99,12 @@ export function Quiz({ title = '小测验', questions }: QuizProps) {
       {checked && q.explain && <p className="ui-quiz__explain">{q.explain}</p>}
       <div>
         {checked ? (
-          <Button onClick={next}>{index + 1 === questions.length ? '看结果' : '下一题'}</Button>
+          <Button onClick={next}>
+            {index + 1 === questions.length ? s.quiz.results : s.quiz.next}
+          </Button>
         ) : (
           <Button onClick={check} disabled={picked === null}>
-            检查答案
+            {s.quiz.check}
           </Button>
         )}
       </div>

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useUiStrings } from '../strings';
 
 export interface MenuBarProps {
   /** Left: logo or site name. */
@@ -12,13 +13,14 @@ export interface MenuBarProps {
 }
 
 /** A thin top bar in the spirit of an old desktop menu bar. */
-export function MenuBar({ brand, children, end, navLabel = '主导航' }: MenuBarProps) {
+export function MenuBar({ brand, children, end, navLabel }: MenuBarProps) {
+  const s = useUiStrings();
   return (
     <header className="ui-menubar">
       <div className="ui-menubar__inner">
         <div className="ui-menubar__brand">{brand}</div>
         {children && (
-          <nav aria-label={navLabel} className="ui-menubar__nav">
+          <nav aria-label={navLabel ?? s.mainNav} className="ui-menubar__nav">
             {children}
           </nav>
         )}

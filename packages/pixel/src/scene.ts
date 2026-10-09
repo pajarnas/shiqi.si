@@ -7,22 +7,26 @@ import { rng } from './random';
 import { circle, dither, type Ctx } from './raster';
 
 /** Sky stops (top, middle, bottom) per time of day. Hours are local, 0-24. */
+export type SkyId =
+  'lateNight' | 'dawn' | 'morning' | 'noon' | 'afternoon' | 'dusk' | 'nightfall' | 'night';
+
 export interface Sky {
   from: number;
-  name: string;
+  /** Stable id; apps map it to a display name in their own language. */
+  id: SkyId;
   stops: readonly [string, string, string];
   night: boolean;
 }
 
 const SKIES: readonly Sky[] = [
-  { from: 0, name: '深夜', stops: ['#08130f', '#0e1f1a', '#1d3b30'], night: true },
-  { from: 5, name: '黎明', stops: ['#1d3b30', '#6fae95', '#fbe7a6'], night: false },
-  { from: 7, name: '早晨', stops: ['#9fd7c2', '#d6eedf', '#fbf8ef'], night: false },
-  { from: 11, name: '正午', stops: ['#7cc8ad', '#bfe6c8', '#fbf8ef'], night: false },
-  { from: 16, name: '午后', stops: ['#9fd7c2', '#fbe7a6', '#f2b51b'], night: false },
-  { from: 18, name: '黄昏', stops: ['#0d5c35', '#c98a0c', '#f2b51b'], night: false },
-  { from: 19.5, name: '入夜', stops: ['#0e1f1a', '#1d3b30', '#0d5c35'], night: true },
-  { from: 21, name: '夜晚', stops: ['#08130f', '#0e1f1a', '#1d3b30'], night: true },
+  { from: 0, id: 'lateNight', stops: ['#08130f', '#0e1f1a', '#1d3b30'], night: true },
+  { from: 5, id: 'dawn', stops: ['#1d3b30', '#6fae95', '#fbe7a6'], night: false },
+  { from: 7, id: 'morning', stops: ['#9fd7c2', '#d6eedf', '#fbf8ef'], night: false },
+  { from: 11, id: 'noon', stops: ['#7cc8ad', '#bfe6c8', '#fbf8ef'], night: false },
+  { from: 16, id: 'afternoon', stops: ['#9fd7c2', '#fbe7a6', '#f2b51b'], night: false },
+  { from: 18, id: 'dusk', stops: ['#0d5c35', '#c98a0c', '#f2b51b'], night: false },
+  { from: 19.5, id: 'nightfall', stops: ['#0e1f1a', '#1d3b30', '#0d5c35'], night: true },
+  { from: 21, id: 'night', stops: ['#08130f', '#0e1f1a', '#1d3b30'], night: true },
 ];
 
 /** Hill colours, back to front, for day and night. */

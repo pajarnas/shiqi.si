@@ -24,9 +24,12 @@ import {
   toSvg,
   type Grid,
 } from '~/features/play/pad';
+import { useI18n } from '~/i18n';
+import { Rich } from '~/i18n/Rich';
+import type { Route } from './+types/pad';
 
-export const meta = () =>
-  pageMeta('像素画板', '32×32 像素画板：镜像、填充、撤销，导出 PNG 和 SVG，自动保存在本地。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({ title: t.entries.pad.title, description: t.pad.description }));
 
 type Tool = 'pen' | 'eraser' | 'fill';
 const CELL = 16;
@@ -34,6 +37,7 @@ const STORAGE_KEY = 'shiqi:pad';
 const HISTORY = 100;
 
 export default function Pad() {
+  const { t } = useI18n();
   const mounted = useMounted();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [grid, setGrid] = useState<Grid>(emptyGrid);
@@ -193,18 +197,13 @@ export default function Pad() {
     downloadBlob(new Blob([toSvg(grid)], { type: 'image/svg+xml' }), 'shiqi-pixel.svg');
 
   return (
-    <PageWindow
-      file="play/pad"
-      eyebrow="PIXEL PAD"
-      title="像素画板"
-      lede="32×32，九种颜色，默认左右镜像。今天的小怪已经替你起了个头。画的东西自动保存在这个浏览器里。"
-    >
+    <PageWindow page="pad" title={t.entries.pad.title} lede={t.pad.lede}>
       <div className="stage">
         <div className="stage__canvas">
           <canvas
             ref={canvasRef}
             className="ui-canvas ui-canvas--framed pad-canvas"
-            aria-label="像素画布，用鼠标或手指绘制"
+            aria-label={t.pad.canvas}
             role="img"
             onPointerDown={onDown}
             onPointerMove={onMove}
@@ -215,19 +214,19 @@ export default function Pad() {
         <Card padded className="stage__panel">
           <Stack gap={4}>
             <Segmented
-              label="工具"
+              label={t.pad.tool}
               value={tool}
               onChange={setTool}
               options={[
-                { value: 'pen', label: '笔' },
-                { value: 'eraser', label: '橡皮' },
-                { value: 'fill', label: '填充' },
+                { value: 'pen', label: t.pad.pen },
+                { value: 'eraser', label: t.pad.eraser },
+                { value: 'fill', label: t.pad.fill },
               ]}
             />
             <div className="ui-field">
-              <span className="ui-field__label">颜色</span>
+              <span className="ui-field__label">{t.pad.color}</span>
               <Swatches
-                label="颜色"
+                label={t.pad.color}
                 value={String(color)}
                 onChange={(v) => {
                   setColor(Number(v));
@@ -235,41 +234,40 @@ export default function Pad() {
                 }}
                 colors={PAD_COLORS.slice(1).map((c, i) => ({
                   value: String(i + 1),
-                  name: c.name,
+                  name: t.colors[c.name],
                   css: c.value,
                 }))}
               />
             </div>
             <Checkbox
-              label="左右镜像"
+              label={t.pad.mirror}
               checked={mirror}
               onChange={(e) => setMirror(e.target.checked)}
             />
             <Checkbox
-              label="显示网格"
+              label={t.pad.grid}
               checked={lines}
               onChange={(e) => setLines(e.target.checked)}
             />
             <Cluster>
               <Button variant="secondary" size="sm" onClick={doUndo} disabled={!undo.length}>
-                撤销
+                {t.pad.undo}
               </Button>
               <Button variant="secondary" size="sm" onClick={doRedo} disabled={!redo.length}>
-                重做
+                {t.pad.redo}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => commit(emptyGrid(), grid)}>
-                清空
+                {t.pad.clear}
               </Button>
             </Cluster>
             <Cluster>
-              <Button onClick={exportPng}>导出 PNG</Button>
+              <Button onClick={exportPng}>{t.pad.exportPng}</Button>
               <Button variant="secondary" onClick={exportSvg}>
-                导出 SVG
+                {t.pad.exportSvg}
               </Button>
             </Cluster>
             <p className="ui-field__hint">
-              <Kbd>B</Kbd> 笔 · <Kbd>E</Kbd> 橡皮 · <Kbd>G</Kbd> 填充 · <Kbd>M</Kbd> 镜像 ·{' '}
-              <Kbd>⌘Z</Kbd> 撤销
+              <Rich text={t.pad.keys} tags={{ k: (s) => <Kbd>{s}</Kbd> }} />
             </p>
           </Stack>
         </Card>

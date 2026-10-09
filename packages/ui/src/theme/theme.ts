@@ -1,12 +1,13 @@
 // Theme preference: stored in localStorage, applied as <html data-theme>.
 // "auto" follows the OS between day and night.
 
+// Display names live in UI_STRINGS.themes, keyed by id.
 export const THEMES = [
-  { id: 'auto', label: '跟随系统' },
-  { id: 'day', label: '白天' },
-  { id: 'night', label: '夜晚' },
-  { id: 'gold', label: '1984 金' },
-  { id: 'matcha', label: '抹茶' },
+  { id: 'auto' },
+  { id: 'day' },
+  { id: 'night' },
+  { id: 'gold' },
+  { id: 'matcha' },
 ] as const;
 
 export type ThemePreference = (typeof THEMES)[number]['id'];

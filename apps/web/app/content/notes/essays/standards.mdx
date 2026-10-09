@@ -1,46 +1,48 @@
 import { Quiz } from '@shiqi/ui';
 
 export const frontmatter = {
-  title: '标准是写给陌生人的信',
+  title: 'Standards are letters to strangers',
   date: '2026-10-07',
-  summary: 'ISO 8601、UTF-8、语义化 HTML：遵守标准，是对没见过面的人客气。还有一个小测验。',
+  summary:
+    'ISO 8601, UTF-8, semantic HTML: following a standard is being polite to people you’ve never met. Plus a small quiz.',
   topics: ['standards', 'web'],
 };
 
-写 `2026-10-09` 而不是 `10/09/26`，不是因为前者更好看，而是因为任何一个人、任何一台机器读到它，都不会误会。
+Writing `2026-10-09` instead of `10/09/26` isn’t about looks. It’s that nobody, and no machine, can misread it.
 
-标准就是这样的东西：它是写给你永远不会见面的人的信。也许是另一个国家的同学，也许是三年后的你自己，也许是一个屏幕阅读器。遵守它，就是提前对他们客气。
+That’s what a standard is: a letter to people you will never meet. Maybe a classmate in another country, maybe you in three years, maybe a screen reader. Following it is being polite to them in advance.
 
-这个网站尽量这样做：
+This site tries to:
 
-- 时间一律 ISO 8601；[时间戳工具](/tools/time) 也会告诉你今天是第几周（ISO 周，周一开始）。
-- 颜色对比度按 WCAG 检查，[颜色工具](/tools/color) 可以算。
-- 按钮是 `<button>`，链接是 `<a>`，表单有 `<label>`，动画会尊重系统的“减少动态效果”。
-- 新的 UUID 用 v7（RFC 9562），因为它按时间排序，对数据库索引更友好。
+- Write every time in ISO 8601. The [Timestamps tool](/tools/time) also tells you which week it is (the ISO week, starting on Monday).
+- Check color contrast against WCAG; the [Color tool](/tools/color) does the math.
+- Use `<button>` for buttons, `<a>` for links and `<label>` for form fields, and respect the system’s “reduce motion” setting in animations.
+- Use v7 for new UUIDs (RFC 9562), because they sort by time, which database indexes like.
 
-顺便做个小测验，这也是以后课程笔记里会用的组件：
+And a small quiz, the same component future course notes will use:
 
 <Quiz
-  title="标准小测验"
+  title="Standards quiz"
   questions={[
     {
-      q: '按 ISO 8601，2026 年 1 月 1 日属于哪一周？',
+      q: 'Under ISO 8601, which week does January 1, 2026 belong to?',
       options: ['2026-W01', '2025-W53', '2026-W00'],
       answer: 0,
       explain:
-        'ISO 周从周一开始，第一周是包含该年第一个周四的那一周。2026-01-01 是周四，所以属于 2026-W01。',
+        'ISO weeks start on Monday, and week 1 is the week containing the year’s first Thursday. 2026-01-01 is a Thursday, so it falls in 2026-W01.',
     },
     {
-      q: 'WCAG AA 对普通正文要求的最低对比度是？',
+      q: 'What is the minimum contrast WCAG AA requires for normal body text?',
       options: ['3:1', '4.5:1', '7:1'],
       answer: 1,
-      explain: '普通文字 4.5:1，大号文字 3:1；7:1 是 AAA。',
+      explain: 'Normal text needs 4.5:1, large text 3:1; 7:1 is AAA.',
     },
     {
-      q: 'UUID v7 的前 48 位存的是什么？',
-      options: ['随机数', 'MAC 地址', 'Unix 毫秒时间戳'],
+      q: 'What do the first 48 bits of a UUID v7 hold?',
+      options: ['Random bits', 'A MAC address', 'A Unix millisecond timestamp'],
       answer: 2,
-      explain: 'RFC 9562 规定 v7 以 48 位 Unix 毫秒时间戳开头，所以新生成的 ID 天然按时间递增。',
+      explain:
+        'RFC 9562 defines v7 to start with a 48-bit Unix millisecond timestamp, so new IDs naturally increase over time.',
     },
   ]}
 />

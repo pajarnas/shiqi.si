@@ -8,8 +8,8 @@ import type { Ctx } from './raster';
 export const CRITTER_SIZE = 12;
 
 const FILLS = [P.paper, P.gold, P.green, P.goldPale, P.greenPale] as const;
-const NAMES_A = ['小', '圆', '胖', '呆', '闪', '软', '乖', '酷'] as const;
-const NAMES_B = ['豆', '团', '仔', '球', '芽', '饼', '米', '果'] as const;
+/** Names are two parts picked from lists of this length; apps supply the words. */
+export const CRITTER_NAME_PARTS = 8;
 
 /** Cell values: 0 empty, 1 ink, 2 body, 3 eye white, 4 accent. */
 export type CritterGrid = Uint8Array[];
@@ -125,8 +125,9 @@ export function drawCritter(ctx: Ctx, x: number, y: number, o: CritterOptions): 
   });
 }
 
-/** A two-character name, stable per seed. */
-export function critterName(seed: number): string {
+/** Indexes of a two-part name, stable per seed. Each is below CRITTER_NAME_PARTS. */
+export function critterNameParts(seed: number): readonly [number, number] {
   const r = rng(seed ^ 0xa11);
-  return pick(r, NAMES_A) + pick(r, NAMES_B);
+  const idx = Array.from({ length: CRITTER_NAME_PARTS }, (_, i) => i);
+  return [pick(r, idx), pick(r, idx)];
 }

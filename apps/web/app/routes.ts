@@ -26,7 +26,10 @@ export default [
     route('admin/visits', 'routes/admin/visits.tsx'),
     route('*', 'routes/not-found.tsx'),
   ]),
-  ...prefix('api', [route('health', 'routes/api/health.ts')]),
+  ...prefix('api', [
+    route('health', 'routes/api/health.ts'),
+    route('locale', 'routes/api/locale.ts'),
+  ]),
   route('sitemap.xml', 'routes/sitemap.ts'),
   route('robots.txt', 'routes/robots.ts'),
 ] satisfies RouteConfig;

@@ -27,6 +27,7 @@ describe('isoWeek', () => {
 describe('relative', () => {
   it('picks a sensible unit', () => {
     const now = new Date(2026, 9, 9, 12);
-    expect(relative(new Date(2026, 9, 6, 12), now)).toBe('3天前');
+    expect(relative(new Date(2026, 9, 6, 12), now, 'zh-CN')).toBe('3天前');
+    expect(relative(new Date(2026, 9, 6, 12), now)).toBe('3 days ago');
   });
 });

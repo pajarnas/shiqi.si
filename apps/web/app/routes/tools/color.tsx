@@ -8,12 +8,16 @@ import {
   wcagLevels,
   type Rgba,
 } from '~/features/tools/color';
+import { useI18n } from '~/i18n';
+import type { Route } from './+types/color';
 
-export const meta = () => pageMeta('颜色', 'HEX、RGB、HSL、OKLCH 互转，WCAG 2 对比度检查。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({ title: t.entries.color.title, description: t.color.description }));
 
 const css = (c: Rgba) => `rgb(${c.r} ${c.g} ${c.b} / ${c.a})`;
 
 export default function ColorTool() {
+  const { t } = useI18n();
   const [fg, setFg] = useState('#121212');
   const [bg, setBg] = useState('#f2b51b');
   const a = parseColor(fg);
@@ -23,20 +27,15 @@ export default function ColorTool() {
   const f = a ? formatColor(a) : null;
 
   return (
-    <PageWindow
-      file="tools/color"
-      eyebrow="COLOR"
-      title="颜色"
-      lede="输入 HEX、rgb() 或 hsl()。第一个颜色当文字，第二个当背景，顺便算 WCAG 对比度。"
-    >
+    <PageWindow page="color" title={t.entries.color.title} lede={t.color.lede}>
       <Stack gap={5}>
         <div className="two-col">
-          <Field label="文字颜色" error={fg && !a ? '无法解析' : undefined}>
+          <Field label={t.color.text} error={fg && !a ? t.color.invalid : undefined}>
             {(p) => (
               <Cluster>
                 <input
                   type="color"
-                  aria-label="选择文字颜色"
+                  aria-label={t.color.pickText}
                   value={f?.hex.slice(0, 7) ?? '#000000'}
                   onChange={(e) => setFg(e.target.value)}
                   className="color-well"
@@ -50,12 +49,12 @@ export default function ColorTool() {
               </Cluster>
             )}
           </Field>
-          <Field label="背景颜色" error={bg && !b ? '无法解析' : undefined}>
+          <Field label={t.color.background} error={bg && !b ? t.color.invalid : undefined}>
             {(p) => (
               <Cluster>
                 <input
                   type="color"
-                  aria-label="选择背景颜色"
+                  aria-label={t.color.pickBackground}
                   value={b ? formatColor(b).hex.slice(0, 7) : '#ffffff'}
                   onChange={(e) => setBg(e.target.value)}
                   className="color-well"
@@ -73,18 +72,18 @@ export default function ColorTool() {
 
         {a && b && ratio && levels && (
           <Card className="contrast" style={{ color: css(a), background: css(b) }}>
-            <p className="contrast__big">像素 Aa 1984</p>
-            <p>敏捷的金色小怪跳过了绿色的山丘。</p>
+            <p className="contrast__big">{t.color.sampleBig}</p>
+            <p>{t.color.sample}</p>
             <Cluster className="contrast__badges">
               <span className="ui-pixel contrast__ratio">{ratio.toFixed(2)}:1</span>
               <Badge tone={levels.normalAA ? 'green' : 'gold'}>
-                正文 AA {levels.normalAA ? '✓' : '✗'}
+                {t.color.normalAA} {levels.normalAA ? '✓' : '✗'}
               </Badge>
               <Badge tone={levels.normalAAA ? 'green' : 'gold'}>
-                正文 AAA {levels.normalAAA ? '✓' : '✗'}
+                {t.color.normalAAA} {levels.normalAAA ? '✓' : '✗'}
               </Badge>
               <Badge tone={levels.largeAA ? 'green' : 'gold'}>
-                大字 AA {levels.largeAA ? '✓' : '✗'}
+                {t.color.largeAA} {levels.largeAA ? '✓' : '✗'}
               </Badge>
             </Cluster>
           </Card>

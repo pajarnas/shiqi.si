@@ -9,3 +9,4 @@ coverage/
 !.env.example
 infra/server/.env
 dump.rdb
+infra/server/secrets.env

@@ -50,8 +50,8 @@ export function isoWeek(d: Date): { year: number; week: number; day: number; lab
   return { year, week, day, label: `${year}-W${pad(week)}-${day}` };
 }
 
-/** "3 天前" / "2 小时后", picking the largest sensible unit. */
-export function relative(d: Date, now: Date, locale = 'zh-CN'): string {
+/** "3 days ago" / "in 2 hours", picking the largest sensible unit. */
+export function relative(d: Date, now: Date, locale = 'en'): string {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
   const sec = (d.getTime() - now.getTime()) / 1000;
   const units: [Intl.RelativeTimeFormatUnit, number][] = [
@@ -69,14 +69,25 @@ export function relative(d: Date, now: Date, locale = 'zh-CN'): string {
   return '';
 }
 
-export function formatInstant(d: Date, now: Date) {
+export interface InstantLabels {
+  unixS: string;
+  unixMs: string;
+  isoUtc: string;
+  isoLocal: string;
+  http: string;
+  isoWeek: string;
+  relative: string;
+}
+
+/** Labelled rows for a tool UI; `labels` and `locale` come from the page's language. */
+export function formatInstant(d: Date, now: Date, labels: InstantLabels, locale = 'en') {
   return [
-    { label: 'Unix 秒', value: String(Math.floor(d.getTime() / 1000)) },
-    { label: 'Unix 毫秒', value: String(d.getTime()) },
-    { label: 'ISO 8601 (UTC)', value: d.toISOString() },
-    { label: 'ISO 8601 (本地)', value: toLocalIso(d) },
-    { label: 'RFC 9110 (HTTP)', value: d.toUTCString() },
-    { label: 'ISO 周', value: isoWeek(d).label },
-    { label: '相对现在', value: relative(d, now) },
+    { label: labels.unixS, value: String(Math.floor(d.getTime() / 1000)) },
+    { label: labels.unixMs, value: String(d.getTime()) },
+    { label: labels.isoUtc, value: d.toISOString() },
+    { label: labels.isoLocal, value: toLocalIso(d) },
+    { label: labels.http, value: d.toUTCString() },
+    { label: labels.isoWeek, value: isoWeek(d).label },
+    { label: labels.relative, value: relative(d, now, locale) },
   ];
 }

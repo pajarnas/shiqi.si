@@ -12,11 +12,14 @@ import {
 import { useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { formatInstant, parseInstant } from '~/features/tools/time';
+import { useI18n } from '~/i18n';
+import type { Route } from './+types/time';
 
-export const meta = () =>
-  pageMeta('时间戳', 'Unix 时间戳和 ISO 8601 互转，显示 ISO 周和相对时间。');
+export const meta: Route.MetaFunction = ({ matches }) =>
+  pageMeta(matches, (t) => ({ title: t.entries.time.title, description: t.time.description }));
 
 export default function TimeTool() {
+  const { t, lang } = useI18n();
   const mounted = useMounted();
   const [input, setInput] = useState('');
   const [now, setNow] = useState(() => new Date());
@@ -26,25 +29,18 @@ export default function TimeTool() {
   const target = input ? parsed?.date : now;
 
   return (
-    <PageWindow
-      file="tools/time"
-      eyebrow="TIME"
-      title="时间戳"
-      lede="粘贴 Unix 秒、毫秒或任何 ISO 8601 时间。留空就显示现在。"
-    >
+    <PageWindow page="time" title={t.entries.time.title} lede={t.time.lede}>
       <Stack gap={5}>
         <Field
-          label="输入"
-          hint="12 位及以上的数字按毫秒处理。"
-          error={
-            input && !parsed ? '看不懂这个时间。试试 1760000000 或 2026-10-09T12:00:00Z' : undefined
-          }
+          label={t.time.input}
+          hint={t.time.hint}
+          error={input && !parsed ? t.time.error : undefined}
         >
           {(p) => (
             <TextInput
               {...p}
               value={input}
-              placeholder="1760000000 或 2026-10-09T12:00:00+08:00"
+              placeholder={t.time.placeholder}
               onChange={(e) => setInput(e.target.value)}
             />
           )}
@@ -55,15 +51,15 @@ export default function TimeTool() {
             size="sm"
             onClick={() => setInput(String(Math.floor(Date.now() / 1000)))}
           >
-            填入现在
+            {t.time.now}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setInput('')}>
-            清空
+            {t.time.clear}
           </Button>
         </Cluster>
         <Card>
           {mounted && target ? (
-            <OutputList rows={formatInstant(target, now)} />
+            <OutputList rows={formatInstant(target, now, t.time.rows, lang)} />
           ) : (
             <p style={{ padding: '1rem' }}>…</p>
           )}
