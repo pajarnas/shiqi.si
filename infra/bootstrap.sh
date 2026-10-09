@@ -7,7 +7,7 @@
 # cert-manager with a Let's Encrypt issuer, then the site manifests.
 set -euo pipefail
 
-: "${ACME_EMAIL:?Set ACME_EMAIL, the address Let's Encrypt sends expiry notices to}"
+: "${ACME_EMAIL:?Set ACME_EMAIL, the email that receives certificate expiry notices}"
 : "${GITHUB_OWNER:?Set GITHUB_OWNER, the GitHub user or org that owns ghcr.io/<owner>/shiqi.si}"
 CERT_MANAGER_VERSION="${CERT_MANAGER_VERSION:-v1.18.2}"
 SWAP_SIZE="${SWAP_SIZE:-2G}"
