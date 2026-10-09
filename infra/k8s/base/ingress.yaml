@@ -1,5 +1,5 @@
-# HTTPS for shiqi.si and www.shiqi.si via cert-manager (Let's Encrypt, HTTP-01)
-# on k3s's built-in Traefik. www and plain HTTP redirect to https://shiqi.si.
+# HTTPS for shiqi.si and www.shiqi.si on k3s's built-in Traefik, which gets
+# Let's Encrypt certificates itself (resolver `le`, set up by bootstrap.sh). www and plain HTTP redirect to https://shiqi.si.
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
@@ -24,14 +24,12 @@ kind: Ingress
 metadata:
   name: web
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: 'true'
+    traefik.ingress.kubernetes.io/router.tls.certresolver: le
     traefik.ingress.kubernetes.io/router.middlewares: shiqi-redirect-www@kubernetescrd
 spec:
   ingressClassName: traefik
-  tls:
-    - hosts: [shiqi.si, www.shiqi.si]
-      secretName: shiqi-si-tls
   rules:
     - host: shiqi.si
       http:
@@ -48,8 +46,8 @@ spec:
             backend:
               service: { name: web, port: { name: http } }
 ---
-# Plain HTTP: redirect everything to HTTPS. The ACME challenge path that
-# cert-manager adds is more specific, so it still wins during issuance.
+# Plain HTTP: redirect everything to HTTPS. Traefik's own ACME challenge
+# router outranks this one, so certificate issuance still works.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

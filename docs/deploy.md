@@ -3,9 +3,8 @@
 服务器：Azure for Students，`shiqi-1`，Ubuntu 24.04，`northcentralus`，公网 IP `52.162.142.136`，B2ats v2（2 vCPU / 1 GB）。
 
 ```
-浏览器 ──HTTPS──▶ Traefik（k3s 自带） ──▶ web（React Router, Node） ──▶ redis
-                     ▲
-              cert-manager（Let's Encrypt 自动签发、续期）
+浏览器 ──HTTPS──▶ Traefik（k3s 自带，自己向 Let's Encrypt 申请、续期证书）
+                     ──▶ web（React Router, Node） ──▶ redis
 ```
 
 ## 1. DNS（在域名注册商后台）
@@ -41,16 +40,16 @@ git clone https://github.com/<你的用户名>/shiqi.si.git && cd shiqi.si
 ACME_EMAIL=<你的邮箱> GITHUB_OWNER=<你的用户名> bash infra/bootstrap.sh
 ```
 
-脚本会：加 2 GB swap、开自动安全更新、装 k3s、装 cert-manager 和 Let's Encrypt issuer、部署网站和 Redis。
+脚本会：加 2 GB swap、开自动安全更新、配置 Traefik 自动申请 Let's Encrypt 证书、装 k3s、部署网站和 Redis。1 GB 的机器内存紧，所以不用 cert-manager。
 
 检查：
 
 ```bash
-kubectl -n shiqi get pods,ingress,certificate
+kubectl -n shiqi get pods,ingress
 curl -I https://shiqi.si
 ```
 
-证书一般一两分钟变成 `READY=True`。前提是第 1 步的 DNS 已经生效。
+DNS 生效后，Traefik 一般一两分钟就能拿到证书。证书没拿到时查日志：`kubectl -n kube-system logs deploy/traefik | grep -i acme`。
 
 ## 4. 打开自动部署
 

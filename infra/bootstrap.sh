@@ -4,18 +4,17 @@
 #   ACME_EMAIL=you@example.com GITHUB_OWNER=your-github-name bash infra/bootstrap.sh
 #
 # Installs: swap, automatic security updates, k3s (Kubernetes + Traefik),
-# cert-manager with a Let's Encrypt issuer, then the site manifests.
+# Traefik's Let's Encrypt resolver, then the site manifests.
 set -euo pipefail
 
 : "${ACME_EMAIL:?Set ACME_EMAIL, the email that receives certificate expiry notices}"
 : "${GITHUB_OWNER:?Set GITHUB_OWNER, the GitHub user or org that owns ghcr.io/<owner>/shiqi.si}"
-CERT_MANAGER_VERSION="${CERT_MANAGER_VERSION:-v1.18.2}"
 SWAP_SIZE="${SWAP_SIZE:-2G}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 log() { printf '\n\033[1;33m==> %s\033[0m\n' "$*"; }
-# A fresh 1 GB node answers slowly at first, and cert-manager's webhook takes a
-# moment to accept requests; retry instead of failing the whole run.
+# A fresh 1 GB node answers slowly at first and can time out requests for a
+# while; retry instead of failing the whole run.
 retry() {
   local i
   for i in 1 2 3 4 5 6; do
@@ -45,6 +44,33 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades git curl
 sudo dpkg-reconfigure -f noninteractive unattended-upgrades
 
+log "Traefik settings: Let's Encrypt via Traefik's built-in ACME"
+# k3s applies everything in this folder at start-up. Writing it before k3s
+# installs means Traefik comes up with the certificate resolver already set.
+# Traefik does ACME itself, which saves the three cert-manager pods that a
+# 1 GB node cannot spare.
+sudo mkdir -p /var/lib/rancher/k3s/server/manifests
+sudo tee /var/lib/rancher/k3s/server/manifests/traefik-config.yaml >/dev/null <<YAML
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    persistence:
+      enabled: true
+      size: 128Mi
+      storageClass: local-path
+    certificatesResolvers:
+      le:
+        acme:
+          email: ${ACME_EMAIL}
+          storage: /data/acme.json
+          httpChallenge:
+            entryPoint: web
+YAML
+
 log "k3s"
 if ! command -v k3s >/dev/null; then
   curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=metrics-server --write-kubeconfig-mode=600" sh -
@@ -56,32 +82,26 @@ chmod 600 "$HOME/.kube/config"
 export KUBECONFIG="$HOME/.kube/config"
 grep -q 'KUBECONFIG' "$HOME/.bashrc" || echo 'export KUBECONFIG=$HOME/.kube/config' >>"$HOME/.bashrc"
 grep -q 'alias k=' "$HOME/.bashrc" || echo 'alias k=kubectl' >>"$HOME/.bashrc"
-# The node registers a few seconds after k3s starts; `wait` fails if none exist yet.
-until kubectl get node -o name 2>/dev/null | grep -q node/; do sleep 2; done
-kubectl wait --for=condition=Ready node --all --timeout=180s
+# The API server and the node take a while to come up on a small VM.
+wait_for() {
+  local what="$1" deadline=$((SECONDS + 600))
+  shift
+  until "$@" >/dev/null 2>&1; do
+    ((SECONDS < deadline)) || { echo "Timed out waiting for $what" >&2; return 1; }
+    sleep 5
+  done
+}
+wait_for "the Kubernetes API" kubectl get --raw /readyz
+wait_for "the node to register" bash -c 'kubectl get node -o name | grep -q node/'
+retry kubectl wait --for=condition=Ready node --all --timeout=180s
 
-log "cert-manager $CERT_MANAGER_VERSION"
-retry kubectl apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
-retry kubectl -n cert-manager rollout status deploy/cert-manager-webhook --timeout=300s
-
-log "Let's Encrypt issuer"
-cat >"$TMP/issuer.yaml" <<YAML
-apiVersion: cert-manager.io/v1
-kind: ClusterIssuer
-metadata:
-  name: letsencrypt
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    email: ${ACME_EMAIL}
-    privateKeySecretRef:
-      name: letsencrypt-account
-    solvers:
-      - http01:
-          ingress:
-            ingressClassName: traefik
-YAML
-retry kubectl apply -f "$TMP/issuer.yaml"
+# Earlier versions of this script installed cert-manager; remove it to free memory.
+if kubectl get namespace cert-manager >/dev/null 2>&1; then
+  log "Removing cert-manager (Traefik handles certificates now)"
+  kubectl delete validatingwebhookconfiguration,mutatingwebhookconfiguration cert-manager-webhook --ignore-not-found
+  retry kubectl delete namespace cert-manager --ignore-not-found --timeout=300s
+  kubectl get crd -o name | grep 'cert-manager.io' | xargs -r kubectl delete
+fi
 
 log "Site: web + Redis + ingress"
 kubectl kustomize "$REPO_DIR/infra/k8s/base" | sed "s#ghcr.io/OWNER/#ghcr.io/${GITHUB_OWNER,,}/#" >"$TMP/site.yaml"
@@ -89,6 +109,6 @@ retry kubectl apply -f "$TMP/site.yaml"
 kubectl -n shiqi rollout status deploy/web --timeout=300s || true
 
 log "Done"
-kubectl -n shiqi get pods,ingress,certificate
+kubectl -n shiqi get pods,ingress
 echo
-echo "Check https://shiqi.si in a minute or two, once the certificate shows READY=True."
+echo "Check https://shiqi.si in a minute or two, once Traefik has fetched the certificate."
