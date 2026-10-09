@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLocale } from './locale.server';
 import { sanitize } from './notes.server';
+import { protect, unprotect } from './translate.server';
 
 const req = (url: string, headers: Record<string, string> = {}) => new Request(url, { headers });
 
@@ -38,5 +39,18 @@ describe('sanitize', () => {
         '<p onclick="x()">hi</p><script>alert(1)</script><a href="javascript:alert(1)">a</a>',
       ),
     ).toBe('<p>hi</p><a href="#">a</a>');
+  });
+});
+
+describe('placeholder fencing', () => {
+  it('round-trips dictionary strings through HTML mode', () => {
+    const s = 'Line {line} & <b>you</b>: {error}';
+    expect(protect(s)).toBe(
+      'Line <span class="notranslate" translate="no">{line}</span> &amp; <b>you</b>: <span class="notranslate" translate="no">{error}</span>',
+    );
+    expect(unprotect(protect(s))).toBe(s);
+    expect(unprotect('第 <span class="notranslate" translate="no">{line}</span> 行')).toBe(
+      '第 {line} 行',
+    );
   });
 });

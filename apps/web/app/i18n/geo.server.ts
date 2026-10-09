@@ -2,7 +2,7 @@
 // A CDN header wins when one is present; otherwise ask a lookup service
 // (country.is by default, no key needed) and cache the answer per IP.
 import { cacheGet, cacheSet } from '~/lib/cache.server';
-import { clientIp, isPrivateIp } from '~/lib/client-ip.server';
+import { clientIp } from '~/features/visits/visits';
 
 const COUNTRY_HEADERS = ['cf-ipcountry', 'x-vercel-ip-country', 'cloudfront-viewer-country'];
 const DEFAULT_URL = 'https://api.country.is/{ip}';
@@ -16,8 +16,8 @@ export async function visitorCountry(request: Request): Promise<string | null> {
     const c = request.headers.get(h)?.toUpperCase();
     if (valid(c) && c !== 'XX') return c;
   }
-  const ip = clientIp(request);
-  if (!ip || isPrivateIp(ip)) return null;
+  const ip = clientIp(request.headers);
+  if (ip === 'unknown' || isPrivateIp(ip)) return null;
   return lookupCountry(ip);
 }
 
@@ -44,4 +44,16 @@ export async function lookupCountry(ip: string): Promise<string | null> {
     console.warn('[geo] lookup failed', ip, err instanceof Error ? err.message : err);
     return null;
   }
+}
+
+/** Loopback and private ranges, where a geo lookup can't say anything. */
+export function isPrivateIp(ip: string): boolean {
+  return (
+    /^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(ip) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ||
+    ip === '::1' ||
+    /^f[cd][0-9a-f]{2}:/i.test(ip) ||
+    /^fe80:/i.test(ip) ||
+    ip.startsWith('::ffff:127.')
+  );
 }

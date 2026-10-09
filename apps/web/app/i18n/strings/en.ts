@@ -18,7 +18,7 @@ export const en = {
   chrome: {
     skipToContent: 'Skip to content',
     homeLink: 'shiqi.si home',
-    footer: 'Hand-written in React + TypeScript',
+    footer: 'Hand-written in React + TypeScript · No third-party tracking',
     components: 'Components',
   },
   language: {
@@ -272,9 +272,31 @@ export const en = {
   },
   notes: {
     title: 'Notes',
-    description: 'Thoughts on pixels, standards and this website.',
-    lede: 'Some thoughts. Course notes will live here too.',
-    back: '← NOTES',
+    description: 'A learning journal, commonplace notes and essays, organized by folder and topic.',
+    lede: 'What I learn each day goes in the journal; knowledge that stands on its own goes in the commonplace book.',
+    folders: {
+      journal: {
+        title: 'Journal',
+        description: 'A dated log of what I built and learned each day, mistakes included.',
+      },
+      commonplace: {
+        title: 'Commonplace',
+        description:
+          'Evergreen notes on one topic each: Docker, SSH, DNS, Kubernetes and the rest.',
+      },
+      essays: {
+        title: 'Essays',
+        description: 'Thoughts on pixels, standards and this site.',
+      },
+    },
+    folderMissing: 'No such folder',
+    topics: 'Topics',
+    latest: 'Latest',
+    count: '{n} notes',
+    topicTitle: '#{topic} · Notes',
+    topicDescription: 'Every note tagged #{topic}.',
+    allNotes: '← All notes',
+    back: 'NOTES',
     missing: 'No such note',
     machine: 'Machine-translated from English.',
     original: 'Read the original',

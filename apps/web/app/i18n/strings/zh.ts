@@ -17,7 +17,7 @@ export const zh: DeepPartial<Strings> = {
   chrome: {
     skipToContent: '跳到正文',
     homeLink: 'shiqi.si 首页',
-    footer: 'React + TypeScript 手写',
+    footer: 'React + TypeScript 手写 · 无第三方追踪',
     components: '组件库',
   },
   language: {
@@ -270,9 +270,30 @@ export const zh: DeepPartial<Strings> = {
   },
   notes: {
     title: '笔记',
-    description: '关于像素、标准和这个网站的一些想法。',
-    lede: '一些想法。以后课程笔记也会放在这里。',
-    back: '← 笔记',
+    description: '学习流水、杂学和随想：按文件夹和话题整理的笔记。',
+    lede: '每天学了什么记在学习流水里；能单独成篇的知识整理进杂学。',
+    folders: {
+      journal: {
+        title: '学习流水',
+        description: '按日期记下每天做了什么、学到什么，踩过的坑也算。',
+      },
+      commonplace: {
+        title: '杂学',
+        description: '每篇讲透一个主题：Docker、SSH、DNS、Kubernetes……',
+      },
+      essays: {
+        title: '随想',
+        description: '关于像素、标准和这个网站的一些想法。',
+      },
+    },
+    folderMissing: '没有这个文件夹',
+    topics: '话题',
+    latest: '最近',
+    count: '{n} 篇笔记',
+    topicTitle: '#{topic} · 笔记',
+    topicDescription: '所有带 #{topic} 话题的笔记。',
+    allNotes: '← 全部笔记',
+    back: '笔记',
     missing: '没有这篇笔记',
     machine: '本文由英文原文机器翻译。',
     original: '看英文原文',

@@ -80,9 +80,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <List className="flush">
             {latestNotes(LATEST).map((n) => (
               <ListItem
-                key={n.slug}
+                key={n.href}
                 as={Link}
-                to={`/notes/${n.slug}`}
+                to={n.href}
                 icon={<PixelIcon name="book" />}
                 title={loaderData.noteText[n.slug]?.title ?? n.title}
                 description={loaderData.noteText[n.slug]?.summary ?? n.summary}

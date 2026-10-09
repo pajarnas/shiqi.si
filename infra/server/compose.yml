@@ -1,5 +1,5 @@
 # Production stack for a small VM: the site, Redis, and Caddy for HTTPS.
-# bootstrap.sh writes .env next to this file (IMAGE, ACME_EMAIL); deploy.sh
+# bootstrap.sh writes .env next to this file (IMAGE, ACME_EMAIL, ADMIN_PASSWORD); deploy.sh
 # updates IMAGE. Run from this folder: `docker compose ps`, `docker compose logs -f web`.
 name: shiqi
 
@@ -10,8 +10,11 @@ services:
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
+      # Password for /admin/visits; the page is off while it is empty.
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_TIME_ZONE: ${ADMIN_TIME_ZONE:-America/New_York}
     # API keys live in secrets.env next to this file (never in git), e.g.
-    # ANTHROPIC_API_KEY=sk-ant-... for the translation service.
+    # AZURE_TRANSLATOR_KEY=... for the translation service.
     env_file:
       - path: secrets.env
         required: false

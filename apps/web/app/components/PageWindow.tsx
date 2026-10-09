@@ -7,19 +7,23 @@ import { PAGES } from '~/site';
 /** Every inner page is one window on the desktop with a standard header. */
 export function PageWindow({
   page,
+  file = page && PAGES[page].file,
+  eyebrow = page && PAGES[page].eyebrow,
   title,
   lede,
   children,
 }: {
   /** Which page: sets the title bar (like a file name) and the eyebrow. */
-  page: keyof typeof PAGES;
+  page?: keyof typeof PAGES;
+  /** Title bar text, for pages not listed in PAGES. */
+  file?: string;
+  eyebrow?: string;
   title: string;
   lede?: ReactNode;
   children: ReactNode;
 }) {
-  const { file, eyebrow } = PAGES[page];
   return (
-    <Window title={file}>
+    <Window title={file ?? ''}>
       <PageHeader eyebrow={eyebrow} title={title} lede={lede} />
       {children}
     </Window>

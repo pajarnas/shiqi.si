@@ -1,0 +1,73 @@
+export const frontmatter = {
+  title: 'Writing server setup scripts in bash',
+  date: '2026-10-09',
+  summary:
+    'Strict mode, quoting traps, idempotency, waiting with timeouts, apt locks, and catching mistakes in CI.',
+  topics: ['bash', 'linux', 'automation'],
+};
+
+## Start strict
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+```
+
+- `-e`: stop at the first failing command.
+- `-u`: using an unset variable is an error, not an empty string.
+- `-o pipefail`: a pipeline fails if any part fails, not only the last.
+
+Required inputs fail fast with a message:
+
+```bash
+: "${ACME_EMAIL:?Set ACME_EMAIL, the email for certificate notices}"
+```
+
+## Quoting traps
+
+- Keep apostrophes out of messages inside `${var:?message}`. Bash can read the `'` as the start of a quoted string, and the error appears at the very end of the file as `unexpected EOF while looking for matching ...`.
+- Always quote expansions: `"$file"`, `"${array[@]}"`.
+- In a heredoc, `<<EOF` expands variables and `<<'EOF'` does not.
+
+## Catch it before the server does
+
+`bash -n script.sh` parses a script without running it. Run it in CI over every script, along with `shellcheck` if you can. A syntax error found by CI costs a minute; found on a server, it costs a round trip with whoever is at the keyboard.
+
+## Idempotent: safe to run twice
+
+Every step checks before it acts, so a half-finished run can simply be repeated:
+
+```bash
+if ! swapon --show | grep -q /swapfile; then
+  sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+  sudo mkswap /swapfile && sudo swapon /swapfile
+fi
+grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+## Waiting, visibly
+
+Never wait silently: a script that says nothing looks frozen. Print what you are waiting for, poll, and give up after a timeout.
+
+```bash
+echo "Waiting for the site to answer..."
+for _ in $(seq 1 30); do
+  curl -fsS -o /dev/null http://127.0.0.1/ && break
+  sleep 5
+done
+```
+
+## apt on a fresh Ubuntu VM
+
+Right after boot, `unattended-upgrades` often holds the dpkg lock (`Could not get lock /var/lib/dpkg/lock-frontend`). Never delete the lock file. Tell apt to wait instead:
+
+```bash
+sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=900 install -y git curl
+```
+
+`DEBIAN_FRONTEND=noninteractive` stops packages from opening prompts that a script can't answer.
+
+## Running scripts by hand
+
+- Paste one command per line, or join them deliberately with `&&`. A missing newline turns `bootstrap.sh` and `cd` into `bootstrap.shcd`.
+- `cd ~/project && git pull && bash infra/bootstrap.sh` makes each step depend on the previous one succeeding.

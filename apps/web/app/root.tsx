@@ -10,8 +10,10 @@ import {
   Scripts,
   ScrollRestoration,
   isRouteErrorResponse,
+  type ShouldRevalidateFunction,
 } from 'react-router';
 import type { Route } from './+types/root';
+import { recordVisitMiddleware } from './features/visits/middleware.server';
 import { HTML_LANG, I18nProvider, useI18n, type Locale } from './i18n';
 import { useRootData } from './i18n/root-data';
 import { fillGaps } from './i18n/gaps.server';
@@ -28,6 +30,16 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export const middleware: Route.MiddlewareFunction[] = [recordVisitMiddleware];
+
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+  currentUrl,
+  nextUrl,
+  defaultShouldRevalidate,
+}) => currentUrl.pathname !== nextUrl.pathname || defaultShouldRevalidate;
+
+// Reruns whenever the path changes (see shouldRevalidate), so every client-side
+// navigation reaches the server and the visit middleware sees it.
 export async function loader({ request }: Route.LoaderArgs) {
   const { locale, source } = await resolveLocale(request);
   return { locale, source, extra: await fillGaps(locale) };

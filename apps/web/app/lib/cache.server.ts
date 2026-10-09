@@ -1,5 +1,5 @@
 // A tiny string cache: Redis when it's there, a bounded in-process map when it isn't.
-import { getRedis } from './redis.server';
+import { getRedis, within } from './redis.server';
 
 const MEMORY_LIMIT = 5000;
 const memory = new Map<string, { value: string; expires: number }>();
@@ -9,7 +9,7 @@ export async function cacheGet(keys: string[]): Promise<(string | null)[]> {
   const redis = await getRedis();
   if (redis) {
     try {
-      return await redis.mGet(keys);
+      return await within(redis.mGet(keys), 1000);
     } catch (err) {
       console.error('[cache] read failed', err);
     }
@@ -29,7 +29,7 @@ export async function cacheSet(entries: [string, string][], ttlSeconds: number):
       const multi = redis.multi();
       for (const [k, v] of entries)
         multi.set(k, v, { expiration: { type: 'EX', value: ttlSeconds } });
-      await multi.exec();
+      await within(multi.exec(), 1000);
       return;
     } catch (err) {
       console.error('[cache] write failed', err);

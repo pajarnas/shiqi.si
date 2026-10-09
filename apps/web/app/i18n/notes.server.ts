@@ -4,10 +4,11 @@
 import { createElement, type ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Locale } from './locales';
+import type { NoteText } from './notes';
 import { translateTexts, translationEnabled, within } from './translate.server';
 
 interface NoteLike {
-  slug: string;
+  href: string;
   title: string;
   summary: string;
 }
@@ -16,9 +17,7 @@ interface NoteLike {
 const META_WAIT_MS = 4000;
 const BODY_WAIT_MS = 10_000;
 
-export type NoteText = Record<string, { title: string; summary: string }>;
-
-/** Translated title and summary per slug; notes that couldn't be translated are left out. */
+/** Translated title and summary per note href; notes that couldn't be translated are left out. */
 export async function localizeNoteMeta(
   notes: readonly NoteLike[],
   locale: Locale,
@@ -34,7 +33,7 @@ export async function localizeNoteMeta(
   notes.forEach((n, i) => {
     const title = out[2 * i];
     const summary = out[2 * i + 1];
-    if (title && summary) result[n.slug] = { title, summary };
+    if (title && summary) result[n.href] = { title, summary };
   });
   return result;
 }
