@@ -1,0 +1,30 @@
+export const frontmatter = {
+  title: 'CI/CD with GitHub Actions and GHCR',
+  date: '2026-10-09',
+  summary:
+    'Check, build an image, push it to the GitHub Container Registry, deploy over SSH: one workflow file.',
+  topics: ['github-actions', 'ci-cd', 'docker', 'deployment'],
+};
+
+A pipeline in three jobs, each depending on the previous one:
+
+1. **Check** on every push and pull request: install with a frozen lockfile, format check, lint, type check, tests, build, and `bash -n` on shell scripts.
+2. **Image**, only on `main`: build the Docker image and push it to `ghcr.io/<owner>/<repo>`, tagged with the commit SHA and `latest`. `docker/build-push-action` with `platforms: linux/amd64,linux/arm64` builds for both Intel VMs and Arm servers.
+3. **Deploy**: SSH to the server and switch it to the new tag.
+
+## GHCR
+
+- The workflow logs in with the built-in `GITHUB_TOKEN`; the job needs `permissions: packages: write`.
+- An image built from a public repository is public too, so the server can `docker pull` without credentials. For a private one, make the package public or `docker login ghcr.io` on the server.
+- Tagging by commit SHA makes rollbacks trivial: deploy the previous tag.
+
+## Deploying over SSH safely
+
+- Generate a key used **only** by CI, add its public half to the server's `authorized_keys`, and store the private half as a repository or environment secret. Delete the local copy after.
+- Store the server's host key (`ssh-keyscan <host>`) as a secret too and write it to `known_hosts`, so CI verifies it is talking to your server.
+- Gate the job on a variable (`if: vars.DEPLOY_ENABLED == 'true'`) so the pipeline stays green before the server exists.
+- The remote command should be a script in the repository (`git pull && bash infra/deploy.sh <image>`), not logic hidden in the workflow.
+
+## Secrets vs variables
+
+Secrets are encrypted and masked in logs (keys, hosts, tokens). Variables are plain configuration (feature flags such as `DEPLOY_ENABLED`). Both live under the repository's Settings, or per environment such as `production`.

@@ -1,4 +1,4 @@
-import { NOTES } from '~/content/notes';
+import { FOLDERS, NOTES } from '~/content/notes';
 import { SITE, TOOLS, TOYS } from '~/site';
 
 export function loader() {
@@ -9,7 +9,8 @@ export function loader() {
     '/ui',
     ...TOYS.map((t) => t.path),
     ...TOOLS.map((t) => t.path),
-    ...NOTES.map((n) => `/notes/${n.slug}`),
+    ...FOLDERS.map((f) => `/notes/${f.id}`),
+    ...NOTES.map((n) => n.href),
   ];
   const body =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +

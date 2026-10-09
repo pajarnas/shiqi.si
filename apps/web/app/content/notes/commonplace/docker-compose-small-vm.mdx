@@ -1,0 +1,76 @@
+export const frontmatter = {
+  title: 'Docker Compose on a small VM',
+  date: '2026-10-09',
+  summary:
+    'Running a web app, Redis and a reverse proxy on 1 GB of RAM: compose.yml, limits, health checks and the everyday commands.',
+  topics: ['docker', 'docker-compose', 'deployment', 'redis'],
+};
+
+Docker Compose describes several containers in one file and starts them together. On a single small server it does most of what Kubernetes would, for a fraction of the memory.
+
+## The shape of compose.yml
+
+```yaml
+name: shiqi
+services:
+  web:
+    image: ${IMAGE} # read from .env next to the file
+    restart: unless-stopped
+    environment:
+      REDIS_URL: redis://redis:6379
+    mem_limit: 256m
+    healthcheck:
+      test: [CMD, wget, -qO-, http://127.0.0.1:3000/api/health]
+      interval: 30s
+    depends_on: [redis]
+  redis:
+    image: redis:8.8.3-alpine
+    command: [redis-server, --appendonly, 'yes', --maxmemory, 64mb, --maxmemory-policy, allkeys-lru]
+    volumes: [redis:/data]
+    mem_limit: 96m
+  caddy:
+    image: caddy:2.10.2-alpine
+    ports: ['80:80', '443:443']
+    volumes: [./Caddyfile:/etc/caddy/Caddyfile:ro, caddy_data:/data]
+volumes:
+  redis:
+  caddy_data:
+```
+
+Things worth knowing:
+
+- **Service names are hostnames.** Inside the Compose network, `redis` resolves to the Redis container, so the app connects to `redis://redis:6379`. Only the proxy publishes ports to the outside.
+- **`.env`** next to `compose.yml` fills in `${VARIABLES}`. Keep secrets there, not in the file you commit, and `chmod 600` it.
+- **Pin image versions** (`redis:8.8.3-alpine`, not `redis:latest`) so a restart never surprises you.
+- **Named volumes** (`redis:`, `caddy_data:`) survive container recreation. Caddy's volume holds the TLS certificates: losing it means asking Let's Encrypt again, which is rate-limited.
+- **`restart: unless-stopped`** brings everything back after a reboot.
+
+## Memory and safety limits
+
+On a small machine, give every container a ceiling so one leak cannot take the whole server down:
+
+- `mem_limit` per container, and for Redis also `--maxmemory` with an eviction policy.
+- Swap (1 to 2 GB) as a cushion, with `vm.swappiness=10` so it is only used under pressure.
+- Hardening that costs nothing: `read_only: true` with a `tmpfs` for `/tmp`, `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`.
+
+Budget from 2026-10-09: web 256 MB, Redis 96 MB, Caddy 128 MB, about 200 MB actually used.
+
+## Everyday commands
+
+Run them in the folder that holds `compose.yml`:
+
+```bash
+docker compose ps                 # what is running, health status
+docker compose logs -f web        # follow one service's logs
+docker compose pull web && docker compose up -d web   # roll out a new image
+docker compose restart web
+docker compose exec redis redis-cli
+docker stats --no-stream          # real memory use per container
+docker image prune -f             # reclaim disk from old images
+```
+
+Deploying a new version is just changing `IMAGE` in `.env` and running `up -d` again; rolling back is the same with the old tag. That is all `infra/deploy.sh` does.
+
+## When to move to Kubernetes
+
+When there is more than one machine, or you need rolling updates without downtime, autoscaling, or lots of services. Until then Compose is simpler and lighter. See [Kubernetes on a small node](/notes/commonplace/k3s-on-small-nodes).

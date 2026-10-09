@@ -1,33 +1,68 @@
-import { Card, List, ListItem, PixelIcon } from '@shiqi/ui';
+import { Card, List, ListItem, PixelIcon, Section } from '@shiqi/ui';
 import { Link } from 'react-router';
+import { NoteList, TopicTags } from '~/components/NoteList';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
-import { NOTES } from '~/content/notes';
+import { FOLDERS, NOTES, TOPICS, latestNotes, notesIn, notesTagged } from '~/content/notes';
+import type { Route } from './+types/index';
 
-export const meta = () => pageMeta('笔记', '关于像素、标准和这个网站的一些想法。');
+export function loader({ request }: Route.LoaderArgs) {
+  return { topic: new URL(request.url).searchParams.get('topic') };
+}
 
-export default function NotesIndex() {
+export const meta: Route.MetaFunction = ({ loaderData }) =>
+  loaderData?.topic
+    ? pageMeta(`#${loaderData.topic} · 笔记`, `所有带 #${loaderData.topic} 话题的笔记。`)
+    : pageMeta('笔记', '学习流水、杂学和随想：按文件夹和话题整理的笔记。');
+
+export default function NotesIndex({ loaderData: { topic } }: Route.ComponentProps) {
+  if (topic) {
+    const tagged = notesTagged(topic);
+    return (
+      <PageWindow
+        file={`notes/?topic=${topic}`}
+        eyebrow="TOPIC"
+        title={`#${topic}`}
+        lede={
+          <>
+            {tagged.length} 篇笔记 · <Link to="/notes">← 全部笔记</Link>
+          </>
+        }
+      >
+        <NoteList notes={tagged} />
+      </PageWindow>
+    );
+  }
+
   return (
     <PageWindow
       file="notes/"
       eyebrow="NOTES"
       title="笔记"
-      lede="一些想法。以后课程笔记也会放在这里。"
+      lede="每天学了什么记在学习流水里；能单独成篇的知识整理进杂学。"
     >
       <Card>
         <List>
-          {NOTES.map((n) => (
+          {FOLDERS.map((f) => (
             <ListItem
-              key={n.slug}
+              key={f.id}
               as={Link}
-              to={`/notes/${n.slug}`}
-              icon={<PixelIcon name="book" />}
-              title={n.title}
-              description={n.summary}
-              meta={<time dateTime={n.date}>{n.date}</time>}
+              to={`/notes/${f.id}`}
+              icon={<PixelIcon name={f.icon} />}
+              title={`${f.title} · ${f.subtitle}`}
+              description={f.description}
+              meta={`${notesIn(f.id).length} ›`}
             />
           ))}
         </List>
       </Card>
+
+      <Section eyebrow="TOPICS" title="话题" description={`${NOTES.length} 篇笔记`}>
+        <TopicTags topics={TOPICS.map((t) => t.topic)} />
+      </Section>
+
+      <Section eyebrow="LATEST" title="最近">
+        <NoteList notes={latestNotes(5)} />
+      </Section>
     </PageWindow>
   );
 }

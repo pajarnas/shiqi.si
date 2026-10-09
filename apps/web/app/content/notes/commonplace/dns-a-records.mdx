@@ -1,0 +1,36 @@
+export const frontmatter = {
+  title: 'DNS: A records and TTL',
+  date: '2026-10-09',
+  summary: 'How a domain name finds a server, what TTL means, and how to check propagation.',
+  topics: ['dns', 'networking'],
+};
+
+DNS turns a name like `shiqi.si` into an IP address. You manage the records at your registrar (or whichever DNS host the domain points to).
+
+## The records you need for one server
+
+- **A**: name → IPv4 address. `@` means the bare domain itself, `www` means `www.shiqi.si`.
+- **AAAA**: the same for IPv6. Only add it if the server really has a public IPv6 address.
+- **CNAME**: name → another name. `www` can be a CNAME to the bare domain instead of a second A record. The bare domain itself cannot be a CNAME.
+
+Remove any parking-page A record on `@` first; two A records on the same name mean visitors are split between them.
+
+## TTL
+
+TTL (time to live) is in **seconds**: how long resolvers may cache the answer. 300 is five minutes. Use a short TTL while you are still moving things around, and a longer one (3600 or more) once the address is stable.
+
+"Not yet propagated" just means caches around the world still hold the old answer (or none). New records usually show up within minutes; changes can take as long as the old TTL.
+
+## Checking
+
+```bash
+dig +short shiqi.si          # the A record your resolver sees
+dig +short shiqi.si @1.1.1.1 # ask a specific public resolver
+dig shiqi.si ANY +noall +answer
+```
+
+On a Mac without `dig`, `nslookup shiqi.si` works too.
+
+## Why HTTPS waits for DNS
+
+Let's Encrypt proves you control a domain by connecting to it. Until the A record points at your server, the certificate request fails, so a web server with automatic HTTPS will keep retrying until DNS is right. See [Automatic HTTPS with Caddy](/notes/commonplace/caddy-https).
