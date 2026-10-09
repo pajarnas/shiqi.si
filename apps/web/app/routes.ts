@@ -19,6 +19,7 @@ export default [
     ]),
     ...prefix('notes', [index('routes/notes/index.tsx'), route(':slug', 'routes/notes/note.tsx')]),
     route('ui', 'routes/ui.tsx'),
+    route('admin/visits', 'routes/admin/visits.tsx'),
     route('*', 'routes/not-found.tsx'),
   ]),
   ...prefix('api', [route('health', 'routes/api/health.ts')]),

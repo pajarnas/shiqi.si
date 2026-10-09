@@ -75,6 +75,23 @@ DNS 生效后，第一次访问时 Caddy 就会去拿证书。拿不到时查日
 
 之后每次推到 `main`：检查 → 构建镜像 → 自动滚动更新。
 
+## 访客记录
+
+每次打开页面（包括站内跳转），网站会把 IP、页面、浏览器和来源记进 Redis：最近 2 万条，加上每个页面的累计人数。IP 取自 Caddy 加的 `X-Forwarded-For`，Caddy 会丢掉客户端自己伪造的那份。
+
+后台：<https://shiqi.si/admin/visits>，用户名随便填，密码是服务器上 `infra/server/.env` 里的 `ADMIN_PASSWORD`（没设密码时这个页面是 404）。
+
+在 2026-10-09 之前跑过 bootstrap 的服务器，要手动加一次密码（在服务器 `saige@shiqi-1` 上）：
+
+```bash
+cd ~/shiqi.si/infra/server
+echo "ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .env
+docker compose up -d web
+grep ADMIN_PASSWORD .env      # 这就是密码
+```
+
+时间默认按美东时间显示，想换就在 `.env` 里加 `ADMIN_TIME_ZONE=Asia/Shanghai`，再 `docker compose up -d web`。
+
 ## 以后：Kafka
 
 Kafka 需要约 1 GB 内存，1 GB 的机器放不下。等有更大的节点（比如 Oracle Cloud 免费的 Arm 机器），在那台机器上：

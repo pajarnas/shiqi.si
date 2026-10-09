@@ -45,9 +45,13 @@ sudo usermod -aG docker "$USER"
 
 log "Settings ($SERVER_DIR/.env)"
 umask 077
+# Keep the admin password across re-runs; make one up the first time.
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(sed -n 's/^ADMIN_PASSWORD=//p' "$SERVER_DIR/.env" 2>/dev/null || true)}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -hex 16)}"
 cat >"$SERVER_DIR/.env" <<ENV
 IMAGE=ghcr.io/${GITHUB_OWNER,,}/shiqi.si:latest
 ACME_EMAIL=${ACME_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
 ENV
 
 log "Start the site"
@@ -69,3 +73,4 @@ sudo docker compose ps
 free -h
 echo
 echo "Open https://shiqi.si once DNS points here; Caddy fetches the certificate on the first visit."
+echo "Visitor log: https://shiqi.si/admin/visits (password: grep ADMIN_PASSWORD $SERVER_DIR/.env)"

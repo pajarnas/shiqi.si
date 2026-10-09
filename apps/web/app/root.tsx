@@ -10,8 +10,10 @@ import {
   Scripts,
   ScrollRestoration,
   isRouteErrorResponse,
+  type ShouldRevalidateFunction,
 } from 'react-router';
 import type { Route } from './+types/root';
+import { recordVisitMiddleware } from './features/visits/middleware.server';
 
 export const links: Route.LinksFunction = () => [
   { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
@@ -23,6 +25,17 @@ export const links: Route.LinksFunction = () => [
     crossOrigin: 'anonymous',
   },
 ];
+
+export const middleware: Route.MiddlewareFunction[] = [recordVisitMiddleware];
+
+// An empty loader that reruns whenever the path changes, so every client-side
+// navigation reaches the server and the visit middleware sees it.
+export const loader = () => null;
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+  currentUrl,
+  nextUrl,
+  defaultShouldRevalidate,
+}) => currentUrl.pathname !== nextUrl.pathname || defaultShouldRevalidate;
 
 export function Layout({ children }: { children: ReactNode }) {
   return (

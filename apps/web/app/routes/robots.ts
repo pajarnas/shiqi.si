@@ -2,7 +2,7 @@ import { SITE } from '~/site';
 
 export function loader() {
   return new Response(
-    `User-agent: *\nAllow: /\nDisallow: /api/\n\nSitemap: ${SITE.url}/sitemap.xml\n`,
+    `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\n\nSitemap: ${SITE.url}/sitemap.xml\n`,
     {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
