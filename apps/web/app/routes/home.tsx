@@ -70,9 +70,9 @@ export default function Home() {
           <List className="flush">
             {latestNotes(4).map((n) => (
               <ListItem
-                key={n.slug}
+                key={n.href}
                 as={Link}
-                to={`/notes/${n.slug}`}
+                to={n.href}
                 icon={<PixelIcon name="book" />}
                 title={n.title}
                 description={n.summary}

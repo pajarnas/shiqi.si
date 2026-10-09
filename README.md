@@ -35,7 +35,7 @@ docker compose up -d
 apps/web/              网站：React Router（服务端渲染）+ MDX
   app/routes/          页面和 API（routes.ts 是路由表）
   app/features/        纯逻辑（工具的算法、画板模型），都有测试
-  app/content/notes/   笔记，一篇一个 .mdx
+  app/content/notes/   笔记：journal/ 学习流水、commonplace/ 杂学、essays/ 随想，一篇一个 .mdx
   app/site.ts          导航、玩具和工具清单，首页和 sitemap 都读它
 packages/ui/           @shiqi/ui 组件库：主题、tokens、React 组件
 packages/pixel/        @shiqi/pixel 像素绘图库：不依赖框架
@@ -55,7 +55,10 @@ infra/                 服务器初始化和部署脚本；server/ 是 Docker Co
 
 ## 加东西
 
-- **一篇笔记**：在 `apps/web/app/content/notes/` 加一个 `.mdx`，导出 `frontmatter`（title、date、summary）。可以直接 `import { Quiz } from '@shiqi/ui'`。
+- **一篇笔记**：在 `apps/web/app/content/notes/<文件夹>/` 加一个 `.mdx`，导出 `frontmatter`（title、date、summary、topics）。文件夹在 `content/notes/folders.ts` 里登记。可以直接 `import { Quiz } from '@shiqi/ui'`。
+  - `journal/`（学习流水）：每天一篇，文件名 `YYYY-MM-DD-<主题>.mdx`，按时间记当天做了什么、踩了什么坑、学到什么。
+  - `commonplace/`（杂学）：一篇讲透一个通用主题（Docker、SSH、k8s…），不绑定某一天；已有的就更新它，别重复写。
+  - 笔记正文用英文；topics 用小写连字符（`docker-compose`），尽量复用已有的话题。
 - **一个工具**：逻辑写在 `app/features/tools/x.ts` 并配 `x.test.ts`，页面写在 `app/routes/tools/x.tsx`，在 `routes.ts` 和 `site.ts` 各加一行。
 - **一个 API**：在 `app/routes/api/` 加一个只导出 `loader` / `action` 的文件，在 `routes.ts` 的 `api` 前缀下注册。
 

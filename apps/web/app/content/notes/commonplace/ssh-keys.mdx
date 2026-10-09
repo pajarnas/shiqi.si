@@ -1,0 +1,65 @@
+export const frontmatter = {
+  title: "SSH keys and knowing which machine you're on",
+  date: '2026-10-09',
+  summary:
+    'Key pairs, host keys, known_hosts, and the shell prompt as your most important piece of information.',
+  topics: ['ssh', 'linux', 'security'],
+};
+
+## Key pairs
+
+SSH logs in with a key pair instead of a password.
+
+```bash
+ssh-keygen -t ed25519 -C "a label"   # creates ~/.ssh/id_ed25519 and id_ed25519.pub
+cat ~/.ssh/id_ed25519.pub              # the public half
+```
+
+- **Private key** (`id_ed25519`): stays on the machine that created it. Never paste, upload or email it.
+- **Public key** (`id_ed25519.pub`): safe to share. Servers keep the public keys they accept in `~/.ssh/authorized_keys`, one per line.
+- `ed25519` is the modern default: short keys, fast, secure. Use it unless something old requires RSA.
+- The `-C` comment is only a label at the end of the public key. Change it in place with `ssh-keygen -c -C "new" -f ~/.ssh/id_ed25519`; regenerating creates a different key, which then has to replace the old one on every server.
+- An optional passphrase encrypts the private key on disk; `ssh-agent` (and the macOS keychain) remembers it so you are not asked every time.
+
+## Host keys and known_hosts
+
+The server has its own key pair too. The first time you connect, SSH shows its fingerprint and asks whether to trust it:
+
+```
+ED25519 key fingerprint is SHA256:...
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+```
+
+Type `yes` (the whole word). The fingerprint is saved in `~/.ssh/known_hosts`, and from then on SSH warns loudly if the server's key ever changes, which is how it detects someone in the middle. If you rebuilt the server yourself, remove the stale entry with `ssh-keygen -R <host>`.
+
+## Reading errors
+
+- `Permission denied (publickey)`: this machine does not have a private key the server accepts. Usually you are on the wrong machine, or the server has a different public key.
+- `Connection timed out`: network level. A firewall or security group blocks port 22, or the server is down.
+- The connection opens but then hangs: the server is alive but overloaded, often out of memory.
+
+## Which machine am I on?
+
+The prompt tells you, and it is worth reading before every command:
+
+- `you@laptop ~ %` (zsh on a Mac): your own computer.
+- `user@server:~$` (bash on Linux): you are on the server, through SSH.
+- A web terminal in a cloud console (Azure Cloud Shell, Google Cloud Shell) is a third machine, a container that has neither your private key nor root.
+
+`exit` leaves an SSH session. When unsure, `hostname` and `whoami` answer the question.
+
+## Useful extras
+
+- `~/.ssh/config` gives a server a short name:
+
+  ```
+  Host shiqi
+    HostName 52.162.142.136
+    User saige
+  ```
+
+  Then `ssh shiqi` is enough.
+
+- A separate key per purpose (one for you, one for CI deploys) means you can revoke one without touching the other.
+
+Background: the day this came up is in [the go-live journal](/notes/journal/2026-10-09-shiqi-si-goes-live).

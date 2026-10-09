@@ -1,0 +1,43 @@
+export const frontmatter = {
+  title: 'Kubernetes on a small node',
+  date: '2026-10-09',
+  summary:
+    'What k3s is, what it costs in memory, how a 1 GB VM fails under it, and what to try instead.',
+  topics: ['kubernetes', 'k3s', 'linux', 'capacity-planning'],
+};
+
+## k3s
+
+k3s is a complete Kubernetes distribution in a single binary, aimed at small machines and edge devices. One command installs a single-node cluster with Traefik (ingress), CoreDNS, a local storage provisioner and a metrics server already running:
+
+```bash
+curl -sfL https://get.k3s.io | sh -
+sudo k3s kubectl get nodes
+sudo /usr/local/bin/k3s-uninstall.sh   # removes it again, cleanly
+```
+
+## What it costs
+
+The control plane (API server, scheduler, controller manager, embedded datastore) plus the bundled system pods use roughly **600 to 800 MB** before any of your own workloads run. Add-ons cost more: cert-manager alone is three more pods. The k3s docs list 2 GB as a sensible minimum for a server node; 4 GB is comfortable.
+
+## How a 1 GB node fails
+
+Not with a clean error, but by slowing down until things time out:
+
+- `kubectl` reports `TLS handshake timeout` or `request did not complete within requested timeout`.
+- Installing manifests times out half-way, leaving a broken half-installed add-on.
+- Finally SSH stops answering too, because the kernel is busy swapping and killing processes.
+
+Checks while you still can get in: `free -h`, `uptime` (load average), `sudo journalctl -u k3s -n 50`, `dmesg | grep -i -E 'oom|killed'`. Recovery from outside: restart the VM from the cloud console.
+
+## Lessons for small clusters
+
+- Do the memory arithmetic before choosing the platform.
+- Waits in setup scripts need a timeout and a message; "the node exists" comes before "the node is Ready"; CRDs must exist before resources that use them (`no matches for kind ...` means they don't yet).
+- One heavy add-on at a time, and remove what failed before retrying.
+
+## Alternatives
+
+- **Docker Compose** for one machine ([Docker Compose on a small VM](/notes/commonplace/docker-compose-small-vm)).
+- A bigger node for the cluster, for example Oracle Cloud's free Arm instance, and keep the manifests ready for that day.
+- For learning only: `kind` or `minikube` on a laptop, where memory is plentiful.

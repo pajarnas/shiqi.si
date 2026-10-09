@@ -1,0 +1,49 @@
+export const frontmatter = {
+  title: 'Automatic HTTPS with Caddy',
+  date: '2026-10-09',
+  summary:
+    'Let’s Encrypt, the ACME protocol, and a Caddyfile that gets and renews certificates by itself.',
+  topics: ['https', 'caddy', 'networking', 'security'],
+};
+
+## ACME in one paragraph
+
+Let's Encrypt issues free TLS certificates through the **ACME** protocol. Your server asks for a certificate for `shiqi.si`; Let's Encrypt replies with a challenge; your server proves it controls the domain by answering it over HTTP on port 80 (HTTP-01) or inside the TLS handshake on port 443 (TLS-ALPN-01). Certificates last 90 days and are renewed automatically, so the only thing you ever hand over is an email address for expiry warnings.
+
+What has to be true for it to work:
+
+- DNS for the name points at this server ([DNS: A records and TTL](/notes/commonplace/dns-a-records)).
+- Ports 80 and 443 are open in the cloud firewall and not used by anything else.
+- The certificate storage survives restarts, or you will hit Let's Encrypt's rate limits.
+
+## Caddy
+
+Caddy is a web server that does all of the above by default. A whole production config:
+
+```
+{
+	email {$ACME_EMAIL}
+}
+
+shiqi.si {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+www.shiqi.si {
+	redir https://shiqi.si{uri} permanent
+}
+```
+
+- A site block named after a domain means "get a certificate for it and serve HTTPS". Plain HTTP is redirected to HTTPS automatically.
+- `reverse_proxy web:3000` forwards to the app container (Compose service names are hostnames).
+- `{$ACME_EMAIL}` reads an environment variable.
+- Certificates live in `/data` inside the container; mount a volume there.
+
+Debugging: `docker compose logs caddy` shows every ACME attempt. The usual failures are DNS not pointing here yet or port 80 blocked.
+
+## Alternatives
+
+- **cert-manager** on Kubernetes: powerful, but three extra pods; too heavy for a 1 GB node.
+- **Traefik's built-in ACME**: the natural choice if Traefik is already the ingress (as in k3s).
+- **certbot + nginx**: the classic setup, with more moving parts to maintain.
