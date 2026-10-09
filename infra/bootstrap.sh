@@ -14,6 +14,19 @@ SWAP_SIZE="${SWAP_SIZE:-2G}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 log() { printf '\n\033[1;33m==> %s\033[0m\n' "$*"; }
+# A fresh 1 GB node answers slowly at first, and cert-manager's webhook takes a
+# moment to accept requests; retry instead of failing the whole run.
+retry() {
+  local i
+  for i in 1 2 3 4 5 6; do
+    "$@" && return 0
+    echo "Attempt $i failed; retrying in 20s..." >&2
+    sleep 20
+  done
+  return 1
+}
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
 
 log "Swap ($SWAP_SIZE): small VMs need it for k3s"
 if ! swapon --show | grep -q /swapfile; then
@@ -48,11 +61,11 @@ until kubectl get node -o name 2>/dev/null | grep -q node/; do sleep 2; done
 kubectl wait --for=condition=Ready node --all --timeout=180s
 
 log "cert-manager $CERT_MANAGER_VERSION"
-kubectl apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
-kubectl -n cert-manager rollout status deploy/cert-manager-webhook --timeout=300s
+retry kubectl apply -f "https://github.com/cert-manager/cert-manager/releases/download/${CERT_MANAGER_VERSION}/cert-manager.yaml"
+retry kubectl -n cert-manager rollout status deploy/cert-manager-webhook --timeout=300s
 
 log "Let's Encrypt issuer"
-kubectl apply -f - <<YAML
+cat >"$TMP/issuer.yaml" <<YAML
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -68,9 +81,11 @@ spec:
           ingress:
             ingressClassName: traefik
 YAML
+retry kubectl apply -f "$TMP/issuer.yaml"
 
 log "Site: web + Redis + ingress"
-kubectl kustomize "$REPO_DIR/infra/k8s/base" | sed "s#ghcr.io/OWNER/#ghcr.io/${GITHUB_OWNER,,}/#" | kubectl apply -f -
+kubectl kustomize "$REPO_DIR/infra/k8s/base" | sed "s#ghcr.io/OWNER/#ghcr.io/${GITHUB_OWNER,,}/#" >"$TMP/site.yaml"
+retry kubectl apply -f "$TMP/site.yaml"
 kubectl -n shiqi rollout status deploy/web --timeout=300s || true
 
 log "Done"
