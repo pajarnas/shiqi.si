@@ -105,6 +105,8 @@ if kubectl get namespace cert-manager >/dev/null 2>&1; then
 fi
 
 log "Site: web + Redis + ingress"
+# Traefik's CRDs (Middleware etc.) arrive a little after the node is Ready.
+wait_for "Traefik's CRDs" kubectl get crd middlewares.traefik.io
 kubectl kustomize "$REPO_DIR/infra/k8s/base" | sed "s#ghcr.io/OWNER/#ghcr.io/${GITHUB_OWNER,,}/#" >"$TMP/site.yaml"
 retry kubectl apply -f "$TMP/site.yaml"
 kubectl -n shiqi rollout status deploy/web --timeout=300s || true
