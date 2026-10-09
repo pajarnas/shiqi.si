@@ -58,5 +58,4 @@ export const PAGES = {
   json: { file: 'tools/json', eyebrow: 'JSON' },
   notes: { file: 'notes/', eyebrow: 'NOTES' },
   ui: { file: 'ui/', eyebrow: '@shiqi/ui' },
-  notFound: { file: '404', eyebrow: '404' },
 } as const;
