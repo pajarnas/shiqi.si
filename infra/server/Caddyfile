@@ -1,0 +1,14 @@
+# Caddy gets and renews Let's Encrypt certificates on its own and redirects
+# plain HTTP to HTTPS.
+{
+	email {$ACME_EMAIL}
+}
+
+shiqi.si {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+www.shiqi.si {
+	redir https://shiqi.si{uri} permanent
+}

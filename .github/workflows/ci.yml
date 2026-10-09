@@ -21,7 +21,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - name: Shell syntax
-        run: for f in infra/*.sh; do bash -n "$f"; done
+        run: for f in infra/*.sh infra/k8s/*.sh; do bash -n "$f"; done
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
@@ -84,4 +84,4 @@ jobs:
           printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           ssh -i ~/.ssh/deploy "$USER@$HOST" \
-            "export KUBECONFIG=\$HOME/.kube/config; kubectl -n shiqi set image deploy/web web=$IMAGE && kubectl -n shiqi rollout status deploy/web --timeout=300s"
+            "cd ~/shiqi.si && git pull -q --ff-only && bash infra/deploy.sh $IMAGE"

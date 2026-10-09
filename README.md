@@ -39,7 +39,7 @@ apps/web/              网站：React Router（服务端渲染）+ MDX
   app/site.ts          导航、玩具和工具清单，首页和 sitemap 都读它
 packages/ui/           @shiqi/ui 组件库：主题、tokens、React 组件
 packages/pixel/        @shiqi/pixel 像素绘图库：不依赖框架
-infra/                 服务器初始化、k8s 清单、部署脚本
+infra/                 服务器初始化和部署脚本；server/ 是 Docker Compose，k8s/ 留给以后的大机器
 .github/workflows/     CI：检查 → 构建镜像 → 部署
 ```
 
@@ -61,7 +61,7 @@ infra/                 服务器初始化、k8s 清单、部署脚本
 
 ## 部署
 
-见 [docs/deploy.md](docs/deploy.md)。简单说：推到 `main` → GitHub Actions 检查并构建多架构镜像推到 GHCR → SSH 到服务器让 k3s 滚动更新。
+见 [docs/deploy.md](docs/deploy.md)。简单说：推到 `main` → GitHub Actions 检查并构建多架构镜像推到 GHCR → SSH 到服务器，用 Docker Compose 换上新镜像。
 
 ## 约定
 

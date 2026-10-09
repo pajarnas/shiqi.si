@@ -3,9 +3,13 @@
 服务器：Azure for Students，`shiqi-1`，Ubuntu 24.04，`northcentralus`，公网 IP `52.162.142.136`，B2ats v2（2 vCPU / 1 GB）。
 
 ```
-浏览器 ──HTTPS──▶ Traefik（k3s 自带，自己向 Let's Encrypt 申请、续期证书）
+浏览器 ──HTTPS──▶ Caddy（自动申请、续期 Let's Encrypt 证书）
                      ──▶ web（React Router, Node） ──▶ redis
+全部由 Docker Compose 管理（infra/server/compose.yml）
 ```
+
+1 GB 内存跑不动 k3s（实测会把机器拖死），所以这台机器用 Docker Compose。
+k8s 清单和 `infra/k8s/bootstrap-k3s.sh` 留着，等有 2 GB 以上的机器（比如 Oracle 免费 Arm）再用。
 
 ## 1. DNS（在域名注册商后台）
 
@@ -30,26 +34,26 @@
    ```
 
 3. 等 Actions 里的 **CI** 跑完：会生成镜像 `ghcr.io/<你的用户名>/shiqi.si`。
-4. 如果仓库是私有的：在 GitHub 的 Packages 页面把 `shiqi.si` 包改成 Public，或者在集群里配 `imagePullSecret`。
+4. 如果仓库是私有的：在 GitHub 的 Packages 页面把 `shiqi.si` 包改成 Public，或者在服务器上 `docker login ghcr.io`。
 
 ## 3. 初始化服务器（只做一次）
 
 ```bash
 ssh saige@52.162.142.136
-git clone https://github.com/<你的用户名>/shiqi.si.git && cd shiqi.si
+git clone https://github.com/<你的用户名>/shiqi.si.git && cd shiqi.si   # 必须克隆到 ~/shiqi.si，CI 部署会用这个路径
 ACME_EMAIL=<你的邮箱> GITHUB_OWNER=<你的用户名> bash infra/bootstrap.sh
 ```
 
-脚本会：加 2 GB swap、开自动安全更新、配置 Traefik 自动申请 Let's Encrypt 证书、装 k3s、部署网站和 Redis。1 GB 的机器内存紧，所以不用 cert-manager。
+脚本会：加 2 GB swap、开自动安全更新、装 Docker、用 Docker Compose 启动网站、Redis 和 Caddy。
 
 检查：
 
 ```bash
-kubectl -n shiqi get pods,ingress
+cd ~/shiqi.si/infra/server && docker compose ps
 curl -I https://shiqi.si
 ```
 
-DNS 生效后，Traefik 一般一两分钟就能拿到证书。证书没拿到时查日志：`kubectl -n kube-system logs deploy/traefik | grep -i acme`。
+DNS 生效后，第一次访问时 Caddy 就会去拿证书。拿不到时查日志：`docker compose logs caddy`。
 
 ## 4. 打开自动部署
 
@@ -73,9 +77,10 @@ DNS 生效后，Traefik 一般一两分钟就能拿到证书。证书没拿到�
 
 ## 以后：Kafka
 
-Kafka 需要约 1 GB 内存，1 GB 的机器放不下。等有更大的节点（比如 Oracle Cloud 免费的 Arm 机器）：
+Kafka 需要约 1 GB 内存，1 GB 的机器放不下。等有更大的节点（比如 Oracle Cloud 免费的 Arm 机器），在那台机器上：
 
 ```bash
+ACME_EMAIL=<你的邮箱> GITHUB_OWNER=<你的用户名> bash infra/k8s/bootstrap-k3s.sh
 kubectl apply -k infra/k8s/addons/kafka
 ```
 
@@ -83,9 +88,13 @@ kubectl apply -k infra/k8s/addons/kafka
 
 ## 常用运维
 
+在服务器上，先 `cd ~/shiqi.si/infra/server`：
+
 ```bash
-kubectl -n shiqi logs deploy/web -f            # 看日志
-kubectl -n shiqi rollout restart deploy/web    # 重启
-kubectl -n shiqi rollout undo deploy/web       # 回滚到上一个版本
-kubectl -n shiqi exec -it redis-0 -- redis-cli # 进 Redis
+docker compose ps                          # 看状态
+docker compose logs -f web                 # 看日志
+docker compose restart web                 # 重启
+bash ~/shiqi.si/infra/deploy.sh <镜像>     # 换到某个版本（回滚也用它）
+docker compose exec redis redis-cli        # 进 Redis
+free -h                                    # 看内存
 ```
