@@ -36,8 +36,8 @@ export default function SiteLayout() {
       </main>
       <footer className="site-footer ui-container">
         <p>
-          <span className="ui-pixel">© 2026 shiqi.si</span> · React + TypeScript 手写 · 无追踪、无
-          Cookie · <Link to="/ui">组件库</Link>
+          <span className="ui-pixel">© 2026 shiqi.si</span> · React + TypeScript 手写 ·
+          无第三方追踪、无 Cookie · <Link to="/ui">组件库</Link>
         </p>
       </footer>
     </>
