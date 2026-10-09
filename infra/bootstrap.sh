@@ -86,6 +86,7 @@ grep -q 'alias k=' "$HOME/.bashrc" || echo 'alias k=kubectl' >>"$HOME/.bashrc"
 wait_for() {
   local what="$1" deadline=$((SECONDS + 600))
   shift
+  echo "Waiting for $what (up to 10 minutes)..."
   until "$@" >/dev/null 2>&1; do
     ((SECONDS < deadline)) || { echo "Timed out waiting for $what" >&2; return 1; }
     sleep 5
