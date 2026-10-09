@@ -39,9 +39,9 @@ if ! swapon --show | grep -q /swapfile; then
 fi
 
 log "Packages and automatic security updates"
-sudo apt-get update -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
-sudo DEBIAN_FRONTEND=noninteractive apt-get install -y unattended-upgrades git curl
+sudo apt-get -o DPkg::Lock::Timeout=900 update -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=900 upgrade -y
+sudo DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=900 install -y unattended-upgrades git curl
 sudo dpkg-reconfigure -f noninteractive unattended-upgrades
 
 log "Traefik settings: Let's Encrypt via Traefik's built-in ACME"
