@@ -104,13 +104,20 @@ az cognitiveservices account create -n shiqi-translator -g shiqi \
 az cognitiveservices account keys list -n shiqi-translator -g shiqi --query key1 -o tsv
 ```
 
-（`-l global` 被学生订阅拒绝的话，换成 `-l northcentralus`，下面再多加一行 `AZURE_TRANSLATOR_REGION=northcentralus`。）
+（`-l global` 被学生订阅拒绝的话，换成 `-l northcentralus`，再多加一个 secret `APP_AZURE_TRANSLATOR_REGION`，值 `northcentralus`。）
 
-然后在服务器（`saige@shiqi-1`）上：
+然后把 key 存进 GitHub Secrets（加密保存，不进代码；仓库是公开的，key 绝不能写进任何文件）：
+仓库 → Settings → Environments → `production` → Add environment secret，名字 `APP_AZURE_TRANSLATOR_KEY`，值填 key。
+
+每次部署时，CI 会把所有 `APP_` 开头的 secret 去掉前缀，通过 SSH 的标准输入写进服务器的
+`infra/server/secrets.env`（只替换同名的那一行，其余保留），再重启 web。以后加别的 key 也一样，
+只要加一个 `APP_<名字>` 的 secret，不用改代码。存好后在 Actions 里重新跑一次最新的 CI，或者等下一次 push。
+
+没开 CI 自动部署的话，也可以直接在服务器（`saige@shiqi-1`）上写：
 
 ```bash
 cd ~/shiqi.si/infra/server
-umask 077 && echo 'AZURE_TRANSLATOR_KEY=<上面那串 key>' >> secrets.env
+umask 077 && echo 'AZURE_TRANSLATOR_KEY=<key>' >> secrets.env
 docker compose up -d web
 ```
 

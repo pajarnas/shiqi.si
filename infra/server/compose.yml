@@ -14,7 +14,8 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_TIME_ZONE: ${ADMIN_TIME_ZONE:-America/New_York}
     # API keys live in secrets.env next to this file (never in git), e.g.
-    # AZURE_TRANSLATOR_KEY=... for the translation service.
+    # AZURE_TRANSLATOR_KEY=... for the translation service. CI fills it from
+    # GitHub Secrets named APP_<NAME> (see infra/deploy.sh).
     env_file:
       - path: secrets.env
         required: false

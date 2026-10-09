@@ -78,6 +78,8 @@ infra/                 服务器初始化和部署脚本；server/ 是 Docker Co
 | `LIBRETRANSLATE_URL`      | 或者用自己部署的 [LibreTranslate](https://libretranslate.com)（开源，免费），需要 2 GB 以上内存 |
 | `GEOIP_URL`               | 可选，IP 查国家的服务，`{ip}` 会被替换；设成 `off` 就不按 IP 选                                 |
 
+生产环境里这些变量放在 GitHub 的 `production` environment secrets，名字前加 `APP_`（比如 `APP_AZURE_TRANSLATOR_KEY`），部署时自动写到服务器，见 [docs/deploy.md](docs/deploy.md)。
+
 ## 部署
 
 见 [docs/deploy.md](docs/deploy.md)。简单说：推到 `main` → GitHub Actions 检查并构建多架构镜像推到 GHCR → SSH 到服务器，用 Docker Compose 换上新镜像。

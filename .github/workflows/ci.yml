@@ -79,9 +79,16 @@ jobs:
           KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           IMAGE: ${{ needs.image.outputs.image }}
+          # Every secret named APP_<NAME> is written to the server's
+          # infra/server/secrets.env as <NAME>=... (sent over stdin, never on a
+          # command line). Adding a key = adding a secret; no code change.
+          SECRETS: ${{ toJSON(secrets) }}
         run: |
           install -m 700 -d ~/.ssh
           printf '%s\n' "$KEY" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          jq -r 'to_entries[] | select(.key | startswith("APP_")) | "\(.key | ltrimstr("APP_"))=\(.value)"' \
+            <<< "$SECRETS" > app-secrets.env
           ssh -i ~/.ssh/deploy "$USER@$HOST" \
-            "cd ~/shiqi.si && git pull -q --ff-only && bash infra/deploy.sh $IMAGE"
+            "cd ~/shiqi.si && git pull -q --ff-only && bash infra/deploy.sh $IMAGE" < app-secrets.env
+          rm -f app-secrets.env
