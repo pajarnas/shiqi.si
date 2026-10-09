@@ -9,7 +9,7 @@ const digest = (s: string) => createHash('sha256').update(s).digest();
  */
 export function requireAdmin(request: Request): Response | null {
   const password = process.env.ADMIN_PASSWORD;
-  if (!password) return new Response('Not Found', { status: 404 });
+  if (!password) return new Response(null, { status: 404 });
   const header = request.headers.get('authorization') ?? '';
   const [scheme, encoded] = header.split(' ');
   if (scheme === 'Basic' && encoded) {
@@ -17,7 +17,7 @@ export function requireAdmin(request: Request): Response | null {
     const given = decoded.slice(decoded.indexOf(':') + 1);
     if (timingSafeEqual(digest(given), digest(password))) return null;
   }
-  return new Response('需要密码', {
+  return new Response(null, {
     status: 401,
     headers: {
       'WWW-Authenticate': 'Basic realm="shiqi.si admin", charset="UTF-8"',

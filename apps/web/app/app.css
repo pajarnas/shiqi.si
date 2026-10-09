@@ -480,3 +480,46 @@ ul.topic-tags {
 .lang-switch__btn:hover {
   background: var(--accent-soft);
 }
+
+/* ---------- Error pages ---------- */
+
+.error-screen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-6);
+}
+
+.error-screen__critter {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+/* A square speech bubble with a hard shadow, its tail pointing at the critter. */
+.error-screen__bubble {
+  position: relative;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-lg);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow);
+}
+
+.error-screen__bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(-1 * var(--space-2) - var(--border-width));
+  width: var(--space-2);
+  height: var(--space-2);
+  background: var(--border);
+  transform: translateX(-50%);
+}
+
+.error-screen__sprite canvas {
+  display: block;
+  width: 112px;
+  height: 112px;
+}

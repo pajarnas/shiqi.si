@@ -1,5 +1,5 @@
 import { Badge, Card, Section } from '@shiqi/ui';
-import { Link } from 'react-router';
+import { Link, data } from 'react-router';
 import { PageWindow } from '~/components/PageWindow';
 import { requireAdmin } from '~/features/visits/auth.server';
 import { VISITS_TEXT as T } from '~/features/visits/text';
@@ -9,20 +9,20 @@ import type { Route } from './+types/visits';
 
 const SHOWN = 300;
 
-export const middleware: Route.MiddlewareFunction[] = [
-  async ({ request }, next) => requireAdmin(request) ?? next(),
-];
-
 export const meta = () => [
   { title: `${T.metaTitle} · shiqi.si` },
   { name: 'robots', content: 'noindex' },
 ];
 
-export function headers() {
-  return { 'Cache-Control': 'no-store' };
+export function headers({ errorHeaders }: Route.HeadersArgs) {
+  return errorHeaders ?? { 'Cache-Control': 'no-store' };
 }
 
 export async function loader({ request }: Route.LoaderArgs) {
+  // Thrown, so the site's error page (401, or 404 when there is no password) renders
+  // with the auth header kept.
+  const denied = requireAdmin(request);
+  if (denied) throw data(null, { status: denied.status, headers: denied.headers });
   const url = new URL(request.url);
   const ip = url.searchParams.get('ip') ?? '';
   const bots = url.searchParams.get('bots') === '1';

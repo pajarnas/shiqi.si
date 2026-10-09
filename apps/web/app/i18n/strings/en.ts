@@ -27,22 +27,37 @@ export const en = {
     zh: '中文',
   },
   ui: UI_STRINGS,
-  error: {
-    title: 'Something went wrong',
-    detail: 'The page ran into an unexpected problem.',
+  // Error pages: today's critter holds up a sign with the status code.
+  errors: {
+    critter: 'Today’s critter holding a {code} sign',
     home: 'Back home',
-  },
-  notFound: {
-    title: 'Nothing here',
-    lede: 'Maybe the link has a typo, or this page hasn’t grown yet.',
-    critter: 'A lost critter',
-    home: 'Back home',
+    back: 'Go back',
+    retry: 'Try again',
+    400: {
+      title: 'That didn’t make sense',
+      lede: 'The request was garbled on the way here. Check the link and try again.',
+    },
+    401: { title: 'Password, please', lede: 'This page is only for people who know the password.' },
+    403: { title: 'Not this door', lede: 'This page exists, but it isn’t open to you.' },
+    404: {
+      title: 'Nothing here',
+      lede: 'Maybe the link has a typo, or this page hasn’t grown yet.',
+    },
+    500: {
+      title: 'Something broke',
+      lede: 'The server tripped over something. It isn’t your fault; try again in a moment.',
+    },
+    503: {
+      title: 'Taking a nap',
+      lede: 'The site is restarting or too busy right now. Try again in a minute.',
+    },
+    other: { title: 'Something went wrong', lede: 'The page ran into a problem it didn’t expect.' },
   },
   home: {
     window: 'shiqi.si — hello',
     eyebrow: 'HELLO, WORLD',
     title: 'Hi, I’m Shiqi.',
-    lede: 'I study and write code in Atlanta. I like standards, pixels and things that are just right. This is my sandbox: a few small toys, some handy tools and notes, with course notes and online quizzes on the way.',
+    lede: 'I’m a software engineer in Fremont, CA, and an online master’s student in AI at Georgia Tech. I like standards, pixels and things that are just right. This is my sandbox: a few small toys, some handy tools and notes, with course notes and online quizzes on the way.',
     play: 'Go play',
     tools: 'Toolbox',
     playWindow: 'Play — PLAY',

@@ -9,12 +9,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  isRouteErrorResponse,
   type ShouldRevalidateFunction,
 } from 'react-router';
 import type { Route } from './+types/root';
+import { ErrorScreen, errorStatus } from './components/ErrorScreen';
 import { recordVisitMiddleware } from './features/visits/middleware.server';
-import { HTML_LANG, I18nProvider, useI18n, type Locale } from './i18n';
+import { HTML_LANG, I18nProvider, type Locale } from './i18n';
 import { useRootData } from './i18n/root-data';
 import { fillGaps } from './i18n/gaps.server';
 import { resolveLocale } from './i18n/locale.server';
@@ -84,23 +84,11 @@ export default function App() {
   return <Outlet />;
 }
 
+/** Errors the site layout couldn't catch (it failed itself): same screen, no menu bar. */
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  const { t } = useI18n();
-  let title = t.error.title;
-  let detail = t.error.detail;
-  if (isRouteErrorResponse(error)) {
-    title = String(error.status);
-    detail = error.statusText || detail;
-  } else if (import.meta.env.DEV && error instanceof Error) {
-    detail = error.message;
-  }
   return (
-    <main style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-      <h1>{title}</h1>
-      <p>{detail}</p>
-      <p>
-        <a href="/">{t.error.home}</a>
-      </p>
+    <main id="main" className="desk ui-container">
+      <ErrorScreen status={errorStatus(error)} />
     </main>
   );
 }
