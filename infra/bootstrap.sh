@@ -43,6 +43,8 @@ chmod 600 "$HOME/.kube/config"
 export KUBECONFIG="$HOME/.kube/config"
 grep -q 'KUBECONFIG' "$HOME/.bashrc" || echo 'export KUBECONFIG=$HOME/.kube/config' >>"$HOME/.bashrc"
 grep -q 'alias k=' "$HOME/.bashrc" || echo 'alias k=kubectl' >>"$HOME/.bashrc"
+# The node registers a few seconds after k3s starts; `wait` fails if none exist yet.
+until kubectl get node -o name 2>/dev/null | grep -q node/; do sleep 2; done
 kubectl wait --for=condition=Ready node --all --timeout=180s
 
 log "cert-manager $CERT_MANAGER_VERSION"
