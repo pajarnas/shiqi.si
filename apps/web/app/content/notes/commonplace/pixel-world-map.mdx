@@ -1,0 +1,52 @@
+export const frontmatter = {
+  title: 'Drawing a pixel world map',
+  date: '2026-10-09',
+  summary:
+    'Turning country shapes into a grid of pixels: a simple projection, the ray-casting point-in-polygon test, and why to do it once at build time.',
+  topics: ['maps', 'geometry', 'pixel-art'],
+};
+
+A pixel world map is a small grid where each cell says which country it belongs to (or sea). Shading cells by data then makes a choropleth in the site's pixel style.
+
+## Data
+
+**Natural Earth** publishes country borders in the public domain. The `world-atlas` package ships them as TopoJSON (`countries-50m.json`), and `topojson-client`'s `feature()` turns that into GeoJSON polygons. Shapes carry numeric ISO 3166 ids; `i18n-iso-countries` maps them to two-letter codes like `US`. A few places have no ISO number (Kosovo `XK`, Northern Cyprus, Somaliland) and need a hand-made mapping.
+
+## Projection
+
+The simplest projection is **equirectangular**: longitude maps linearly to x, latitude to y. For a `W × H` grid:
+
+```js
+const lonAt = (x) => -180 + ((x + 0.5) * 360) / W; // cell centre
+const latAt = (y) => NORTH - ((y + 0.5) * (NORTH - SOUTH)) / H;
+```
+
+Cutting the poles (here 84°N to 58°S, so no Antarctica) keeps the grid from wasting rows on ice. It distorts area near the poles, which nobody minds at 128 × 56.
+
+## Which country is this point in?
+
+The **ray-casting** test: shoot a ray from the point to the right and count how many polygon edges it crosses. Odd means inside, even means outside.
+
+```js
+function inRing(lon, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+```
+
+- A polygon's first ring is the outline; later rings are **holes** (a lake, or a country inside another, like Lesotho in South Africa). A point is in the polygon if it is in the outline and in no hole.
+- A country is a **MultiPolygon** when it has islands: check each part.
+- Check the **bounding box** first. It is four comparisons and rules out almost every country for a given point.
+
+Small countries can fall between cell centres and vanish; for a visitor map that is an acceptable trade, or you can mark the cell that contains the country's centroid.
+
+## Do it once
+
+Rasterizing every page view would be wasted work: borders don't change. A script generates the grid once and commits it as data (a string per row, or a list of runs), and the page only colours cells. Re-run the script only to change the size or the source data.
+
+Related: [Evening: MySQL for visits, a pixel world map, eight languages](/notes/journal/2026-10-09-mysql-world-map-languages).

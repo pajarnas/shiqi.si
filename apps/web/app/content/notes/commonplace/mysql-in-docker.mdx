@@ -1,0 +1,87 @@
+export const frontmatter = {
+  title: 'MySQL in a container',
+  date: '2026-10-09',
+  summary:
+    'Running MySQL with Docker Compose on a small server: first-start initialization, memory tuning, migrations, and how an app should behave when the database is away.',
+  topics: ['mysql', 'database', 'docker', 'docker-compose'],
+};
+
+The official `mysql` image is the quickest way to get a real database next to an app on one machine.
+
+## Initialization happens once
+
+On its **first start with an empty data directory**, the image creates the database and users from environment variables:
+
+```yaml
+mysql:
+  image: mysql:8.4
+  environment:
+    MYSQL_DATABASE: shiqi
+    MYSQL_USER: shiqi
+    MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+  env_file: [secrets.env] # MYSQL_PASSWORD=...
+  volumes: [mysql:/var/lib/mysql]
+```
+
+After that the volume already holds a database, and **these variables are ignored**. Changing `MYSQL_PASSWORD` later does nothing; the symptom is
+
+```
+Access denied for user 'shiqi'@'172.18.0.5' (using password: YES)
+```
+
+Two ways out:
+
+- If the volume holds nothing you need: `docker compose rm -sf mysql && docker volume rm <project>_mysql`, then start again so it re-initializes. This deletes all data in it.
+- If it holds data: change the password inside MySQL (`ALTER USER 'shiqi'@'%' IDENTIFIED BY '...'`) to match the new secret.
+
+So set secrets **before** the first start. Give root a random password nobody needs (`MYSQL_RANDOM_ROOT_PASSWORD`) and work as the app user: `docker compose exec mysql mysql -ushiqi -p`.
+
+## Fitting into a small server
+
+MySQL's defaults assume a dedicated machine. To idle well under 200 MB:
+
+```yaml
+command:
+  - --performance-schema=OFF # the biggest single saving
+  - --innodb-buffer-pool-size=32M
+  - --max-connections=20
+  - --table-open-cache=256
+  - --skip-name-resolve # no reverse DNS on every connection
+mem_limit: 320m
+```
+
+Grow the buffer pool when the data outgrows it; it is MySQL's main cache.
+
+A health check lets Compose and humans see when it is ready, and the first initialization takes 30 to 60 seconds:
+
+```yaml
+healthcheck:
+  test: [CMD, mysqladmin, ping, -h, 127.0.0.1, --silent]
+  start_period: 60s
+```
+
+## Migrations without a framework
+
+Keep schema changes as an ordered list of SQL statements and record which ran:
+
+```sql
+CREATE TABLE IF NOT EXISTS schema_migrations (
+  version INT UNSIGNED PRIMARY KEY,
+  applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+On startup, apply every entry whose number isn't in the table, then insert its number. Never edit a migration that has shipped; add a new one. Use `utf8mb4` for text (real UTF-8, emoji included) and index the columns you filter and sort by, usually as compound indexes like `(path, ts)`.
+
+## The app's side
+
+- Keep the connection in **one place** that builds the URL from environment (`MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`), so moving to a managed database is a configuration change.
+- Use a small pool (5 connections) and a short connect timeout.
+- If the database is unavailable, features that can live without it should **degrade, not fail**: skip the write, show an empty state, retry after a pause.
+- Run one-time startup jobs (importing old data, backfills) after the first successful connect, and make them safe to run twice (rename or mark what was imported).
+
+## MySQL vs MariaDB
+
+MariaDB began as a MySQL fork and accepts most of the same SQL, which makes it handy for a quick local test. They have diverged (JSON, authentication plugins, some functions), so test on the engine that runs in production before trusting it.
+
+Related: the day it went in, [Evening: MySQL for visits, a pixel world map, eight languages](/notes/journal/2026-10-09-mysql-world-map-languages); [Docker Compose on a small VM](/notes/commonplace/docker-compose-small-vm); [Managing secrets](/notes/commonplace/secrets).
