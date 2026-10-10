@@ -724,3 +724,132 @@ ul.topic-tags {
   background: var(--surface-sunken);
   font-weight: 700;
 }
+
+/* ---------- /kafka: the real cluster ---------- */
+
+.kafka-mode {
+  justify-self: start;
+}
+
+.kr-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.kr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.kr-topic {
+  display: grid;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+
+.kr-topic__name {
+  margin: 0;
+  font: 700 var(--text-sm) / 1.3 var(--font-pixel);
+}
+
+.kr-partitions {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kr-partition {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 2px var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+  color: var(--text);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  cursor: pointer;
+}
+
+.kr-partition:hover,
+.kr-partition--selected {
+  outline: 3px solid var(--focus);
+}
+
+.kr-rate {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.kr-rate--on {
+  color: var(--success);
+}
+
+.kr-bar {
+  position: relative;
+  grid-column: 1 / -1;
+  height: 10px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+}
+
+.kr-bar__fill {
+  position: absolute;
+  inset: 0;
+  background: var(--accent-2);
+  opacity: 0.6;
+}
+
+.kr-bar__commit {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 3px;
+  margin-left: -1px;
+  background: var(--link);
+}
+
+.kr-records {
+  overflow-x: auto;
+}
+
+.kr-records table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.kr-records th,
+.kr-records td {
+  padding: var(--space-1) var(--space-2);
+  text-align: start;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+
+.kr-admin {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) dashed var(--border);
+}
+
+.kr-admin > summary {
+  font: 700 var(--text-sm) / 1.3 var(--font-pixel);
+  cursor: pointer;
+}
+
+.kr-curl {
+  overflow-x: auto;
+  font-size: var(--text-xs);
+}
