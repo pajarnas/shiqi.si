@@ -1188,3 +1188,321 @@ button.kv-cell:focus-visible,
     animation: none;
   }
 }
+
+/* ---------- Build your own Kafka widgets (kvb-) ---------- */
+.kvb-widget {
+  display: grid;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem);
+  border: var(--border-width, 2px) solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-offset, 4px) var(--shadow-offset, 4px) 0 var(--shadow);
+  min-width: 0;
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.kvb-widget p,
+.kvb-widget ul,
+.kvb-widget ol {
+  margin: 0;
+}
+
+.kvb-running {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.kvb-controls,
+.kvb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  align-items: center;
+}
+
+.kvb-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.kvb-field > span {
+  font-family: var(--font-mono);
+}
+
+.kvb-num {
+  width: 6rem;
+}
+
+.kvb-good {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.kvb-bad {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.kvb-file {
+  overflow-wrap: anywhere;
+}
+
+.kvb-stats {
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.15rem;
+}
+
+/* Field colours for the hex dump. */
+.kvb-g1 {
+  --kvb-f: var(--c-gold, #e9a514);
+}
+.kvb-g2 {
+  --kvb-f: var(--accent-2, #2f8f5a);
+}
+.kvb-g3 {
+  --kvb-f: #5b8def;
+}
+.kvb-g4 {
+  --kvb-f: #c4568a;
+}
+.kvb-g5 {
+  --kvb-f: #8b6fd6;
+}
+.kvb-g6 {
+  --kvb-f: #d9773a;
+}
+
+.kvb-hex {
+  display: grid;
+  gap: var(--space-2, 0.5rem);
+}
+
+.kvb-hex__grid {
+  font-family: var(--font-mono);
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.kvb-hex__row {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 2px;
+  width: max-content;
+}
+
+.kvb-hex__addr {
+  color: var(--text-muted);
+  width: 3.2em;
+  flex: none;
+}
+
+.kvb-hex__byte {
+  font: inherit;
+  width: 1.9em;
+  padding: 0.1em 0;
+  border: 1px solid transparent;
+  color: var(--text);
+  background: color-mix(in srgb, var(--kvb-f, transparent) 22%, var(--surface));
+  cursor: pointer;
+}
+
+.kvb-hex__byte--header {
+  background: color-mix(in srgb, var(--kvb-f, transparent) 40%, var(--surface));
+}
+
+.kvb-hex__byte--field {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--kvb-f, transparent) 70%, var(--surface));
+}
+
+.kvb-hex__byte--picked {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.kvb-hex__byte--changed {
+  color: var(--danger);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.kvb-hex__about {
+  display: grid;
+  gap: 0.15rem;
+  min-height: 3.5em;
+}
+
+.kvb-rows {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.kvb-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+@media (max-width: 40rem) {
+  .kvb-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Cells: index entries, batches in a .log file, queue messages. */
+.kvb-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.kvb-cell {
+  width: 0.6rem;
+  height: 0.9rem;
+  background: var(--surface-sunken);
+  border: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+}
+
+.kvb-cells--index .kvb-cell {
+  width: 0.9rem;
+  background: color-mix(in srgb, var(--accent-2) 25%, var(--surface));
+}
+
+.kvb-cell--probed {
+  background: color-mix(in srgb, var(--link) 70%, var(--surface)) !important;
+}
+
+.kvb-cell--scanned {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+}
+
+.kvb-cell--hit {
+  background: var(--accent) !important;
+  border-color: var(--border);
+  outline: 2px solid var(--border);
+}
+
+/* Segment directory listing. */
+.kvb-dir {
+  display: grid;
+  gap: 3px;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+}
+
+.kvb-dir__seg {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.kvb-dir__seg > * {
+  position: relative;
+}
+
+.kvb-dir__fill {
+  position: absolute !important;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--accent-2) 18%, transparent);
+}
+
+.kvb-dir__seg--active {
+  border-width: 2px;
+}
+
+.kvb-dir__seg--gone {
+  opacity: 0.55;
+  text-decoration: line-through;
+  border-style: dashed;
+}
+
+/* Page cache byte strip. */
+.kvb-strip {
+  display: grid;
+  gap: 4px;
+}
+
+.kvb-strip__row {
+  display: block;
+  width: 100%;
+  height: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.kvb-strip__empty {
+  fill: var(--surface-sunken);
+}
+
+.kvb-strip__disk {
+  fill: var(--accent-2);
+}
+
+.kvb-strip__mem {
+  fill: var(--accent);
+  opacity: 0.55;
+}
+
+.kvb-strip__torn {
+  fill: var(--danger);
+}
+
+.kvb-strip__page {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.6;
+}
+
+.kvb-strip__batch {
+  stroke: var(--surface);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Queue vs log. */
+.kvb-cells--queue {
+  gap: 4px;
+  min-height: 2.4rem;
+}
+
+.kvb-msg {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--accent-soft);
+  font-family: var(--font-mono);
+}
+
+.kvb-msg--gone {
+  opacity: 0.3;
+  border-style: dashed;
+  background: transparent;
+  text-decoration: line-through;
+}
+
+.kvb-msg--end {
+  background: transparent;
+  border-style: dashed;
+}
+
+.kvb-msg__reader {
+  padding: 0 0.25rem;
+  background: var(--accent-2);
+  color: var(--accent-2-text);
+  font-size: 0.75em;
+}

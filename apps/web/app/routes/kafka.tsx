@@ -2,7 +2,7 @@ import '@shiqi/kafka-viz/styles.css';
 
 import { isScenarioId, KafkaLab, KafkaStringsProvider, type ScenarioId } from '@shiqi/kafka-viz';
 import { Callout, Section } from '@shiqi/ui';
-import { useSearchParams, type ShouldRevalidateFunction } from 'react-router';
+import { Link, useSearchParams, type ShouldRevalidateFunction } from 'react-router';
 import { NoteList } from '~/components/NoteList';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { notesTagged } from '~/content/notes';
@@ -35,6 +35,9 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
   return (
     <div className="desk-wide">
       <PageWindow page="kafka" title={t.kafka.title} lede={t.kafka.lede}>
+        <Callout>
+          {t.kafka.course} <Link to="/kafka/build">{t.kafka.courseLink}</Link>
+        </Callout>
         <KafkaStringsProvider strings={t.kafka.lab}>
           <KafkaLab
             scenario={isScenarioId(scenario) ? scenario : null}

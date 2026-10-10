@@ -23,6 +23,8 @@ export default [
       route(':folder/:slug', 'routes/notes/note.tsx'),
     ]),
     route('kafka', 'routes/kafka.tsx'),
+    route('kafka/build', 'routes/kafka/build.tsx'),
+    route('kafka/build/:chapter', 'routes/kafka/chapter.tsx'),
     route('ui', 'routes/ui.tsx'),
     route('admin/visits', 'routes/admin/visits.tsx'),
     route('*', 'routes/not-found.tsx'),
