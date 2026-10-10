@@ -29,6 +29,30 @@ Components ask for `t('notes.title')`. Then:
 - Markup inside a sentence uses tags in the string (`'Read the <link>notes</link>'`) that the component maps to elements, so translators can move the link too.
 - Shared UI libraries take their words from the app (a provider or props) instead of carrying their own language.
 
+## One registry of languages
+
+Keep everything about a language in one table, and have every part of the site read from it:
+
+```ts
+export const LANGUAGES = {
+  en: { name: 'English', tag: 'en', azure: 'en', libre: 'en', countries: [] },
+  'zh-Hant': {
+    name: '繁體中文',
+    tag: 'zh-TW',
+    azure: 'zh-Hant',
+    libre: 'zt',
+    countries: ['TW', 'HK', 'MO'],
+  },
+  // ...
+} as const;
+export type Locale = keyof typeof LANGUAGES;
+```
+
+- The **name in its own language** goes in the picker: a Japanese reader looks for 日本語, not "Japanese".
+- Store each service's **code separately**. The same language is `zh-TW` in HTML, `zh-Hant` at Azure and `zt` at LibreTranslate.
+- Country lists and `Accept-Language` aliases live in the same entry, so the language detection is generated from the table.
+- Adding a language is one entry; hand-written string tables are optional per language, and machine translation fills the rest.
+
 ## Choosing the language
 
 Ask in order, first answer wins:
@@ -54,4 +78,4 @@ For long content you won't translate by hand, translate on the server and cache:
 
 Hand-written translations stay better for short UI text; use machine translation to fill gaps and for long content.
 
-Related: the day it was built, [Afternoon on the live site](/notes/journal/2026-10-09-visitors-i18n-auto-deploy).
+Related: the day it was built, [Afternoon on the live site](/notes/journal/2026-10-09-visitors-i18n-auto-deploy); eight languages from one registry, [Evening: MySQL for visits, a pixel world map, eight languages](/notes/journal/2026-10-09-mysql-world-map-languages).

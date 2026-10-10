@@ -1,0 +1,106 @@
+export const frontmatter = {
+  title: 'Evening: MySQL for visits, a pixel world map, eight languages',
+  date: '2026-10-09',
+  summary:
+    'The visitor log moved from Redis to MySQL with pagination and a pixel world map, the language toggle became an eight-language picker, the home page lost its bio, and a MySQL volume that kept its first, empty password.',
+  topics: ['mysql', 'docker', 'docker-compose', 'secrets', 'i18n', 'css', 'deployment'],
+};
+
+All times are UTC, which had already rolled past midnight; in Fremont it was still the evening of 2026-10-09. This picks up after [the afternoon journal](/notes/journal/2026-10-09-visitors-i18n-auto-deploy) and covers PRs #8 to #11.
+
+## The home page drops the bio (03:23 to 03:35)
+
+I asked for my personal introduction to be removed: it read awkwardly and the site doesn't need it. The hero now introduces the site itself ("a sandbox drawn one pixel at a time"), and two new windows fill the page:
+
+- **Under the hood**: server rendering, pixels drawn in code, several languages, one small server, no third-party trackers.
+- **On the way**: course notes, quizzes, public APIs, more toys, each marked SOON.
+
+Following the house rules, the list keys and icons live in `site.ts` and the words in the string tables; the component only maps over them.
+
+A bug came along with it: Chinese visitors saw the home page's latest notes in English. Note translations were cached by **href** (`/notes/journal/...`), but the home page looked them up by **slug**, so it never found one. Same data, two keys; it now uses the href everywhere.
+
+From here on I also asked that Claude **merge its own PRs once CI is green** and tell me after deploy, instead of waiting for me to click merge.
+
+## Eight languages from one registry (03:34 to 03:47)
+
+"Shouldn't there be more than Chinese and English to choose from?" The toggle button became a picker with English, 简体中文, 繁體中文, 日本語, 한국어, Español, Français and Deutsch.
+
+The point of the change is that a language is now **one entry** in `LANGUAGES` (`app/i18n/locales.ts`):
+
+```ts
+'zh-Hant': {
+  name: '繁體中文',     // shown in the picker, in its own language
+  tag: 'zh-TW',         // <html lang> and Intl
+  azure: 'zh-Hant',     // code at Azure Translator
+  libre: 'zt',          // code at LibreTranslate
+  countries: ['TW', 'HK', 'MO'],
+  aliases: ['zh-tw', 'zh-hk', 'zh-mo', 'zh-hant'],
+},
+```
+
+The IP-country lookup, the `Accept-Language` matcher, the picker and both translation services all read from that table, so nothing else has to know which languages exist. Simplified Chinese keeps its hand-written strings; the other six are machine translated and cached like the notes. Translation service codes differ from web tags (`zh-Hant` vs `zt` vs `zh-TW`), which is exactly why each entry stores all three. See [Picking a language and translating a site](/notes/commonplace/i18n-and-translation).
+
+One side effect worth knowing: the first visitor to open a page in a new language may see English while the translation is fetched and cached.
+
+## Visits move to MySQL (03:34 to 03:53)
+
+The same message asked for four things: where should a MySQL database live, put the visits in it, fix `/admin/visits` (each row was one long line that ran off the screen) with pagination, and show where visitors come from on a pixel world map, because IPs without countries are useless to me.
+
+**Where it lives.** A `mysql:8.4` container in the same Compose stack on the 1 GB VM, squeezed to idle well under 200 MB: `--performance-schema=OFF`, `--innodb-buffer-pool-size=32M`, `--max-connections=20`, `mem_limit: 320m`. The app only needs a URL, so moving to a managed database later is a configuration change, not a code change. See [MySQL in a container](/notes/commonplace/mysql-in-docker).
+
+**Schema.** One `visits` table (time, IP, country, path, user agent, referrer, bot flag) with indexes on time, path+time, IP+time and country. Migrations are a list of SQL strings applied in order and recorded in `schema_migrations`; a shipped migration is never edited, only followed by a new one.
+
+**Never break the page.** As with Redis before, if the database is missing or slow (2 s connect timeout) the visit simply isn't recorded, and the pool retries after 15 s.
+
+**Moving the old data.** On the first successful connect, the old Redis list is imported, then renamed to `visits:log:imported` so it is never imported twice, and a backfill looks up countries for rows that have none.
+
+**The admin page** got totals, a country summary, the most-read pages, and a log paginated 50 per page with each visit squeezed into two lines. Clicking an IP, a country or a page filters by it.
+
+**APIs.** `GET /api/visitors/countries` is public and returns only counts per country, no addresses. `GET /api/admin/visits` returns the full paginated log as JSON behind the admin password.
+
+The local test ran against **MariaDB**, because the sandbox could not pull the MySQL 8.4 image. The SQL is written to work on both, but it means the first real MySQL start happened in production.
+
+## The pixel world map
+
+The map is a 128 × 56 grid generated once by `scripts/worldmap.mjs` from Natural Earth country shapes (public domain, packaged as `world-atlas`) and committed as data. For each cell the script asks "which country contains this point?" with a ray-casting point-in-polygon test, after a cheap bounding-box check. Antarctica is left out. On the home page, countries with visitors are shaded gold, darker with more people. See [Drawing a pixel world map](/notes/commonplace/pixel-world-map).
+
+## The password that didn't take (03:49 to 04:13)
+
+The first version had the server generate the MySQL password itself. That broke my rule that secrets come from **GitHub Secrets**, so it changed: a new secret `APP_MYSQL_PASSWORD` in the `production` environment, which CI writes into `secrets.env` like every other `APP_*` secret. A Compose detail mattered here: values under `environment:` **override** the same names from `env_file:`, so `MYSQL_PASSWORD` must not appear under `environment:` or the secret would be silently ignored.
+
+PR #10 merged and deployed **before** I had added the secret. MySQL started anyway, with no app password. I added the secret, the deploy was re-run (`secrets.env: set MYSQL_PASSWORD` in the log), and still:
+
+```
+web-1  | [db] unavailable: Access denied for user 'shiqi'@'172.18.0.5' (using password: YES)
+```
+
+**Cause:** the official MySQL image reads `MYSQL_USER`, `MYSQL_PASSWORD` and friends **only when it initializes an empty data directory**. The first start had already created the volume, so the password added later was never applied. The volume held nothing yet (the Redis import had never succeeded), so the fix was to throw it away and let MySQL initialize again:
+
+```bash
+cd ~/shiqi.si/infra/server
+sudo docker compose rm -sf mysql
+sudo docker volume rm shiqi_mysql
+sudo docker compose up -d web
+```
+
+The first check still looked broken, but those were **old log lines**: `logs --tail 30` happily shows errors from before the fix. Filtering by time (`docker compose logs -t --since 2m mysql web`) shows only what happened since. A minute later the admin page was empty for a few seconds while the import and country backfill ran, then filled up.
+
+## Floating windows (04:08 to 04:15)
+
+"Shouldn't these float?" The lower half of the home page was a grid of **rows**: Tools next to About, Notes next to Next. A row is as tall as its tallest window, so the shorter one left a gap under it. The fix was to make **columns** instead: two stacks, each its own `display: grid` with a gap, side by side in an `auto-fit` grid that collapses to one column on phones. Each window now sits right under the one above it.
+
+## What I learned
+
+- **Container init variables are one-shot.** Database images apply users and passwords only to an empty volume. Set secrets before the first start, or be ready to recreate the volume.
+- **Order of rollout matters.** Code that needs a secret should not deploy before the secret exists; check the secret first.
+- **Read logs by time, not by line count.** `--since` and `-t` separate old errors from new ones.
+- **One key per thing.** Caching translations by href and reading them by slug is a bug waiting to happen.
+- **Registries scale.** With one table of languages, adding a ninth is one entry, and every part that cares reads the same list.
+- **Rows align, columns stack.** For a masonry feel without a library, lay out columns, not rows.
+- **Test on the real engine when you can.** MariaDB is close to MySQL, not identical.
+
+## General notes from today
+
+- [MySQL in a container](/notes/commonplace/mysql-in-docker)
+- [Drawing a pixel world map](/notes/commonplace/pixel-world-map)
+- Updated: [Picking a language and translating a site](/notes/commonplace/i18n-and-translation), [Docker Compose on a small VM](/notes/commonplace/docker-compose-small-vm)

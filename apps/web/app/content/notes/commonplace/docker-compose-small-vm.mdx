@@ -41,6 +41,7 @@ Things worth knowing:
 
 - **Service names are hostnames.** Inside the Compose network, `redis` resolves to the Redis container, so the app connects to `redis://redis:6379`. Only the proxy publishes ports to the outside.
 - **`.env`** next to `compose.yml` fills in `${VARIABLES}`. Keep secrets there, not in the file you commit, and `chmod 600` it.
+- **`environment:` beats `env_file:`.** When a name is set in both, the `environment:` value wins. Keep secrets only in the `env_file` (for example `secrets.env`), and don't also list them under `environment:`, or an empty `${VAR:-}` there silently replaces the real value.
 - **Pin image versions** (`redis:8.8.3-alpine`, not `redis:latest`) so a restart never surprises you.
 - **Named volumes** (`redis:`, `caddy_data:`) survive container recreation. Caddy's volume holds the TLS certificates: losing it means asking Let's Encrypt again, which is rate-limited.
 - **`restart: unless-stopped`** brings everything back after a reboot.
@@ -53,7 +54,7 @@ On a small machine, give every container a ceiling so one leak cannot take the w
 - Swap (1 to 2 GB) as a cushion, with `vm.swappiness=10` so it is only used under pressure.
 - Hardening that costs nothing: `read_only: true` with a `tmpfs` for `/tmp`, `cap_drop: [ALL]`, `security_opt: [no-new-privileges:true]`.
 
-Budget from 2026-10-09: web 256 MB, Redis 96 MB, Caddy 128 MB, about 200 MB actually used.
+Budget from 2026-10-09: web 256 MB, Redis 96 MB, Caddy 128 MB, about 200 MB actually used. MySQL was added that evening with a 320 MB cap; see [MySQL in a container](/notes/commonplace/mysql-in-docker).
 
 ## Everyday commands
 
@@ -65,6 +66,7 @@ docker compose logs -f web        # follow one service's logs
 docker compose pull web && docker compose up -d web   # roll out a new image
 docker compose restart web
 docker compose exec redis redis-cli
+docker compose logs -t --since 5m web   # only recent lines, with timestamps
 docker stats --no-stream          # real memory use per container
 docker image prune -f             # reclaim disk from old images
 ```
