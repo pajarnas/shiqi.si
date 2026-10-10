@@ -358,6 +358,7 @@ function ProducerCard({
         <span className="kv-tag">{format(t.producer.acks, { acks: String(p.acks) })}</span>
       </p>
       <p className="kv-client__line kv-muted">{t.producer.keys[p.keys]}</p>
+      {cluster.authorizer && <p className="kv-client__line kv-muted">{p.principal}</p>}
       <p className="kv-client__line kv-muted">
         {format(t.producer.stats, { sent: p.sent, acked: p.acked, failed: p.failed })}
       </p>
@@ -440,6 +441,12 @@ function GroupCard({
               <span className="kv-muted">{format(t.group.rate, { rate: m.rate })}</span>
             </div>
             {!m.alive && <p className="kv-error kv-member__note">{t.group.crashed}</p>}
+            {cluster.authorizer && <p className="kv-muted kv-member__note">{m.principal}</p>}
+            {m.error && (
+              <p className="kv-error kv-member__note">
+                {format(t.group.authError, { error: m.error })}
+              </p>
+            )}
             {m.assignment.length === 0 ? (
               <p className="kv-muted kv-member__note">{t.group.noPartitions}</p>
             ) : (

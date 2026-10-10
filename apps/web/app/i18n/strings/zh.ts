@@ -535,6 +535,7 @@ export const zh: DeepPartial<Strings> = {
         totalLag: '总落后 {n}',
         noPartitions: '没有分区（成员比分区多，或正在重平衡）',
         crashed: '已崩溃：会话超时后才会被移出',
+        authError: '被拒绝：{error}。它会一直重试，直到有 ACL 允许它。',
         redelivered: '{n} 条被处理了两次',
         leave: '离开',
         crash: '崩溃',
@@ -682,9 +683,20 @@ export const zh: DeepPartial<Strings> = {
           produce: '生产',
           consume: '消费',
           groups: '消费者组',
+          security: '安全',
           cluster: '集群',
         },
         specs: {
+          authorizer: {
+            title: '打开或关闭授权器',
+            what: '模拟器专用：相当于在每个 broker 上设置 authorizer.class.name。打开后，每个请求都需要一条允许它的 ACL。',
+          },
+          aclAdd: {
+            title: '授权或拒绝（加 ACL）',
+            what: '谁可以对哪个 topic 或组做什么。只要有匹配的 Deny，就比 Allow 优先。',
+          },
+          aclRemove: { title: '删除 ACL', what: '要完全匹配：用户、操作、资源和匹配方式。' },
+          aclList: { title: '列出 ACL', what: '所有 ACL，按它们管的 topic 或组分组。' },
           topicCreate: {
             title: '创建 topic',
             what: '控制器给每个副本选一个 broker，给每个分区选一个 leader。',
@@ -764,6 +776,12 @@ export const zh: DeepPartial<Strings> = {
           action: '操作',
           broker: 'Broker',
           scope: '分区',
+          state: '授权器',
+          permission: '权限',
+          principal: '用户（谁）',
+          operation: '操作',
+          resource: '对象类型',
+          pattern: '名字匹配',
         },
         choices: {
           '': '无',
@@ -784,6 +802,14 @@ export const zh: DeepPartial<Strings> = {
           start: '启动',
           slow: '变慢',
           fast: '恢复正常',
+          on: '打开',
+          off: '关闭',
+          allow: '允许',
+          deny: '拒绝',
+          topic: 'topic',
+          group: '组',
+          literal: '名字完全一样',
+          prefixed: '名字前缀',
         },
         noTopics: '还没有 topic：先创建一个。',
         noGroups: '还没有消费者组：先用一个组启动消费者。',
@@ -831,11 +857,17 @@ export const zh: DeepPartial<Strings> = {
         topicDeleted: '删除了 topic {topic}',
         partitionsAdded: 'Topic {topic} 现在有 {count} 个分区',
         configChanged: '{topic}：{key} = {value}',
+        authDenied: '{client}（{principal}）无权对 {resource} {name} 执行 {operation}：{error}',
+        aclAdd: '新增 ACL：{permission} {principal} 对 {resource} {name} 执行 {operation}',
+        aclRemove: '删除 ACL：{permission} {principal} 对 {resource} {name} 执行 {operation}',
+        authorizerOn: '授权器已打开：每个请求都要对照 ACL 检查',
+        authorizerOff: '授权器已关闭：所有客户端都可以做任何事',
         reasons: {
           join: '有成员加入',
           leave: '有成员离开',
           timeout: '有成员超时',
           metadata: 'topic 元数据变了',
+          acl: 'ACL 变了',
         },
       },
       legend: {
@@ -997,6 +1029,7 @@ export const zh: DeepPartial<Strings> = {
           kip101: 'KIP-101：leader 纪元',
           consumers: '消费者组',
           log: 'Key 与日志',
+          security: '安全',
         },
         start: '开始',
         exit: '离开情景',
@@ -1014,6 +1047,7 @@ export const zh: DeepPartial<Strings> = {
           kip101: 'KIP-101（Apache Kafka）',
           vanlightly: 'Jack Vanlightly，《How to Lose Messages on a Kafka Cluster》',
           kip429: 'KIP-429（Apache Kafka）',
+          acls: 'Apache Kafka 文档「Authorization and ACLs」',
         },
         list: {
           'first-record': {
@@ -1510,6 +1544,58 @@ export const zh: DeepPartial<Strings> = {
                 options: ['全部二十条', '最新的一条，旧偏移被删掉的地方留下空洞', '什么都不剩'],
                 result:
                   '<compaction>压缩</compaction>重写已关闭的段，每个 key 只留最新的一条。偏移永不复用，所以日志里有洞。<tombstone>墓碑</tombstone>（值为 null）用来删除 key。',
+              },
+            },
+          },
+          acls: {
+            title: '谁有权限？',
+            summary: '打开授权器，只给生产者和消费者各自需要的权限。',
+            steps: {
+              open: {
+                title: '一个不设防的集群',
+                body: '<b>checkout</b> 往 <b>orders</b> 写，<b>billing-1</b> 在 <b>billing</b> 组里读。没人检查它们是谁：授权器是关着的。',
+                result: '',
+              },
+              on: {
+                title: '打开授权器',
+                body: '相当于在每个 broker 上设置 <b>authorizer.class.name</b>。现在还没有任何 ACL。',
+                question: 'checkout 和 billing-1 会怎样？',
+                options: [
+                  '没影响：规则只管新连上的客户端',
+                  '两个都被拒绝：没有匹配的 ACL，答案就是不行',
+                  '只检查写入',
+                ],
+                result:
+                  'checkout 每次发送都收到 TOPIC_AUTHORIZATION_FAILED，billing-1 收到 GROUP_AUTHORIZATION_FAILED：它进不了自己的组，手里一个分区都没有。Kafka 默认拒绝（allow.everyone.if.no.acl.found=false）。',
+              },
+              group: {
+                title: '让 billing-1 进组',
+                body: '<b>kafka-acls --add --allow-principal User:billing-1 --operation Read --group billing</b>',
+                question: '现在 billing-1 能读到记录吗？',
+                options: [
+                  '能，消费者只需要组的 Read',
+                  '不能，它还是进不了组',
+                  '能进组、能分到分区，但每次拉取都被拒绝',
+                ],
+                result:
+                  '加入组和从 topic 拉取是分开检查的。billing-1 回到组里，也分到了分区，但每次拉取都以 TOPIC_AUTHORIZATION_FAILED 失败。',
+              },
+              topic: {
+                title: '授权 topic',
+                body: '给 billing-1 加 orders 的 Read，给 checkout 加 orders 的 Write。一切又流动起来。',
+                result:
+                  '消费者需要组和 topic 的 Read；生产者需要 topic 的 Write。Read 和 Write 都隐含 Describe，客户端靠它拿元数据。',
+              },
+              deny: {
+                title: '对所有人的一条 Deny',
+                body: '有人加了 <b>--deny-principal User:* --operation Write --topic orders</b>。',
+                question: 'checkout 自己还有一条 Allow。它还能写吗？',
+                options: [
+                  '不能：只要有匹配的 Deny，就比任何 Allow 优先',
+                  '能：针对某个用户的规则比针对所有人的优先',
+                  '重连之前还能写',
+                ],
+                result: 'checkout 又被拒绝了。Kafka 先看 Deny，而 User:* 匹配所有用户。',
               },
             },
           },

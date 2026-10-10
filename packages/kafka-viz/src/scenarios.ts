@@ -3,7 +3,13 @@
 // follow the failure cases in KIP-101 and Jack Vanlightly's Kafka loss tests,
 // and the consumer-group behaviour in KIP-429. All text lives in
 // KAFKA_STRINGS.scenarios under the same ids.
-import { Cluster, partitionForKey, type Partition, type TruncationMode } from '@shiqi/kafka';
+import {
+  Cluster,
+  partitionForKey,
+  type Acl,
+  type Partition,
+  type TruncationMode,
+} from '@shiqi/kafka';
 import { anchorId } from './anchors';
 
 export interface ScenarioStep {
@@ -51,6 +57,7 @@ export const SCENARIO_IDS = [
   'crash-vs-leave',
   'keys',
   'retention',
+  'acls',
 ] as const;
 
 export type ScenarioId = (typeof SCENARIO_IDS)[number];
@@ -641,6 +648,76 @@ const retention: Scenario = {
   ],
 };
 
+const allow = (
+  principal: string,
+  resource: Acl['resource'],
+  name: string,
+  operation: Acl['operation'],
+): Acl => ({
+  principal,
+  resource,
+  name,
+  pattern: 'literal',
+  operation,
+  permission: 'Allow',
+});
+const billing = (c: Cluster) => memberByClient(c, 'billing', 'billing-1');
+
+const acls: Scenario = {
+  id: 'acls',
+  source: 'acls',
+  build: () => {
+    const c = new Cluster({ brokers: 3, seed: 909 });
+    c.createTopic('orders', { partitions: 2, replicationFactor: 3 });
+    c.addProducer({ id: 'checkout', topic: 'orders', rate: 6, acks: 'all', keys: 'fixed' });
+    c.addConsumer({ group: 'billing', topics: ['orders'], clientId: 'billing-1', rate: 10 });
+    return c;
+  },
+  steps: [
+    {
+      id: 'open',
+      until: (c) => stable(c, 'billing') && c.now > 3000,
+      focus: () => [anchorId.producer('checkout'), anchorId.group('billing')],
+    },
+    {
+      id: 'on',
+      answer: 1,
+      act: (c) => c.setAuthorizer(true),
+      runMs: 3000,
+      focus: () => [anchorId.producer('checkout'), anchorId.group('billing')],
+      expect: (c) =>
+        c.producers.get('checkout')?.lastError === 'TOPIC_AUTHORIZATION_FAILED' &&
+        billing(c)?.error === 'GROUP_AUTHORIZATION_FAILED',
+    },
+    {
+      id: 'group',
+      answer: 2,
+      act: (c) => c.addAcl(allow('User:billing-1', 'group', 'billing', 'Read')),
+      until: (c) => stable(c, 'billing') && billing(c)?.error === 'TOPIC_AUTHORIZATION_FAILED',
+      focus: () => [anchorId.group('billing')],
+      expect: (c) => billing(c)?.error === 'TOPIC_AUTHORIZATION_FAILED',
+    },
+    {
+      id: 'topic',
+      act: (c) => {
+        c.addAcl(allow('User:billing-1', 'topic', 'orders', 'Read'));
+        c.addAcl(allow('User:checkout', 'topic', 'orders', 'Write'));
+      },
+      runMs: 4000,
+      focus: () => [anchorId.producer('checkout'), anchorId.group('billing')],
+      expect: (c) => billing(c)?.error === undefined && (billing(c)?.consumed ?? 0) > 0,
+    },
+    {
+      id: 'deny',
+      answer: 0,
+      act: (c) => c.addAcl({ ...allow('User:*', 'topic', 'orders', 'Write'), permission: 'Deny' }),
+      runMs: 3000,
+      focus: () => [anchorId.producer('checkout')],
+      expect: (c) => c.producers.get('checkout')?.lastError === 'TOPIC_AUTHORIZATION_FAILED',
+    },
+  ],
+};
+
 export const SCENARIOS: Record<ScenarioId, Scenario> = {
   'first-record': firstRecord,
   'acks-one': acksOne,
@@ -654,6 +731,7 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   'crash-vs-leave': crashVsLeave,
   keys,
   retention,
+  acls,
 };
 
 /** How the scenarios are listed, in order. */
@@ -663,6 +741,7 @@ export const SCENARIO_GROUPS = {
   kip101: ['kip101-restart-hw', 'kip101-restart-epoch', 'kip101-power-hw', 'kip101-power-epoch'],
   consumers: ['rebalance', 'crash-vs-leave'],
   log: ['keys', 'retention'],
+  security: ['acls'],
 } as const satisfies Record<string, readonly ScenarioId[]>;
 
 export const isScenarioId = (id: string | null | undefined): id is ScenarioId =>

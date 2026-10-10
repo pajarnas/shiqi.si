@@ -5,7 +5,7 @@
 import type { Cluster } from './cluster';
 import { TOPIC_DEFAULTS, type TopicConfigKey } from './config';
 
-export type CommandGroup = 'topics' | 'produce' | 'consume' | 'groups' | 'cluster';
+export type CommandGroup = 'topics' | 'produce' | 'consume' | 'groups' | 'security' | 'cluster';
 
 export type FieldKind =
   /** An existing topic. */
@@ -14,6 +14,8 @@ export type FieldKind =
   | 'group'
   /** A broker id. */
   | 'broker'
+  /** `User:<name>` of a client in the cluster, or `User:*`. */
+  | 'principal'
   | 'int'
   | 'text'
   | 'choice'
@@ -326,6 +328,71 @@ export const COMMAND_SPECS: readonly CommandSpec[] = [
     ],
   },
 
+  // ── Security ──
+  {
+    id: 'authorizer',
+    group: 'security',
+    fields: [{ id: 'state', kind: 'choice', choices: ['on', 'off'] }],
+    defaults: (c) => ({ state: c.authorizer ? 'off' : 'on' }),
+    build: (v) => [word('authorizer'), { text: String(v.state), field: 'state' }],
+  },
+  {
+    id: 'aclAdd',
+    group: 'security',
+    fields: [
+      { id: 'permission', kind: 'choice', choices: ['allow', 'deny'] },
+      { id: 'principal', kind: 'principal' },
+      { id: 'operation', kind: 'choice', choices: ['Read', 'Write', 'Describe', 'All'] },
+      { id: 'resource', kind: 'choice', choices: ['topic', 'group'] },
+      { id: 'topic', kind: 'topic', when: { field: 'resource', is: ['topic'] } },
+      { id: 'group', kind: 'group', when: { field: 'resource', is: ['group'] } },
+      { id: 'pattern', kind: 'choice', choices: ['literal', 'prefixed'] },
+    ],
+    defaults: (c) => ({
+      permission: 'allow',
+      principal: principalsIn(c)[0] ?? 'User:*',
+      operation: 'Read',
+      resource: 'topic',
+      topic: firstTopic(c),
+      group: firstGroup(c),
+      pattern: 'literal',
+    }),
+    build: (v) => aclTokens('add', v),
+  },
+  {
+    id: 'aclRemove',
+    group: 'security',
+    fields: [
+      { id: 'permission', kind: 'choice', choices: ['allow', 'deny'] },
+      { id: 'principal', kind: 'principal' },
+      { id: 'operation', kind: 'choice', choices: ['Read', 'Write', 'Describe', 'All'] },
+      { id: 'resource', kind: 'choice', choices: ['topic', 'group'] },
+      { id: 'topic', kind: 'topic', when: { field: 'resource', is: ['topic'] } },
+      { id: 'group', kind: 'group', when: { field: 'resource', is: ['group'] } },
+      { id: 'pattern', kind: 'choice', choices: ['literal', 'prefixed'] },
+    ],
+    defaults: (c) => {
+      const a = c.acls[0];
+      return {
+        permission: a?.permission === 'Deny' ? 'deny' : 'allow',
+        principal: a?.principal ?? principalsIn(c)[0] ?? 'User:*',
+        operation: a?.operation ?? 'Read',
+        resource: a?.resource ?? 'topic',
+        topic: a?.resource === 'topic' ? a.name : firstTopic(c),
+        group: a?.resource === 'group' ? a.name : firstGroup(c),
+        pattern: a?.pattern ?? 'literal',
+      };
+    },
+    build: (v) => aclTokens('remove', v),
+  },
+  {
+    id: 'aclList',
+    group: 'security',
+    fields: [],
+    defaults: () => ({}),
+    build: () => [word('kafka-acls'), word('--list')],
+  },
+
   // ── Cluster ──
   {
     id: 'brokerControl',
@@ -390,8 +457,29 @@ export const COMMAND_GROUPS: readonly CommandGroup[] = [
   'produce',
   'consume',
   'groups',
+  'security',
   'cluster',
 ];
+
+/** Every principal a client in the cluster authenticates as, then `User:*`. */
+export function principalsIn(c: Cluster): string[] {
+  const names = new Set<string>();
+  for (const p of c.producers.values()) names.add(p.principal);
+  for (const g of c.groups.values()) for (const m of g.members.values()) names.add(m.principal);
+  return [...[...names].sort(), 'User:*'];
+}
+
+function aclTokens(action: 'add' | 'remove', v: CommandValues): CommandToken[] {
+  const resource = v.resource === 'group' ? 'group' : 'topic';
+  return [
+    word('kafka-acls'),
+    word(`--${action}`),
+    ...arg(`${String(v.permission)}-principal`, 'principal', v.principal ?? 'User:*'),
+    ...arg('operation', 'operation', v.operation ?? 'Read'),
+    ...arg(resource, resource, v[resource] ?? ''),
+    ...(v.pattern === 'prefixed' ? arg('resource-pattern-type', 'pattern', 'prefixed') : []),
+  ];
+}
 
 export const commandSpec = (id: string) => COMMAND_SPECS.find((s) => s.id === id);
 

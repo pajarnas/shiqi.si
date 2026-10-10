@@ -1,6 +1,14 @@
 // A terminal for the simulated cluster: the stock Kafka scripts (kafka-topics,
 // kafka-console-producer, ...) with their real flags and output formats, plus
 // a few `broker ...` commands that only make sense in a simulator.
+import {
+  describeAcl,
+  resourceLine,
+  type Acl,
+  type AclOperation,
+  type AclPattern,
+  type AclResource,
+} from './acl';
 import type { Cluster, Member, Partition } from './cluster';
 import {
   TOPIC_DEFAULTS,
@@ -51,8 +59,12 @@ export const CLI_TEXT = {
     '  kafka-leader-election --election-type PREFERRED --all-topic-partitions | --topic T --partition P',
     '  kafka-metadata-quorum describe --status',
     '  kafka-producer-perf-test --topic T --num-records N --record-size B [--producer-props acks=1]',
+    '  kafka-acls --add|--remove --allow-principal|--deny-principal User:NAME --operation Read|Write|Describe|All',
+    '             --topic T | --group G [--resource-pattern-type literal|prefixed]',
+    '  kafka-acls --list [--topic T | --group G]',
     'Simulator only:',
     '  broker list | broker stop ID | broker start ID | broker slow ID | broker fast ID | broker add',
+    '  authorizer on | off | status   (like setting authorizer.class.name; the CLI runs as User:admin, a super user)',
     '  clear | help',
     'In the console producer and consumer, type exit (or press Ctrl-C) to stop.',
   ],
@@ -66,6 +78,11 @@ export const CLI_TEXT = {
     'Broker {id} joined the cluster. It has no partitions until some are created or reassigned.',
   brokerUsage: 'Usage: broker list | stop ID | start ID | slow ID | fast ID | add',
   exitHint: 'exit',
+  authorizerOn:
+    'Authorizer on: every client request is checked against the ACLs, and anything not allowed is refused. The CLI runs as User:admin, a super user.',
+  authorizerOff: 'Authorizer off: every client may do anything.',
+  authorizerOffNote:
+    'Note: the authorizer is off, so these ACLs are not enforced yet. Turn it on with: authorizer on',
 } as const;
 
 const fill = (s: string, vars: Record<string, string | number>) =>
@@ -86,6 +103,9 @@ const EXCEPTIONS: Record<KafkaErrorCode, string> = {
   GROUP_ID_NOT_FOUND: 'GroupIdNotFoundException',
   NON_EMPTY_GROUP: 'GroupNotEmptyException',
   BROKER_NOT_AVAILABLE: 'BrokerNotAvailableException',
+  TOPIC_AUTHORIZATION_FAILED: 'TopicAuthorizationException',
+  GROUP_AUTHORIZATION_FAILED: 'GroupAuthorizationException',
+  CLUSTER_AUTHORIZATION_FAILED: 'ClusterAuthorizationException',
 };
 
 export const exceptionName = (code: KafkaErrorCode) =>
@@ -201,6 +221,8 @@ const COMMANDS: Record<string, Command> = {
   'kafka-leader-election': leaderElection,
   'kafka-metadata-quorum': metadataQuorum,
   'kafka-producer-perf-test': perfTest,
+  'kafka-acls': acls,
+  authorizer,
   broker,
   help: () => ({ lines: [...CLI_TEXT.help] }),
   clear: () => ({ lines: [], clear: true }),
@@ -666,6 +688,90 @@ function perfTest(c: Cluster, tokens: string[]): CliResult {
       `${ok} records sent, ${(ok * size) / 1024 / 1024 < 0.01 ? '<0.01' : ((ok * size) / 1024 / 1024).toFixed(2)} MB into the leaders' active segments.`,
     ],
   };
+}
+
+const OPERATIONS: Record<string, AclOperation> = {
+  read: 'Read',
+  write: 'Write',
+  describe: 'Describe',
+  all: 'All',
+};
+
+function acls(c: Cluster, tokens: string[]): CliResult {
+  const a = parseArgs(tokens, ['add', 'remove', 'list', 'force']);
+  const pattern: AclPattern =
+    (one(a, 'resource-pattern-type') ?? 'literal').toLowerCase() === 'prefixed'
+      ? 'prefixed'
+      : 'literal';
+  const resources: [AclResource, string][] = [
+    ...(a.flags.get('topic') ?? []).map((n) => ['topic', n] as [AclResource, string]),
+    ...(a.flags.get('group') ?? []).map((n) => ['group', n] as [AclResource, string]),
+  ];
+  if (has(a, 'list')) {
+    const lines: string[] = [];
+    const keys = new Map<string, Acl[]>();
+    for (const acl of c.acls) {
+      if (resources.length && !resources.some(([r, n]) => r === acl.resource && n === acl.name))
+        continue;
+      const k = `${acl.resource}\u0000${acl.name}\u0000${acl.pattern}`;
+      keys.set(k, [...(keys.get(k) ?? []), acl]);
+    }
+    for (const list of keys.values()) {
+      const first = list[0] as Acl;
+      lines.push(
+        resourceLine(first.resource, first.name, first.pattern),
+        ...list.map((x) => `\t${describeAcl(x)}`),
+        '',
+      );
+    }
+    if (!c.authorizer) lines.push(CLI_TEXT.authorizerOffNote);
+    return { lines };
+  }
+  const adding = has(a, 'add');
+  if (!adding && !has(a, 'remove'))
+    throw new UsageError('Command must include exactly one action: --list, --add, --remove.');
+  if (!resources.length) throw new UsageError('You must specify one of: --topic, --group');
+  const allow = (a.flags.get('allow-principal') ?? []).map((p) => [p, 'Allow'] as const);
+  const deny = (a.flags.get('deny-principal') ?? []).map((p) => [p, 'Deny'] as const);
+  const principals = [...allow, ...deny];
+  if (!principals.length) throw new UsageError(fill(CLI_TEXT.missing, { arg: 'allow-principal' }));
+  const ops = (a.flags.get('operation') ?? ['All']).map((o) => {
+    const op = OPERATIONS[o.toLowerCase()];
+    if (!op) throw new UsageError(`Invalid operation: ${o}. Use Read, Write, Describe or All.`);
+    return op;
+  });
+  const lines: string[] = [];
+  for (const [resource, name] of resources) {
+    const made: Acl[] = [];
+    for (const [principal, permission] of principals) {
+      if (!/^User:.+/.test(principal))
+        throw new UsageError(`Invalid principal ${principal}: use User:NAME`);
+      for (const operation of ops)
+        made.push({ principal, resource, name, pattern, operation, permission });
+    }
+    lines.push(
+      `${adding ? 'Adding' : 'Removing'} ACLs for resource \`ResourcePattern(resourceType=${resource.toUpperCase()}, name=${name}, patternType=${pattern.toUpperCase()})\`: `,
+    );
+    for (const acl of made) {
+      if (adding) c.addAcl(acl);
+      else c.removeAcl(acl);
+      lines.push(`\t${describeAcl(acl)}`);
+    }
+    lines.push('');
+  }
+  if (!c.authorizer) lines.push(CLI_TEXT.authorizerOffNote);
+  return { lines };
+}
+
+function authorizer(c: Cluster, tokens: string[]): CliResult {
+  const [action] = tokens;
+  if (action === 'on' || action === 'off') {
+    c.setAuthorizer(action === 'on');
+    return { lines: [action === 'on' ? CLI_TEXT.authorizerOn : CLI_TEXT.authorizerOff] };
+  }
+  if (action === undefined || action === 'status')
+    return { lines: [c.authorizer ? CLI_TEXT.authorizerOn : CLI_TEXT.authorizerOff] };
+  return { lines: ['Usage: authorizer on | off | status'] };
 }
 
 function broker(c: Cluster, tokens: string[]): CliResult {

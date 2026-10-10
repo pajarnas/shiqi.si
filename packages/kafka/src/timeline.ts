@@ -28,6 +28,9 @@ export const TIMELINE_ACTIONS = [
   'updateConsumer',
   'deleteGroup',
   'commitOffsets',
+  'setAuthorizer',
+  'addAcl',
+  'removeAcl',
 ] as const satisfies readonly (keyof Cluster)[];
 
 export type TimelineAction = (typeof TIMELINE_ACTIONS)[number];

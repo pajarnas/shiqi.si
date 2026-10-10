@@ -1,4 +1,5 @@
 // @shiqi/kafka: a Kafka cluster simulator and CLI emulator, framework-free.
+export * from './acl';
 export * from './assignors';
 export * from './cli';
 export * from './cluster';

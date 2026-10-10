@@ -2,6 +2,14 @@
 // consumer groups, advanced by tick(ms). Every random choice comes from one
 // seeded generator, so a seed replays the same story.
 import { rng, type Random } from '@shiqi/pixel';
+import {
+  authorize,
+  sameAcl,
+  SUPER_USER,
+  type Acl,
+  type AclOperation,
+  type AclResource,
+} from './acl';
 import { ASSIGNORS } from './assignors';
 import { CLUSTER_DEFAULTS, TOPIC_DEFAULTS, type ClusterSettings, type TopicConfig } from './config';
 import { ReplicaLog } from './log';
@@ -110,6 +118,8 @@ export interface ProducerOptions {
   keySet?: string[];
   /** Records per sticky batch before moving to another partition. */
   batchSize?: number;
+  /** Who it authenticates as; `User:<id>` by default. */
+  principal?: string;
 }
 
 export interface Producer extends Required<Omit<ProducerOptions, 'id'>> {
@@ -143,6 +153,8 @@ export interface ConsumerOptions {
   group: string;
   topics: string[];
   clientId?: string;
+  /** Who it authenticates as; `User:<clientId>` by default. */
+  principal?: string;
   /** Records per simulated second this consumer can process. */
   rate?: number;
   assignor?: Assignor;
@@ -163,6 +175,9 @@ export interface Member {
   credit: number;
   consumed: number;
   joinedAt: number;
+  principal: string;
+  /** Why the brokers turn it away (an authorization error), if they do. */
+  error?: KafkaErrorCode;
 }
 
 export interface Group {
@@ -225,6 +240,9 @@ export class Cluster {
   groups = new Map<string, Group>();
   /** The most recent events, oldest first. */
   events: ClusterEvent[] = [];
+  /** authorizer.class.name is set: every request is checked against `acls`. */
+  authorizer = false;
+  acls: Acl[] = [];
   /** Called before every fixed step; a Timeline uses it to replay recorded actions on time. */
   beforeStep?: (now: number) => void;
 
@@ -794,6 +812,13 @@ export class Cluster {
     if (p.leader === null) {
       throw new KafkaError('LEADER_NOT_AVAILABLE', `There is no leader for ${t.name}-${partition}`);
     }
+    const principal = this.producers.get(producer)?.principal ?? SUPER_USER;
+    if (!this.allowed(principal, 'topic', t.name, 'Write')) {
+      throw new KafkaError(
+        'TOPIC_AUTHORIZATION_FAILED',
+        `Not authorized to access topics: [${t.name}]`,
+      );
+    }
     if (acks === 'all' && p.isr.length < t.config['min.insync.replicas']) {
       throw new KafkaError(
         'NOT_ENOUGH_REPLICAS',
@@ -884,6 +909,7 @@ export class Cluster {
       credit: 0,
       sticky: { partition: -1, left: 0 },
       buffered: [],
+      principal: options.principal ?? `User:${id}`,
     };
     this.producers.set(id, producer);
     this.changed();
@@ -976,6 +1002,9 @@ export class Cluster {
       this.produce({ topic, key, value, partition, acks: pr.acks, producer: pr.id });
     } catch (e) {
       const code = e instanceof KafkaError ? e.code : 'INVALID_RECORD';
+      if (code === 'TOPIC_AUTHORIZATION_FAILED' && pr.lastError !== code) {
+        this.denied(pr.principal, pr.id, 'Write', 'topic', topic, code);
+      }
       pr.failed++;
       pr.lastError = code;
       this.emit({
@@ -1075,6 +1104,7 @@ export class Cluster {
       credit: 0,
       consumed: 0,
       joinedAt: this.now,
+      principal: options.principal ?? `User:${clientId}`,
     };
     g.members.set(member.id, member);
     this.startRebalance(g, 'join');
@@ -1132,7 +1162,7 @@ export class Cluster {
 
   private isCooperative = (g: Group) => g.assignor === 'cooperative-sticky';
 
-  private startRebalance(g: Group, reason: 'join' | 'leave' | 'timeout' | 'metadata') {
+  private startRebalance(g: Group, reason: 'join' | 'leave' | 'timeout' | 'metadata' | 'acl') {
     if (g.state !== 'PreparingRebalance') {
       this.emit({
         type: 'rebalance-start',
@@ -1155,7 +1185,14 @@ export class Cluster {
   }
 
   private finishRebalance(g: Group) {
-    const members = new Map([...g.members.values()].map((m) => [m.id, m.topics] as const));
+    // JoinGroup needs Read on the group; a member without it never gets partitions.
+    for (const m of g.members.values()) {
+      const ok = this.allowed(m.principal, 'group', g.id, 'Read');
+      this.setMemberError(g, m, ok ? undefined : 'GROUP_AUTHORIZATION_FAILED');
+      if (!ok) m.assignment = [];
+    }
+    const joined = [...g.members.values()].filter((m) => m.error !== 'GROUP_AUTHORIZATION_FAILED');
+    const members = new Map(joined.map((m) => [m.id, m.topics] as const));
     const partitions = new Map(
       [...new Set([...members.values()].flat())]
         .filter((t) => this.topics.has(t))
@@ -1163,7 +1200,7 @@ export class Cluster {
     );
     const previous = new Map([...g.members.values()].map((m) => [m.id, m.assignment] as const));
     const result = ASSIGNORS[g.assignor]({ members, partitions, previous });
-    for (const m of g.members.values()) {
+    for (const m of joined) {
       const next = result.get(m.id) ?? [];
       const keep = new Set(next.map((tp) => tpKey(tp.topic, tp.partition)));
       for (const tp of m.assignment) {
@@ -1492,6 +1529,89 @@ export class Cluster {
     this.pending = still;
   }
 
+  // ── Authorization ──────────────────────────────────────────────────────
+
+  private allowed(principal: string, resource: AclResource, name: string, op: AclOperation) {
+    return !this.authorizer || authorize(this.acls, principal, resource, name, op);
+  }
+
+  private denied(
+    principal: string,
+    client: string,
+    operation: AclOperation,
+    resource: AclResource,
+    name: string,
+    error: KafkaErrorCode,
+  ) {
+    this.emit({
+      type: 'auth-denied',
+      at: this.now,
+      principal,
+      client,
+      operation,
+      resource,
+      name,
+      error,
+    });
+  }
+
+  private setMemberError(g: Group, m: Member, error: KafkaErrorCode | undefined, topic?: string) {
+    if (m.error === error) return;
+    m.error = error;
+    if (error === 'GROUP_AUTHORIZATION_FAILED')
+      this.denied(m.principal, m.clientId, 'Read', 'group', g.id, error);
+    if (error === 'TOPIC_AUTHORIZATION_FAILED' && topic)
+      this.denied(m.principal, m.clientId, 'Read', 'topic', topic, error);
+    this.changed();
+  }
+
+  /** Turn the authorizer on or off. On, with no ACLs, every client is refused. */
+  setAuthorizer(on: boolean) {
+    if (this.authorizer === on) return;
+    this.authorizer = on;
+    this.emit({ type: 'acl', at: this.now, change: on ? 'on' : 'off' });
+    this.aclsChanged();
+  }
+
+  /** kafka-acls --add. */
+  addAcl(acl: Acl) {
+    if (this.acls.some((a) => sameAcl(a, acl))) return;
+    this.acls.push({ ...acl });
+    this.emit({ type: 'acl', at: this.now, change: 'add', acl: { ...acl } });
+    this.aclsChanged();
+  }
+
+  /** kafka-acls --remove. Returns how many were removed. */
+  removeAcl(acl: Acl): number {
+    const before = this.acls.length;
+    this.acls = this.acls.filter((a) => !sameAcl(a, acl));
+    const n = before - this.acls.length;
+    if (n) {
+      this.emit({ type: 'acl', at: this.now, change: 'remove', acl: { ...acl } });
+      this.aclsChanged();
+    }
+    return n;
+  }
+
+  /** A consumer retries JoinGroup and fetches after an ACL change; a producer's next send is checked anyway. */
+  private aclsChanged() {
+    for (const g of this.groups.values()) {
+      const shut = [...g.members.values()].some(
+        (m) =>
+          (m.error === 'GROUP_AUTHORIZATION_FAILED') ===
+          this.allowed(m.principal, 'group', g.id, 'Read'),
+      );
+      if (shut) this.startRebalance(g, 'acl');
+    }
+    for (const pr of this.producers.values())
+      if (
+        pr.lastError === 'TOPIC_AUTHORIZATION_FAILED' &&
+        this.allowed(pr.principal, 'topic', pr.topic, 'Write')
+      )
+        pr.lastError = undefined;
+    this.changed();
+  }
+
   private runGroups(ms: number) {
     for (const g of this.groups.values()) {
       for (const m of g.members.values()) {
@@ -1529,6 +1649,12 @@ export class Cluster {
   private pollPartition(g: Group, m: Member, tp: TopicPartition) {
     const p = this.topics.get(tp.topic)?.partitions[tp.partition];
     if (!p || p.leader === null) return;
+    // Fetch needs Read on the topic.
+    if (!this.allowed(m.principal, 'topic', tp.topic, 'Read')) {
+      this.setMemberError(g, m, 'TOPIC_AUTHORIZATION_FAILED', tp.topic);
+      return;
+    }
+    if (m.error === 'TOPIC_AUTHORIZATION_FAILED') this.setMemberError(g, m, undefined);
     const log = this.leaderLog(p) as ReplicaLog;
     const k = tpKey(tp.topic, tp.partition);
     let pos = m.positions.get(k) ?? this.startPosition(g, p);

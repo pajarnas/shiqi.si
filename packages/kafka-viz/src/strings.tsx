@@ -82,6 +82,7 @@ export const KAFKA_STRINGS = {
     totalLag: 'Total lag {n}',
     noPartitions: 'No partitions (more members than partitions, or rebalancing)',
     crashed: 'Crashed: removed after the session timeout',
+    authError: 'Refused: {error}. It keeps retrying until an ACL allows it.',
     redelivered: '{n} records processed twice',
     leave: 'Leave',
     crash: 'Crash',
@@ -229,9 +230,23 @@ export const KAFKA_STRINGS = {
       produce: 'Produce',
       consume: 'Consume',
       groups: 'Consumer groups',
+      security: 'Security',
       cluster: 'Cluster',
     },
     specs: {
+      authorizer: {
+        title: 'Authorizer on or off',
+        what: 'Simulator only: like setting authorizer.class.name on every broker. On, every request needs an ACL that allows it.',
+      },
+      aclAdd: {
+        title: 'Grant or deny (add an ACL)',
+        what: 'Who may do what to which topic or group. A matching Deny always beats an Allow.',
+      },
+      aclRemove: {
+        title: 'Remove an ACL',
+        what: 'The ACL must match exactly: principal, operation, resource and pattern.',
+      },
+      aclList: { title: 'List ACLs', what: 'Every ACL, grouped by the topic or group it covers.' },
       topicCreate: {
         title: 'Create a topic',
         what: 'The controller picks a broker for each replica and a leader for each partition.',
@@ -323,6 +338,12 @@ export const KAFKA_STRINGS = {
       action: 'Action',
       broker: 'Broker',
       scope: 'Partitions',
+      state: 'Authorizer',
+      permission: 'Permission',
+      principal: 'Principal (who)',
+      operation: 'Operation',
+      resource: 'On a',
+      pattern: 'Name match',
     },
     choices: {
       '': 'none',
@@ -343,6 +364,14 @@ export const KAFKA_STRINGS = {
       start: 'start',
       slow: 'slow down',
       fast: 'back to normal',
+      on: 'on',
+      off: 'off',
+      allow: 'allow',
+      deny: 'deny',
+      topic: 'topic',
+      group: 'group',
+      literal: 'exact name',
+      prefixed: 'name prefix',
     },
     noTopics: 'No topics yet: create one first.',
     noGroups: 'No groups yet: start a consumer with a group first.',
@@ -392,11 +421,17 @@ export const KAFKA_STRINGS = {
     topicDeleted: 'Topic {topic} deleted',
     partitionsAdded: 'Topic {topic} now has {count} partitions',
     configChanged: '{topic}: {key} = {value}',
+    authDenied: '{client} ({principal}) may not {operation} {resource} {name}: {error}',
+    aclAdd: 'ACL added: {permission} {principal} to {operation} {resource} {name}',
+    aclRemove: 'ACL removed: {permission} {principal} to {operation} {resource} {name}',
+    authorizerOn: 'The authorizer is on: every request is now checked against the ACLs',
+    authorizerOff: 'The authorizer is off: every client may do anything',
     reasons: {
       join: 'a member joined',
       leave: 'a member left',
       timeout: 'a member timed out',
       metadata: 'topic metadata changed',
+      acl: 'ACLs changed',
     },
   },
   legend: {
@@ -563,6 +598,7 @@ export const KAFKA_STRINGS = {
       kip101: 'KIP-101: leader epochs',
       consumers: 'Consumer groups',
       log: 'Keys and the log',
+      security: 'Security',
     },
     start: 'Start',
     exit: 'Leave the scenario',
@@ -580,6 +616,7 @@ export const KAFKA_STRINGS = {
       kip101: 'KIP-101 (Apache Kafka)',
       vanlightly: 'Jack Vanlightly, "How to Lose Messages on a Kafka Cluster"',
       kip429: 'KIP-429 (Apache Kafka)',
+      acls: 'Apache Kafka documentation, "Authorization and ACLs"',
     },
     list: {
       'first-record': {
@@ -1101,6 +1138,60 @@ export const KAFKA_STRINGS = {
             ],
             result:
               '<compaction>Compaction</compaction> rewrote closed segments keeping the newest record per key. Offsets are never reused, so the log has holes. <tombstone>Tombstones</tombstone> (null values) delete a key.',
+          },
+        },
+      },
+      acls: {
+        title: 'Who is allowed?',
+        summary:
+          'Turn on the authorizer and grant a producer and a consumer exactly what they need.',
+        steps: {
+          open: {
+            title: 'An open cluster',
+            body: '<b>checkout</b> writes to <b>orders</b> and <b>billing-1</b> reads it in group <b>billing</b>. Nobody checks who they are: the authorizer is off.',
+            result: '',
+          },
+          on: {
+            title: 'Turn on the authorizer',
+            body: 'Like setting <b>authorizer.class.name</b> on every broker. There are no ACLs yet.',
+            question: 'What happens to checkout and billing-1?',
+            options: [
+              'Nothing: rules only apply to new clients',
+              'Both are refused: with no ACL that matches, the answer is no',
+              'Only writes are checked',
+            ],
+            result:
+              'checkout gets TOPIC_AUTHORIZATION_FAILED on every send, and billing-1 GROUP_AUTHORIZATION_FAILED: it can no longer join its group, so it owns no partitions. Kafka denies by default (allow.everyone.if.no.acl.found=false).',
+          },
+          group: {
+            title: 'Let billing-1 into its group',
+            body: '<b>kafka-acls --add --allow-principal User:billing-1 --operation Read --group billing</b>',
+            question: 'Can billing-1 read records now?',
+            options: [
+              'Yes, Read on the group is all a consumer needs',
+              'No, it still cannot join',
+              'It joins and gets partitions, but every fetch is refused',
+            ],
+            result:
+              'Joining a group and fetching from a topic are checked separately. billing-1 is back in the group with its partitions, but each fetch fails with TOPIC_AUTHORIZATION_FAILED.',
+          },
+          topic: {
+            title: 'Grant the topic',
+            body: 'Read on topic orders for billing-1, and Write on it for checkout. Everything flows again.',
+            result:
+              'A consumer needs Read on its group and on its topics; a producer needs Write on its topics. Read and Write also allow Describe, which clients use to fetch metadata.',
+          },
+          deny: {
+            title: 'One Deny for everyone',
+            body: 'Someone adds <b>--deny-principal User:* --operation Write --topic orders</b>.',
+            question: 'checkout still has its own Allow. Can it write?',
+            options: [
+              'No: a matching Deny always wins over any Allow',
+              'Yes: a rule for one user beats a rule for everyone',
+              'Only until it reconnects',
+            ],
+            result:
+              'checkout is refused again. Kafka checks Deny first, and User:* matches every principal.',
           },
         },
       },
