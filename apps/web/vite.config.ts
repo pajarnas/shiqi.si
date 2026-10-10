@@ -1,9 +1,9 @@
-import mdx from '@mdx-js/rollup';
 import { reactRouter } from '@react-router/dev/vite';
 import { defineConfig } from 'vite';
+import { mdxPlugin } from './mdx.config';
 
 export default defineConfig({
-  plugins: [{ enforce: 'pre', ...mdx({ providerImportSource: undefined }) }, reactRouter()],
+  plugins: [mdxPlugin(), reactRouter()],
   resolve: {
     tsconfigPaths: true,
   },
