@@ -1,6 +1,6 @@
 # 上线清单
 
-服务器：Azure for Students，`shiqi-1`，Ubuntu 24.04，`northcentralus`，公网 IP `52.162.142.136`，B2ats v2（2 vCPU / 1 GB）。
+服务器：Azure for Students，`shiqi-1`，Ubuntu 24.04，`northcentralus`，公网 IP `52.162.142.136`，B2ats v2（2 vCPU / 1 GB；要换成 B2als v2，4 GB，见下面 Kafka 一节）。
 
 ```
 浏览器 ──HTTPS──▶ Caddy（自动申请、续期 Let's Encrypt 证书）
@@ -132,16 +132,37 @@ docker compose up -d web
 
 `secrets.env` 不在 git 里，`bootstrap.sh` 也不会覆盖它。翻译结果缓存在 Redis，每段文字只翻一次；没有 key 时中文访客看到英文原文。
 
-## 以后：Kafka
+## Kafka 集群（4 GB 内存以后自动打开）
 
-Kafka 需要约 1 GB 内存，1 GB 的机器放不下。等有更大的节点（比如 Oracle Cloud 免费的 Arm 机器），在那台机器上：
+`/kafka` 的真集群是 `compose.yml` 里的 `kafka-1/2/3`：三个 KRaft 节点，每个既是 broker 也是 controller，堆 256 MB、容器上限 512 MB，只在内部网络里，不对外开端口。数据保留 24 小时或每分区 64 MB。
+
+`deploy.sh` 每次部署都看一眼内存：`/proc/meminfo` 里 ≥ 3.5 GB 才在 `.env` 里写 `COMPOSE_PROFILES=kafka` 和 `KAFKA_BROKERS` 并启动三个节点；不够就关掉。所以把 VM 换成 `Standard_B2als_v2`（4 GB）以后，下一次部署（或手动跑一次 `deploy.sh`）就会自己起来。
 
 ```bash
-ACME_EMAIL=<你的邮箱> GITHUB_OWNER=<你的用户名> bash infra/k8s/bootstrap-k3s.sh
-kubectl apply -k infra/k8s/addons/kafka
+az vm deallocate -g shiqi -n shiqi-1
+az vm resize -g shiqi -n shiqi-1 --size Standard_B2als_v2
+az vm start -g shiqi -n shiqi-1
 ```
 
-本地开发直接 `docker compose up -d` 就有 Redis 和 Kafka。
+检查：`curl -s https://shiqi.si/api/kafka/snapshot | head -c 300`，没开时是 503 `{"available":false}`。
+
+接口（只读的公开，写操作要 `/admin` 的密码，而且只能动 `lab-` 开头的 topic）：
+
+| 方法     | 路径                                                  | 作用                                                          |
+| -------- | ----------------------------------------------------- | ------------------------------------------------------------- |
+| `GET`    | `/api/kafka/snapshot`                                 | broker、controller、topic/分区（leader、ISR、offset）、消费组 |
+| `GET`    | `/api/kafka/records?topic=&partition=&from=&limit=`   | 读一个分区的记录，最多 50 条                                  |
+| `POST`   | `/api/kafka/topics` `{"name":"lab-x","partitions":3}` | 建 topic                                                      |
+| `DELETE` | `/api/kafka/topics/lab-x`                             | 删 topic                                                      |
+| `POST`   | `/api/kafka/produce` `{"topic":"lab-x","value":"hi"}` | 写记录（acks=all）                                            |
+
+```bash
+curl -u admin:$ADMIN_PASSWORD -H 'Content-Type: application/json' \
+  -d '{"name":"lab-orders","partitions":3,"replicationFactor":3}' https://shiqi.si/api/kafka/topics
+docker compose exec kafka-1 /opt/kafka/bin/kafka-metadata-quorum.sh --bootstrap-server localhost:9092 describe --status
+```
+
+本地开发直接 `docker compose up -d` 就有 Redis 和单节点 Kafka；`KAFKA_BROKERS=localhost:9092 pnpm dev` 让网站连上它。
 
 ## 常用运维
 
