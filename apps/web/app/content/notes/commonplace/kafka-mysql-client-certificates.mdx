@@ -1,0 +1,188 @@
+export const frontmatter = {
+  title: 'Logging in to Kafka and MySQL from a laptop with a client certificate',
+  date: '2026-10-10',
+  summary:
+    'A private CA, a client certificate, an SSH tunnel, and DataGrip: the command to run every time, the one-time setup, and every question that came up on the way.',
+  topics: ['kafka', 'mysql', 'security', 'ssh', 'tls', 'datagrip'],
+};
+
+## Every time
+
+After the laptop restarts, open the tunnel once:
+
+```bash
+ssh -fN shiqi-tunnel
+```
+
+No output means it worked; it keeps running in the background until the next restart. To check it:
+
+```bash
+for p in 19094 29094 39094 13306; do nc -z localhost $p && echo "$p ok" || echo "$p down"; done
+```
+
+Then open DataGrip. Kafka needs this tunnel. MySQL works with or without it (see below).
+
+## The picture
+
+```
+laptop                                   server (shiqi-1)
+DataGrip ──► localhost:19094 ─┐          ┌─► kafka-1 :19094
+             localhost:29094 ─┼── SSH ───┼─► kafka-2 :29094
+             localhost:39094 ─┤  (22)    ├─► kafka-3 :39094
+             localhost:13306 ─┘          └─► mysql   :3306
+```
+
+- On the server, Kafka's external listeners and MySQL listen on `127.0.0.1` only, and the cloud firewall only allows 80, 443 and 22. From the internet the databases do not exist.
+- The SSH tunnel carries those ports to the laptop over the SSH login that already works.
+- Inside the tunnel, both Kafka and MySQL still require a **client certificate** (mutual TLS). No certificate, no login, even through the tunnel. MySQL users made this way have no password at all.
+
+Two different key pairs are involved, and it helps to keep them apart:
+
+| Key             | Where                                | Used for                                     |
+| --------------- | ------------------------------------ | -------------------------------------------- |
+| SSH key         | `~/.ssh/id_ed25519`                  | logging in to the server, opening the tunnel |
+| Certificate key | `~/.shiqi/client.key` + `client.crt` | logging in to Kafka and MySQL                |
+
+## One-time setup
+
+### 1. Get a certificate
+
+From the repo (`infra/local/connect.sh`):
+
+```bash
+bash infra/local/connect.sh setup <name>
+```
+
+What it does:
+
+1. Makes a private key in `~/.shiqi/client.key`. It never leaves the laptop.
+2. Makes a **CSR** (certificate signing request): "please certify that this public key belongs to CN=name". A CSR holds only the public key.
+3. Sends the CSR over SSH to `infra/server/certs.sh sign <name>`. The server checks the CN, signs it with the private CA (valid 365 days), adds a MySQL user `<name>` that may log in only with this certificate, and restarts MySQL.
+4. Writes `ca.crt`, `client.crt`, `client.pem` (key + cert in one file), `kafka.properties` and `my.cnf` into `~/.shiqi`.
+
+The CA is our own ("shiqi.si private CA"), not a public one. That is fine: both sides are ours, and the CA only vouches for our own people and servers.
+
+### 2. Name the tunnel in `~/.ssh/config`
+
+```bash
+cat >> ~/.ssh/config <<'EOF'
+
+Host shiqi-tunnel
+  HostName shiqi.si
+  User <you>
+  LocalForward 19094 127.0.0.1:19094
+  LocalForward 29094 127.0.0.1:29094
+  LocalForward 39094 127.0.0.1:39094
+  LocalForward 13306 127.0.0.1:3306
+  ServerAliveInterval 30
+  ExitOnForwardFailure yes
+EOF
+chmod 600 ~/.ssh/config
+```
+
+`~/.ssh/config` gives a server a nickname plus the options to use with it, so `ssh -fN shiqi-tunnel` is short for `ssh -fN -L 19094:127.0.0.1:19094 -L ... you@shiqi.si`. `-f` goes to the background after logging in; `-N` opens no shell, only the forwards. `ExitOnForwardFailure` makes it fail loudly if a port is already taken instead of pretending to work.
+
+It does not name a key, and does not need to: without `IdentityFile`, ssh tries a fixed list in order (`ssh -G shiqi-tunnel | grep identityfile` prints it):
+
+```
+~/.ssh/id_rsa  ~/.ssh/id_ecdsa  ~/.ssh/id_ecdsa_sk  ~/.ssh/id_ed25519  ~/.ssh/id_ed25519_sk
+```
+
+plus whatever the agent / macOS keychain holds. Files that don't exist are skipped; `id_ed25519` is found. `ssh -v shiqi-tunnel exit 2>&1 | grep -i offering` shows which key was actually offered.
+
+### 3. Java key stores for DataGrip's Kafka plugin
+
+DataGrip's Kafka plugin cannot read our private key as PEM (see the errors below), so convert to PKCS#12, the format Java reads:
+
+```bash
+cd ~/.shiqi
+openssl pkcs12 -export -in client.crt -inkey client.key -certfile ca.crt -name <name> \
+  -out keystore.p12 -passout pass:changeit
+KT=~/Applications/DataGrip.app/Contents/jbr/Contents/Home/bin/keytool
+rm -f truststore.p12
+$KT -importcert -noprompt -alias shiqi-ca -file ca.crt -keystore truststore.p12 \
+  -storetype PKCS12 -storepass changeit
+```
+
+- **Keystore** = who I am: my key and my certificate.
+- **Truststore** = whom I trust: the CA that signed the server's certificate.
+- `changeit` is only the password of these local files (Java's traditional default); the files themselves are what matter, so keep `~/.shiqi` private.
+- `keytool` ships inside every JetBrains IDE. If the path is wrong, find it with `find /Applications ~/Applications -name keytool -type f`. Without keytool, OpenSSL 3.2+ can make the truststore: `openssl pkcs12 -export -nokeys -in ca.crt -jdktrust anyExtendedKeyUsage -out truststore.p12 -passout pass:changeit`.
+
+## DataGrip
+
+### MySQL
+
+Either way works.
+
+**A. DataGrip's own SSH tunnel**
+
+- SSH/SSL tab → Use SSH tunnel: host `shiqi.si`, port 22, your user, auth type **OpenSSH config and authentication agent**.
+- General: host `127.0.0.1`, port `3306`, user `<name>`, empty password, database `shiqi`. The address is as seen from the server, because the tunnel ends there.
+- SSL: Use SSL, CA `~/.shiqi/ca.crt`, client certificate `~/.shiqi/client.crt`, client key `~/.shiqi/client.key`, mode Verify CA.
+
+**B. With `shiqi-tunnel` running**: no SSH in DataGrip; host `127.0.0.1`, port `13306`, same user and SSL settings.
+
+### Kafka
+
+- Bootstrap servers: `localhost:19094,localhost:29094,localhost:39094`
+- Authentication: SSL → **Truststore and Keystore**
+- Truststore `~/.shiqi/truststore.p12`, password `changeit`
+- Use Keystore client authentication: on; keystore `~/.shiqi/keystore.p12`, password and key password `changeit`
+- Validate server host name: on is fine (the server certificate names `localhost` and `shiqi.si`)
+- Enable tunneling: **off**; `shiqi-tunnel` must be running
+- Create the connection fresh and never fill in the "Certificate and Key" fields (see errors below).
+
+## Why Kafka can't use DataGrip's tunnel but MySQL can
+
+MySQL is one address: connect to 3306 and keep using that one connection. Forwarding one port is enough.
+
+Kafka asks first, then goes direct. The client connects to any broker (the _bootstrap_ server) and gets back the cluster metadata: "broker 1 is at localhost:19094, broker 2 at localhost:29094, broker 3 at localhost:39094". From then on it talks to whichever broker leads the partition it needs. Those are the _advertised listeners_. DataGrip's tunnel forwards only the one port you type, so the other two addresses don't exist on the laptop and the connection fails or works only sometimes. `shiqi-tunnel` forwards all three.
+
+That is also why **Test Connection can pass while the real connection fails**: the test may only touch the bootstrap broker.
+
+## Why not just open the ports
+
+It would work: open 3306 and the Kafka ports on the server and in the cloud firewall, and keep requiring certificates. But every internet scanner would find them, and any future bug in MySQL or Kafka would be reachable directly. With the tunnel, the only door is SSH, which is already open and already key-only. The cost is one command after each restart. (An auto-starting tunnel via macOS `launchd` would remove even that; not set up.)
+
+## Errors met on the way
+
+| Error                                                    | Cause                                                                                                 | Fix                                                                              |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `bash infra/local/connect.sh: No such file or directory` | Ran outside the repo                                                                                  | `cd` into the clone first                                                        |
+| `exec: mysql: not found`                                 | No MySQL client on the laptop                                                                         | `brew install mysql-client`, or use DataGrip                                     |
+| `Could not resolve hostname shiqi-tunnel`                | The `Host shiqi-tunnel` block isn't in `~/.ssh/config` yet                                            | Add it (step 2)                                                                  |
+| DataGrip: `private key file '~/.ssh/id_rsa' not found`   | DataGrip's SSH "Key pair" mode defaults to `id_rsa`; the key is `id_ed25519`                          | Auth type "OpenSSH config and authentication agent", or point it at `id_ed25519` |
+| `Failed to parse PKCS#8 key ... Invalid RSA private key` | The Kafka plugin assumes PEM keys are RSA; ours is EC (P-256)                                         | Use Truststore and Keystore with the `.p12` files                                |
+| Same error after switching to `.p12`                     | The connection still held the old "Certificate and Key" paths and the plugin migrated them on connect | Delete the connection and create it again                                        |
+| `zsh: no such file or directory: .../keytool`            | DataGrip installed under `~/Applications`, not `/Applications`                                        | Use the path `find` prints                                                       |
+
+## Questions asked, answers given
+
+- **How was the CSR made?** On the laptop, from the laptop's own private key (`openssl req -new -key client.key -subj /CN=name`). The server only ever sees the CSR, never the key.
+- **Where is the private key, and how is it generated?** `~/.shiqi/client.key`, made by `connect.sh setup` with `openssl ecparam -name prime256v1 -genkey | openssl pkcs8 -topk8 -nocrypt` (PKCS#8, which Kafka's PEM key store needs).
+- **Where should the repo be cloned, given many repos later?** One parent folder per project, one clone per repo inside it: `~/projects/shiqi-si/shiqi.si`, with future repos next to it.
+- **Truststore/keystore for DataGrip?** See step 3.
+- **The Kafka CLI?** `brew install kafka`, then with the tunnel open:
+
+  ```bash
+  kafka-topics --bootstrap-server localhost:19094 --command-config ~/.shiqi/kafka.properties --list
+  kafka-console-consumer --bootstrap-server localhost:19094 --consumer.config ~/.shiqi/kafka.properties \
+    --topic lab-orders --from-beginning
+  kafka-metadata-quorum --bootstrap-server localhost:19094 --command-config ~/.shiqi/kafka.properties describe --status
+  ```
+
+- **"Don't use the tunnel" — what does that mean?** There is always a tunnel. The only question is who opens it: DataGrip (one port per connection) or `ssh -fN shiqi-tunnel` (all four ports at once).
+- **Did adding `shiqi-tunnel` change the hosts file?** No. `~/.ssh/config` only affects `ssh`; `/etc/hosts` was not touched, and nothing on the server changed.
+- **Where did the old key pair go?** Nowhere: the SSH key in `~/.ssh` and the certificate key in `~/.shiqi` are separate and both still in use.
+- **Why do both "Key pair → id_ed25519" and "OpenSSH config" work?** Both end up offering the same key; the server only checks that it is a key it accepts. "OpenSSH config" is the better choice because it follows `~/.ssh/config` automatically.
+- **Why must the tunnel be opened at all?** The databases are not on the internet, by design (see above).
+
+## What was built for this
+
+- A real three-broker Kafka 4.1 cluster in KRaft mode on the server, plus web APIs that show its state live (PR #19).
+- `infra/server/certs.sh`: the private CA, the server certificate (`shiqi.si`, `localhost`), signing CSRs, and certificate-only MySQL users via MySQL's `--init-file` (PR #20).
+- An `EXTERNAL` SSL listener on each broker with `ssl.client.auth=required`, and MySQL with `--ssl-ca/--ssl-cert/--ssl-key`, both published on the server's `127.0.0.1` only (PR #20).
+- `infra/local/connect.sh` for the laptop: `setup`, `tunnel`, `mysql`, `kafka` (PR #20).
+
+A certificate is accepted until it expires; there is no revocation list. To cut everyone off, delete the CA on the server and sign new certificates.
