@@ -17,6 +17,10 @@ import { Rich } from '~/i18n/Rich';
 import { localizeNoteMeta } from '~/i18n/notes.server';
 import { metaStrings } from '~/i18n/root-data';
 import { resolveLocale } from '~/i18n/locale.server';
+import { LANGUAGES } from '~/i18n/locales';
+import { VisitorMap } from '~/components/VisitorMap';
+import { publicCountryCounts } from '~/features/visits/visits.server';
+import { within } from '~/lib/redis.server';
 import { ABOUT, NEXT, SITE, TOOLS } from '~/site';
 import type { Route } from './+types/home';
 
@@ -29,7 +33,15 @@ export const meta: Route.MetaFunction = ({ matches }) => [
 
 export async function loader({ request }: Route.LoaderArgs) {
   const { locale } = await resolveLocale(request);
-  return { noteText: await localizeNoteMeta(latestNotes(LATEST), locale) };
+  const [noteText, visitors] = await Promise.all([
+    localizeNoteMeta(latestNotes(LATEST), locale),
+    within(publicCountryCounts(), 1500).catch(() => ({}) as Record<string, number>),
+  ]);
+  const regionName = new Intl.DisplayNames([LANGUAGES[locale].tag], { type: 'region' });
+  const names = Object.fromEntries(
+    Object.keys(visitors).map((code) => [code, regionName.of(code) ?? code]),
+  );
+  return { noteText, visitors, names };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
@@ -56,6 +68,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </Window>
 
       <SkyWindow />
+
+      <VisitorsWindow counts={loaderData.visitors} names={loaderData.names} />
 
       <Window title={t.home.playWindow}>
         <ToyGrid />
@@ -106,6 +120,45 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </Window>
       </div>
     </div>
+  );
+}
+
+const TOP_COUNTRIES = 5;
+
+function VisitorsWindow({
+  counts,
+  names,
+}: {
+  counts: Record<string, number>;
+  names: Record<string, string>;
+}) {
+  const { t } = useI18n();
+  const top = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, TOP_COUNTRIES);
+  const label = (name: string, n: number) => format(t.visitors.count, { name, n });
+  return (
+    <Window title={format(t.visitors.window, { n: Object.keys(counts).length })}>
+      <div className="visitors">
+        <VisitorMap counts={counts} names={names} label={label} title={t.visitors.title} />
+        <div className="visitors__text">
+          <p className="ui-muted">{top.length ? t.visitors.lede : t.visitors.empty}</p>
+          {top.length > 0 && (
+            <>
+              <span className="ui-eyebrow">{t.visitors.top}</span>
+              <ol className="visitors__top">
+                {top.map(([code, n]) => (
+                  <li key={code}>
+                    <span>{names[code] ?? code}</span>
+                    <span className="ui-pixel">{n}</span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
+        </div>
+      </div>
+    </Window>
   );
 }
 

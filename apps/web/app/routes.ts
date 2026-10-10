@@ -29,6 +29,8 @@ export default [
   ...prefix('api', [
     route('health', 'routes/api/health.ts'),
     route('locale', 'routes/api/locale.ts'),
+    route('visitors/countries', 'routes/api/visitors.ts'),
+    route('admin/visits', 'routes/api/admin/visits.ts'),
   ]),
   route('sitemap.xml', 'routes/sitemap.ts'),
   route('robots.txt', 'routes/robots.ts'),

@@ -111,6 +111,15 @@ export const en = {
       },
     },
   },
+  // The pixel world map of where visitors come from.
+  visitors: {
+    window: 'visitors.map — {n} countries and regions',
+    title: 'Where visitors come from',
+    lede: 'Each gold patch is a place someone has visited from; the darker, the more people. Hover for the count.',
+    count: '{name} · {n}',
+    top: 'Most visitors',
+    empty: 'No one on the map yet. You might be the first.',
+  },
   critter: {
     pet: 'Pet today’s critter',
     label: 'Today’s critter: {name}',

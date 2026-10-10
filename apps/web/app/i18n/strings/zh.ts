@@ -116,6 +116,14 @@ export const zh: DeepPartial<Strings> = {
       },
     },
   },
+  visitors: {
+    window: 'visitors.map — {n} 个国家和地区',
+    title: '访客来自哪里',
+    lede: '金色的格子是有人来访过的国家和地区，颜色越深人越多。把鼠标移上去看人数。',
+    count: '{name} · {n} 人',
+    top: '来得最多的',
+    empty: '地图上还没有人，你可能是第一个。',
+  },
   critter: {
     pet: '摸一摸今天的小怪',
     label: '今日小怪：{name}',

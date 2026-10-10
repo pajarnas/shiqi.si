@@ -1,9 +1,6 @@
 // Visitor log: what one page view looks like, and the pure helpers around it.
-// Reading and writing Redis lives in visits.server.ts.
+// Reading and writing the database lives in visits.server.ts.
 import { isbot } from 'isbot';
-
-/** Entries kept in the log; older ones fall off. About 300 bytes each. */
-export const LOG_SIZE = 20_000;
 
 export interface Visit {
   /** Epoch milliseconds. */
@@ -86,35 +83,85 @@ export function parseVisit(raw: string): Visit | null {
   }
 }
 
-export interface PageSummary {
+/** Rows per page on the admin log. */
+export const PAGE_SIZE = 50;
+
+export interface VisitFilters {
+  ip: string;
+  country: string;
   path: string;
-  /** Views recorded since the log began (all time). */
-  total: number;
-  /** Views in the kept log window, people only. */
-  views: number;
-  /** Distinct addresses in the kept log window, people only. */
-  readers: string[];
-  last: number;
+  bots: boolean;
+  page: number;
 }
 
-/** Groups the log by page, busiest first. Bots are left out of views and readers. */
-export function summarize(visits: readonly Visit[], totals: Record<string, string>): PageSummary[] {
-  const pages = new Map<string, PageSummary>();
-  const page = (path: string) => {
-    let p = pages.get(path);
-    if (!p) {
-      p = { path, total: Number(totals[path] ?? 0), views: 0, readers: [], last: 0 };
-      pages.set(path, p);
-    }
-    return p;
+/** Reads admin filters from a query string, ignoring anything malformed. */
+export function parseFilters(params: URLSearchParams): VisitFilters {
+  const country = (params.get('country') ?? '').toUpperCase();
+  const page = Number.parseInt(params.get('page') ?? '1', 10);
+  return {
+    ip: (params.get('ip') ?? '').slice(0, 45),
+    country: /^[A-Z]{2}$|^--$/.test(country) ? country : '',
+    path: (params.get('path') ?? '').slice(0, 255),
+    bots: params.get('bots') === '1',
+    page: Number.isFinite(page) && page > 0 ? Math.min(page, 100_000) : 1,
   };
-  for (const path of Object.keys(totals)) page(path);
-  for (const v of visits) {
-    if (v.bot) continue;
-    const p = page(v.path);
-    p.views += 1;
-    if (!p.readers.includes(v.ip)) p.readers.push(v.ip);
-    p.last = Math.max(p.last, v.t);
+}
+
+/** Builds a query string from filters, leaving defaults out. */
+export function filterQuery(f: Partial<VisitFilters>): string {
+  const q = new URLSearchParams();
+  if (f.ip) q.set('ip', f.ip);
+  if (f.country) q.set('country', f.country);
+  if (f.path) q.set('path', f.path);
+  if (f.bots) q.set('bots', '1');
+  if (f.page && f.page > 1) q.set('page', String(f.page));
+  const s = q.toString();
+  return s ? `?${s}` : '?';
+}
+
+/** Page numbers to show around the current one, with null for a gap. */
+export function pageWindow(page: number, pages: number): (number | null)[] {
+  const keep = new Set([1, pages, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages));
+  const out: (number | null)[] = [];
+  let last = 0;
+  for (const n of [...keep].sort((a, b) => a - b)) {
+    if (n - last > 1) out.push(null);
+    out.push(n);
+    last = n;
   }
-  return [...pages.values()].sort((a, b) => b.total - a.total || a.path.localeCompare(b.path));
+  return out;
+}
+
+/** Regional-indicator flag for an ISO country code; a globe when unknown. */
+export function flag(country: string | null): string {
+  if (!country || !/^[A-Z]{2}$/.test(country)) return '🌐';
+  return String.fromCodePoint(...[...country].map((c) => 0x1f1a5 + c.charCodeAt(0)));
+}
+
+const BROWSERS: [RegExp, string][] = [
+  [/Edg(?:e|A|iOS)?\//, 'Edge'],
+  [/OPR\/|Opera/, 'Opera'],
+  [/SamsungBrowser\//, 'Samsung'],
+  [/MicroMessenger\//, 'WeChat'],
+  [/Firefox\/|FxiOS\//, 'Firefox'],
+  [/Chrome\/|CriOS\//, 'Chrome'],
+  [/Safari\//, 'Safari'],
+  [/curl\//, 'curl'],
+];
+const SYSTEMS: [RegExp, string][] = [
+  [/iPhone|iPad|iPod/, 'iOS'],
+  [/Android/, 'Android'],
+  [/Mac OS X|Macintosh/, 'macOS'],
+  [/Windows/, 'Windows'],
+  [/CrOS/, 'ChromeOS'],
+  [/Linux/, 'Linux'],
+];
+
+/** "Chrome · macOS" from a user agent; the first word of it when unrecognized. */
+export function shortAgent(ua: string): string {
+  const browser = BROWSERS.find(([re]) => re.test(ua))?.[1];
+  const system = SYSTEMS.find(([re]) => re.test(ua))?.[1];
+  const parts = [browser, system].filter(Boolean);
+  if (parts.length) return parts.join(' · ');
+  return ua.split(/[\s/;(]/)[0]?.slice(0, 30) || '—';
 }

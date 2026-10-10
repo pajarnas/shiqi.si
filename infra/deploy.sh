@@ -20,8 +20,10 @@ if [ ! -t 0 ]; then
   done
 fi
 
+source ./ensure-env.sh
 sed -i "s|^IMAGE=.*|IMAGE=${IMAGE}|" .env
 docker compose pull web
+# Starts MySQL and Redis too if they aren't running yet.
 docker compose up -d web
 docker image prune -f >/dev/null
-docker compose ps web
+docker compose ps
