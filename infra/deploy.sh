@@ -21,6 +21,8 @@ if [ ! -t 0 ]; then
 fi
 
 source ./ensure-env.sh
+# The private CA and the TLS certificates MySQL and Kafka read (see certs.sh).
+bash ./certs.sh server
 sed -i "s|^IMAGE=.*|IMAGE=${IMAGE}|" .env
 
 # Sets NAME=value in .env (or removes NAME when value is empty).

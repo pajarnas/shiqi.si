@@ -58,6 +58,10 @@ mv "$SERVER_DIR/.env.new" "$SERVER_DIR/.env"
 
 log "Start the site"
 cd "$SERVER_DIR"
+# sudo because the docker group only applies from the next login; hand the CA
+# back to this user so deploy.sh can run it later.
+sudo bash ./certs.sh server
+sudo chown "$USER": certs certs/ca.crt && sudo chown -R "$USER": certs/ca certs/server certs/issued
 sudo docker compose pull
 sudo docker compose up -d --remove-orphans
 

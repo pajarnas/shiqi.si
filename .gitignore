@@ -10,3 +10,4 @@ coverage/
 infra/server/.env
 dump.rdb
 infra/server/secrets.env
+infra/server/certs/

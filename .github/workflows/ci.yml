@@ -21,7 +21,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - name: Shell syntax
-        run: for f in infra/*.sh infra/k8s/*.sh; do bash -n "$f"; done
+        run: for f in infra/*.sh infra/*/*.sh; do bash -n "$f"; done
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
