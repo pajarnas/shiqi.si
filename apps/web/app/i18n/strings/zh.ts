@@ -72,6 +72,28 @@ export const zh: DeepPartial<Strings> = {
     notesWindow: '笔记 — NOTES',
     aboutWindow: '幕后 — ABOUT',
     nextWindow: '接下来 — NEXT',
+    kafka: {
+      window: 'Kafka — KAFKA',
+      lede: '从字节开始学 Kafka：先看一个集群怎么工作，再把它弄坏，最后自己把它的每一块写出来。',
+      links: {
+        live: {
+          title: 'Kafka 现场',
+          description: '在浏览器里跑的三 broker 集群：引导情景、断电，还有能点出命令的终端。',
+        },
+        real: {
+          title: '真集群',
+          description: '这台服务器上三个真的 Kafka broker，实时读取：leader、ISR、偏移和落后量。',
+        },
+        course: {
+          title: '自己写一个 Kafka',
+          description: '一次写一个函数，把 Kafka 重新写一遍，旁边的演示就跑在你的代码上。',
+        },
+        notes: {
+          title: 'Kafka 笔记',
+          description: '日志、分区、复制、消费者组：都在「杂学 / Kafka」里。',
+        },
+      },
+    },
     soon: 'SOON',
     about: {
       ssr: {

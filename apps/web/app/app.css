@@ -858,3 +858,8 @@ ul.topic-tags {
   margin-bottom: var(--space-6);
   scroll-margin-top: 4rem;
 }
+
+.home__window-lede {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+}

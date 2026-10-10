@@ -20,7 +20,7 @@ import { LANGUAGES } from '~/i18n/locales';
 import { VisitorMap } from '~/components/VisitorMap';
 import { publicCountryCounts } from '~/features/visits/visits.server';
 import { within } from '~/lib/redis.server';
-import { ABOUT, NEXT, SITE, TOOLS } from '~/site';
+import { ABOUT, KAFKA_LINKS, NEXT, SITE, TOOLS } from '~/site';
 import type { Route } from './+types/home';
 
 const LATEST = 4;
@@ -64,6 +64,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
           <TodaysCritter />
         </div>
+      </Window>
+
+      <Window title={t.home.kafka.window}>
+        <p className="home__window-lede">{t.home.kafka.lede}</p>
+        <List className="flush">
+          {KAFKA_LINKS.map((k) => (
+            <ListItem
+              key={k.key}
+              as={Link}
+              to={k.path}
+              icon={<PixelIcon name={k.icon} />}
+              title={t.home.kafka.links[k.key].title}
+              description={t.home.kafka.links[k.key].description}
+              meta="›"
+            />
+          ))}
+        </List>
       </Window>
 
       <SkyWindow />

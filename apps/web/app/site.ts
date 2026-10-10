@@ -61,6 +61,18 @@ export const NEXT = [
   { key: 'toys', icon: 'glider' },
 ] as const satisfies readonly { key: keyof Strings['home']['next']; icon: IconName }[];
 
+/** The Kafka window on the home page: one row per way in. */
+export const KAFKA_LINKS = [
+  { key: 'live', path: '/kafka', icon: 'terminal' },
+  { key: 'real', path: '/kafka?mode=real', icon: 'bolt' },
+  { key: 'course', path: '/kafka/build', icon: 'pencil' },
+  { key: 'notes', path: '/notes/commonplace#kafka', icon: 'book' },
+] as const satisfies readonly {
+  key: keyof Strings['home']['kafka']['links'];
+  path: string;
+  icon: IconName;
+}[];
+
 /** Window title (shown like a file name) and eyebrow of each page. */
 export const PAGES = {
   play: { file: 'play/', eyebrow: 'PLAY' },
