@@ -73,6 +73,50 @@ function centre(el: HTMLElement, stage: DOMRect) {
   };
 }
 
+/**
+ * Each kind of traffic has its own shape, so colour never has to carry it
+ * alone: records are solid squares in their key's colour, replication is a
+ * hollow square, a consumer fetch is a round dot, a failure is a crossed square.
+ */
+function drawPacket(
+  ctx: CanvasRenderingContext2D,
+  kind: Packet['color'],
+  x: number,
+  y: number,
+  s: number,
+  color: string,
+  ink: string,
+) {
+  ctx.fillStyle = ink;
+  if (kind === 'consume') {
+    ctx.beginPath();
+    ctx.arc(x + s / 2, y + s / 2, s / 2 + 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  ctx.fillRect(x - 1, y - 1, s + 2, s + 2);
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, s, s);
+  if (kind === 'replica') {
+    const b = Math.max(2, Math.round(s / 4));
+    ctx.fillStyle = ink;
+    ctx.fillRect(x + b, y + b, s - 2 * b, s - 2 * b);
+  } else if (kind === 'error') {
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 1, y + 1);
+    ctx.lineTo(x + s - 1, y + s - 1);
+    ctx.moveTo(x + s - 1, y + 1);
+    ctx.lineTo(x + 1, y + s - 1);
+    ctx.stroke();
+  }
+}
+
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
 /**
@@ -177,10 +221,7 @@ export function PacketLayer({
           const y = a.y + (b.y - a.y) * k;
           const s = i === steps.length - 1 ? sq : sq * (0.5 + i * 0.15);
           ctx.globalAlpha = i === steps.length - 1 ? 1 : 0.35;
-          ctx.fillStyle = ink;
-          ctx.fillRect(Math.round(x - s / 2) - 1, Math.round(y - s / 2) - 1, s + 2, s + 2);
-          ctx.fillStyle = color;
-          ctx.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s);
+          drawPacket(ctx, p.color, Math.round(x - s / 2), Math.round(y - s / 2), s, color, ink);
         });
         ctx.globalAlpha = 1;
       }

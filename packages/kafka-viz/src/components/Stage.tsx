@@ -148,7 +148,7 @@ function BrokerCard({
         />
         <span
           className={cx('kv-led', 'kv-led--activity', busy && 'kv-led--blink')}
-          aria-hidden="true"
+          title={t.legend.activity}
         />
         <h3 className="kv-broker__name">{format(t.broker.title, { id: broker.id })}</h3>
         {isController && (
@@ -299,7 +299,9 @@ function ReplicaRow({
           leader={leaderLog}
           ownHighWatermark={isLeader ? undefined : log.highWatermark}
         />
-        <span className="kv-replica__leo">{log.logEndOffset}</span>
+        <span className="kv-replica__leo" title={t.legend.leo}>
+          {log.logEndOffset}
+        </span>
       </button>
     </li>
   );
