@@ -1,0 +1,57 @@
+export const frontmatter = {
+  title: 'Picking a language and translating a site',
+  date: '2026-10-09',
+  summary:
+    'String tables instead of hard-coded text, how to choose a visitor’s language, placeholders, and caching machine translation.',
+  topics: ['i18n', 'web', 'redis'],
+};
+
+**i18n** (internationalization: 18 letters between i and n) is making a site able to speak several languages. **l10n** (localization) is the work of actually adding one.
+
+## Rule one: no text in components
+
+Every visible string lives in a table, keyed by an id:
+
+```ts
+// strings/en.ts (the source language)
+export const en = {
+  'notes.title': 'Notes',
+  'notes.count': '{count} notes',
+};
+// strings/zh.ts
+export const zh = { 'notes.title': '笔记', 'notes.count': '{count} 篇笔记' };
+```
+
+Components ask for `t('notes.title')`. Then:
+
+- Adding a language means adding a table, not touching components.
+- **Placeholders** (`{count}`) let each language put the variable where its grammar wants it. Never build sentences by concatenating fragments.
+- Markup inside a sentence uses tags in the string (`'Read the <link>notes</link>'`) that the component maps to elements, so translators can move the link too.
+- Shared UI libraries take their words from the app (a provider or props) instead of carrying their own language.
+
+## Choosing the language
+
+Ask in order, first answer wins:
+
+1. An explicit choice in the URL (`?lang=zh`): shareable and testable.
+2. A cookie remembering what the visitor picked with the switch.
+3. The visitor's country, from a CDN header (`CF-IPCountry`) or an IP lookup. Cache lookups per IP, keep the timeout short, and remember that sending IPs to a lookup service is sharing visitor data.
+4. The browser's `Accept-Language` header.
+5. The default.
+
+Country is a guess, not a language: people travel and use VPNs. Always offer a visible switch, and let it win.
+
+Set `<html lang="...">` to the chosen language, for screen readers, fonts and search engines.
+
+## Machine translation
+
+For long content you won't translate by hand, translate on the server and cache:
+
+- Cache key = target language + a hash of the source text. Unchanged text is never translated twice, and an edit re-translates only what changed.
+- Translate the **rendered HTML** in HTML mode, so tags survive. Mark things that must not change (`<span translate="no">`, placeholders, code).
+- If the service is down or unconfigured, fall back to the source language instead of failing the page.
+- Free options: **Azure AI Translator F0** (2 million characters a month) or a self-hosted **LibreTranslate**. Both are statistical/neural MT, not LLMs.
+
+Hand-written translations stay better for short UI text; use machine translation to fill gaps and for long content.
+
+Related: the day it was built, [Afternoon on the live site](/notes/journal/2026-10-09-visitors-i18n-auto-deploy).

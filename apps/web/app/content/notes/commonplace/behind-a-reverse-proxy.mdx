@@ -1,0 +1,53 @@
+export const frontmatter = {
+  title: 'Running behind a reverse proxy',
+  date: '2026-10-09',
+  summary:
+    'What changes when Caddy or nginx sits in front of your app: client IPs, forwarded headers, http vs https, and origin checks.',
+  topics: ['networking', 'https', 'caddy', 'security'],
+};
+
+A reverse proxy (Caddy, nginx, Traefik, a CDN) accepts the browser's connection and opens a second one to your app. It usually terminates TLS, so:
+
+```
+browser ──HTTPS──▶ proxy ──plain HTTP──▶ app
+```
+
+Your app now sees the world second-hand. Three things change.
+
+## 1. The client IP
+
+The TCP peer the app sees is the proxy, not the visitor. Proxies pass the real address in headers:
+
+- `X-Forwarded-For: <client>, <proxy1>, <proxy2>`: each hop **appends** the address it received the request from.
+- `X-Real-IP`: a single address, set by some proxies.
+- `Forwarded: for=...;proto=https`: the standard (RFC 7239) form, less common in practice.
+
+**Trust only what your own proxy wrote.** A client can send its own `X-Forwarded-For: 1.2.3.4`, and the proxy appends the real address after it. With exactly one proxy in front, the **last** entry is the trustworthy one. With a CDN in front of the proxy, count back one more, or use the CDN's own header (`CF-Connecting-IP`).
+
+## 2. The scheme and host
+
+The app receives `http://` even though the visitor used `https://`. Anything that builds absolute URLs (redirects, canonical links, emails) must use the configured site URL or `X-Forwarded-Proto`, not the request's own scheme.
+
+## 3. Origin checks (CSRF)
+
+Frameworks protect form posts by checking that the `Origin` header matches the server's own origin. Behind TLS termination they compare `https://example.com` (from the browser) with `http://example.com` (what the app sees), and **reject every legitimate post**. Symptoms: forms work locally, fail in production with 400 or 500.
+
+Fixes, in order of preference:
+
+- Tell the framework which origins are its own. React Router: `allowedActionOrigins: ['example.com', 'www.example.com']` in `react-router.config.ts`.
+- Or have the app trust `X-Forwarded-Proto` / `X-Forwarded-Host` from the proxy.
+
+Never turn the check off: it is what stops another site from submitting forms as your logged-in visitor.
+
+## Testing it locally
+
+Reproduce production's headers with curl instead of trusting "works on my machine":
+
+```bash
+curl -i -X POST http://localhost:3000/api/locale \
+  -H 'Origin: https://example.com' \
+  -H 'X-Forwarded-For: 203.0.113.7' \
+  -d 'lang=zh'
+```
+
+Related: [Automatic HTTPS with Caddy](/notes/commonplace/caddy-https).
