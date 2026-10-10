@@ -700,3 +700,27 @@ ul.topic-tags {
   padding-top: var(--space-4);
   border-top: var(--border-width) dashed var(--border);
 }
+
+/* Tables in notes (GitHub-flavoured Markdown). Wide tables scroll sideways on phones. */
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin-block: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.prose th,
+.prose td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.45;
+}
+
+.prose th {
+  background: var(--surface-sunken);
+  font-weight: 700;
+}
