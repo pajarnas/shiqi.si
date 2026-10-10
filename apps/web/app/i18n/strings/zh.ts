@@ -341,6 +341,7 @@ export const zh: DeepPartial<Strings> = {
         description: '关于像素、标准和这个网站的一些想法。',
       },
     },
+    subfolders: { kafka: 'Kafka' },
     folderMissing: '没有这个文件夹',
     topics: '话题',
     latest: '最近',

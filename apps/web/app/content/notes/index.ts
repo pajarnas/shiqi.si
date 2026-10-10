@@ -19,25 +19,35 @@ export interface NoteMeta {
 
 export interface Note extends NoteMeta {
   folder: FolderId;
+  /** A directory inside the folder, e.g. `kafka` in commonplace/kafka/; null at the top. */
+  subfolder: string | null;
+  /** The file name without .mdx. */
+  name: string;
+  /** Path inside the folder: `<subfolder>/<name>` or `<name>`. */
   slug: string;
   /** `/notes/<folder>/<slug>` */
   href: string;
   Component: ComponentType;
 }
 
-const modules = import.meta.glob<{ default: ComponentType; frontmatter: NoteMeta }>('./*/*.mdx', {
-  eager: true,
-});
+const modules = import.meta.glob<{ default: ComponentType; frontmatter: NoteMeta }>(
+  ['./*/*.mdx', './*/*/*.mdx'],
+  { eager: true },
+);
 
 const folderIds = new Set<string>(FOLDERS.map((f) => f.id));
 
 export const NOTES: readonly Note[] = Object.entries(modules)
   .map(([path, mod]) => {
-    const [, folder = '', slug = ''] = /^\.\/([^/]+)\/(.+)\.mdx$/.exec(path) ?? [];
+    const [, folder = '', subfolder, name = ''] =
+      /^\.\/([^/]+)\/(?:([^/]+)\/)?([^/]+)\.mdx$/.exec(path) ?? [];
     if (!folderIds.has(folder)) throw new Error(`${path}: "${folder}" is not listed in folders.ts`);
+    const slug = subfolder ? `${subfolder}/${name}` : name;
     return {
       ...mod.frontmatter,
       folder: folder as FolderId,
+      subfolder: subfolder ?? null,
+      name,
       slug,
       href: `/notes/${folder}/${slug}`,
       Component: mod.default,
@@ -51,7 +61,13 @@ export const notesTagged = (topic: string) => NOTES.filter((n) => n.topics.inclu
 export const findNote = (folder: string | undefined, slug: string | undefined) =>
   NOTES.find((n) => n.folder === folder && n.slug === slug);
 /** For old `/notes/<slug>` links from before folders existed. */
-export const findNoteBySlug = (slug: string | undefined) => NOTES.find((n) => n.slug === slug);
+export const findNoteBySlug = (slug: string | undefined) => NOTES.find((n) => n.name === slug);
+/** For old `/notes/<folder>/<name>` links to notes since moved into a subfolder. */
+export const findMovedNote = (folder: string | undefined, name: string | undefined) =>
+  NOTES.find((n) => n.folder === folder && n.name === name);
+/** The subfolders of a folder, sorted. */
+export const subfoldersIn = (folder: string) =>
+  [...new Set(notesIn(folder).flatMap((n) => (n.subfolder ? [n.subfolder] : [])))].sort();
 
 /** Every topic with its note count, most used first. */
 export const TOPICS: readonly { topic: string; count: number }[] = [

@@ -853,3 +853,8 @@ ul.topic-tags {
   overflow-x: auto;
   font-size: var(--text-xs);
 }
+
+.note-subfolder {
+  margin-bottom: var(--space-6);
+  scroll-margin-top: 4rem;
+}

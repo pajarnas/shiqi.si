@@ -364,6 +364,7 @@ export const en = {
         description: 'Thoughts on pixels, standards and this site.',
       },
     },
+    subfolders: { kafka: 'Kafka' },
     folderMissing: 'No such folder',
     topics: 'Topics',
     latest: 'Latest',
