@@ -1,0 +1,33 @@
+{
+  "name": "@shiqi/kafka-viz",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React views for @shiqi/kafka: live cluster diagram, partition inspector, terminal and event log.",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./strings": "./src/strings.tsx",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@shiqi/kafka": "workspace:*",
+    "@shiqi/pixel": "workspace:*",
+    "@shiqi/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}

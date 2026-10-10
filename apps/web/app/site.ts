@@ -27,6 +27,7 @@ export const NAV = [
   { path: '/play', key: 'play' },
   { path: '/tools', key: 'tools' },
   { path: '/notes', key: 'notes' },
+  { path: '/kafka', key: 'kafka' },
   { path: '/ui', key: 'ui' },
 ] as const satisfies readonly { path: string; key: keyof Strings['nav'] }[];
 
@@ -73,5 +74,6 @@ export const PAGES = {
   uuid: { file: 'tools/uuid', eyebrow: 'UUID' },
   json: { file: 'tools/json', eyebrow: 'JSON' },
   notes: { file: 'notes/', eyebrow: 'NOTES' },
+  kafka: { file: 'kafka/', eyebrow: 'KAFKA' },
   ui: { file: 'ui/', eyebrow: '@shiqi/ui' },
 } as const;

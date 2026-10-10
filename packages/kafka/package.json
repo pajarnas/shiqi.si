@@ -1,0 +1,17 @@
+{
+  "name": "@shiqi/kafka",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A deterministic, in-memory Kafka cluster simulator and CLI emulator. Framework-free.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@shiqi/pixel": "workspace:*"
+  }
+}

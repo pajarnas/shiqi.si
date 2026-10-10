@@ -6,6 +6,7 @@ export function loader() {
     '/',
     '/tools',
     '/notes',
+    '/kafka',
     '/ui',
     ...TOYS.map((t) => t.path),
     ...TOOLS.map((t) => t.path),

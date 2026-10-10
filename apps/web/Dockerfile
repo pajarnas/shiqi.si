@@ -11,11 +11,17 @@ RUN corepack enable
 WORKDIR /repo
 
 # Install with only manifests first, so dependency layers cache across code changes.
+# Every workspace package.json is collected, so a new package needs no edit here;
+# the copy below stays cached as long as the manifests themselves don't change.
+FROM base AS manifests
+COPY . .
+RUN mkdir /manifests \
+ && cp pnpm-lock.yaml pnpm-workspace.yaml package.json /manifests/ \
+ && for f in apps/*/package.json packages/*/package.json; do \
+      mkdir -p "/manifests/$(dirname "$f")" && cp "$f" "/manifests/$f"; done
+
 FROM base AS deps
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY apps/web/package.json apps/web/
-COPY packages/pixel/package.json packages/pixel/
-COPY packages/ui/package.json packages/ui/
+COPY --from=manifests /manifests ./
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 FROM deps AS build

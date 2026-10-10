@@ -1,6 +1,7 @@
 // English is the original. Every word the site shows starts here; zh.ts mirrors
 // this shape, and keys missing there are filled by the translation service.
 // Placeholders look like {name}; tags like <b>…</b> mark rich text (see Rich).
+import { KAFKA_STRINGS } from '@shiqi/kafka-viz/strings';
 import { UI_STRINGS } from '@shiqi/ui';
 
 export const en = {
@@ -13,6 +14,7 @@ export const en = {
     play: 'Play',
     tools: 'Tools',
     notes: 'Notes',
+    kafka: 'Kafka',
     ui: 'Components',
   },
   chrome: {
@@ -375,6 +377,18 @@ export const en = {
     unavailable: 'The translation isn’t available right now, so this is the English original.',
     pending:
       'The translation is still being written. Refresh in a minute; here is the English original for now.',
+  },
+  kafka: {
+    title: 'Kafka, live',
+    description:
+      'A Kafka cluster running in your browser: watch records move between producers, brokers and consumers, break things, and type real Kafka commands.',
+    lede: 'Three brokers, two topics, two consumer groups, all running right here. Stop a broker, slow a disk, add a consumer, or open the terminal and type kafka-topics --describe.',
+    simulated:
+      'This is a faithful simulation (leaders, ISR, high watermark, rebalances, retention, compaction), not a real broker: the server this site runs on has 1 GB of memory.',
+    notes: 'Kafka notes',
+    notesLede: 'The concepts behind what you see above. They also live under Notes, tagged #kafka.',
+    noNotes: 'No Kafka notes yet.',
+    lab: KAFKA_STRINGS,
   },
   gallery: {
     title: 'Components',

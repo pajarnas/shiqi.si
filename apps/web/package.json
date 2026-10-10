@@ -13,6 +13,8 @@
   "dependencies": {
     "@react-router/node": "^8.4.0",
     "@react-router/serve": "^8.4.0",
+    "@shiqi/kafka": "workspace:*",
+    "@shiqi/kafka-viz": "workspace:*",
     "@shiqi/pixel": "workspace:*",
     "@shiqi/ui": "workspace:*",
     "isbot": "^5.2.2",

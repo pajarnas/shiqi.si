@@ -40,6 +40,8 @@ apps/web/              网站：React Router（服务端渲染）+ MDX
   app/i18n/            多语言：strings/en.ts 是全部文案的原文，zh.ts 是中文；翻译服务和按 IP 选语言
 packages/ui/           @shiqi/ui 组件库：主题、tokens、React 组件
 packages/pixel/        @shiqi/pixel 像素绘图库：不依赖框架
+packages/kafka/        @shiqi/kafka Kafka 集群模拟引擎 + CLI 模拟器：不依赖框架
+packages/kafka-viz/    @shiqi/kafka-viz Kafka 可视化的 React 视图，/kafka 页用它
 infra/                 服务器初始化和部署脚本；server/ 是 Docker Compose，k8s/ 留给以后的大机器
 .github/workflows/     CI：检查 → 构建镜像 → 部署
 ```
@@ -53,6 +55,10 @@ infra/                 服务器初始化和部署脚本；server/ 是 Docker Co
 ### 像素库 `@shiqi/pixel`
 
 调色板、可复现随机数（mulberry32 + FNV-1a）、Bayer 抖动、Bresenham 直线、中点圆、字符画图标、小怪生成器、风景、1984 图案、涂鸦墙。图标是字符画（`#` 墨、`o` 填充、`:` 网点），改一个像素会出现在 diff 里。
+
+### Kafka 实验室 `/kafka`
+
+浏览器里跑的 Kafka 集群：broker、副本和 ISR、leader 选举、消费者组 rebalance、保留和压缩，加一个能敲真 Kafka 命令的终端。引擎在 `packages/kafka`，视图在 `packages/kafka-viz`，计划和路线图见 [docs/kafka/plan.md](docs/kafka/plan.md)。笔记的 topics 里写 `kafka` 就会同时出现在 `/notes` 和 `/kafka`。
 
 ## 加东西
 

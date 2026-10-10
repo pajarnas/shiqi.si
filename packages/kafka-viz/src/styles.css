@@ -1,0 +1,813 @@
+/* @shiqi/kafka-viz. Class names are `kv-<block>[__element][--modifier]`.
+   Only @shiqi/ui's semantic tokens are read, so every theme works. */
+
+:root,
+[data-theme] {
+  /* Key colours: six slots that stay apart in every theme, plus "no key". */
+  --kv-key-0: #f2b51b;
+  --kv-key-1: #1f9d55;
+  --kv-key-2: #5b8def;
+  --kv-key-3: #e8735a;
+  --kv-key-4: #9fd7c2;
+  --kv-key-5: #b07ce8;
+  --kv-key-none: #9a968a;
+  --kv-replica: var(--accent-2);
+  --kv-consume: var(--link);
+  --kv-chassis: var(--surface-sunken);
+  --kv-cell-size: 1.1rem;
+}
+
+.kv-app {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.kv-muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.kv-error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.kv-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0 0.35rem;
+  font: var(--text-xs) / 1.6 var(--font-pixel);
+  color: var(--text);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  white-space: nowrap;
+}
+
+.kv-tag--controller {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
+/* ---------- Toolbar ---------- */
+
+.kv-toolbar > .ui-segmented,
+.kv-panels > .ui-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.kv-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.kv-toolbar__clock {
+  margin-inline-start: auto;
+  font-size: var(--text-sm);
+}
+
+/* ---------- Stage ---------- */
+
+.kv-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr) 15rem;
+  gap: var(--space-6);
+  align-items: start;
+  padding: var(--space-4);
+  background:
+    linear-gradient(var(--surface-sunken) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, var(--surface-sunken) 1px, transparent 1px) 0 0 / 16px 16px,
+    var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+@media (max-width: 64rem) {
+  .kv-stage {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kv-packets {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.kv-lane {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.kv-lane__title {
+  margin: 0;
+  font: var(--text-xs) / 1.5 var(--font-pixel);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.kv-brokers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
+  gap: var(--space-4);
+}
+
+/* ---------- Broker: a server chassis ---------- */
+
+.kv-broker {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--kv-chassis);
+  border: var(--border-width) solid var(--border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow);
+  transition: opacity var(--step-slow);
+}
+
+/* Rack screws in the corners. */
+.kv-broker::before,
+.kv-broker::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  width: 6px;
+  height: 6px;
+  background: var(--border);
+}
+
+.kv-broker::before {
+  left: 6px;
+}
+
+.kv-broker::after {
+  right: 6px;
+}
+
+.kv-broker--down {
+  opacity: 0.55;
+  background: repeating-linear-gradient(-45deg, var(--kv-chassis) 0 8px, var(--surface) 8px 16px);
+}
+
+.kv-broker--slow {
+  border-style: dashed;
+}
+
+.kv-broker__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+  /* Vent slots. */
+  background: repeating-linear-gradient(90deg, transparent 0 6px, var(--surface) 6px 8px) bottom /
+    100% 4px no-repeat;
+  padding-bottom: var(--space-2);
+}
+
+.kv-broker__name {
+  margin: 0;
+  white-space: nowrap;
+  font: 700 var(--text-sm) / 1.2 var(--font-pixel);
+}
+
+.kv-broker__status {
+  margin: 0;
+  padding-inline: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.kv-led {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.kv-led--on {
+  background: var(--success);
+}
+
+.kv-led--off {
+  background: var(--danger);
+}
+
+.kv-led--activity.kv-led--blink {
+  background: var(--accent);
+  animation: kv-blink 0.24s steps(2) infinite;
+}
+
+@keyframes kv-blink {
+  50% {
+    background: var(--surface);
+  }
+}
+
+.kv-broker__meters {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.kv-meter {
+  display: grid;
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.kv-meter__label {
+  font-family: var(--font-pixel);
+}
+
+.kv-meter__bar {
+  height: 8px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(90deg, var(--accent-2) calc(var(--fill) * 100%), transparent 0),
+    repeating-linear-gradient(90deg, transparent 0 3px, var(--surface-sunken) 3px 4px);
+}
+
+.kv-meter__value {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.kv-broker__replicas {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-broker__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ---------- Replica row ---------- */
+
+.kv-replica {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas:
+    'name role leo'
+    'strip strip strip';
+  align-items: center;
+  gap: 3px var(--space-2);
+  width: 100%;
+  padding: 4px var(--space-2);
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--text);
+  text-align: start;
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  cursor: pointer;
+}
+
+.kv-replica > .kv-strip {
+  grid-area: strip;
+}
+
+.kv-replica:hover,
+.kv-replica--selected {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+}
+
+.kv-replica__name {
+  grid-area: name;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv-replica__role {
+  grid-area: role;
+  display: inline-grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  font: 700 var(--text-xs) / 1 var(--font-pixel);
+  border: var(--border-width) solid var(--border);
+}
+
+.kv-replica--leader .kv-replica__role,
+.kv-replica__role.kv-replica--leader {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
+.kv-replica--follower .kv-replica__role,
+.kv-replica__role.kv-replica--follower {
+  color: var(--accent-2-text);
+  background: var(--accent-2);
+}
+
+.kv-replica--out,
+.kv-replica--offline {
+  border-style: dashed;
+}
+
+.kv-replica--out .kv-replica__role,
+.kv-replica__role.kv-replica--out,
+.kv-replica--offline .kv-replica__role {
+  color: var(--surface);
+  background: var(--danger);
+}
+
+.kv-replica__leo {
+  grid-area: leo;
+  min-width: 2rem;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Log strip ---------- */
+
+.kv-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cells), minmax(0, 1fr));
+  gap: 2px;
+  min-width: 0;
+  max-width: calc(var(--cells) * (var(--kv-cell-size) + 2px));
+}
+
+.kv-strip--sm .kv-cell {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.kv-strip--lg {
+  --kv-cell-size: 1.6rem;
+  grid-template-columns: repeat(auto-fill, var(--kv-cell-size));
+  padding-block: 0.3rem 0.6rem;
+}
+
+.kv-cell {
+  position: relative;
+  display: inline-block;
+  width: var(--kv-cell-size);
+  height: var(--kv-cell-size);
+  background: var(--cell, var(--surface));
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.kv-strip--lg .kv-cell {
+  height: 1.6rem;
+}
+
+.kv-cell--missing {
+  background: transparent;
+  border-style: dotted;
+}
+
+.kv-cell--gone {
+  background: repeating-linear-gradient(-45deg, transparent 0 2px, var(--text-muted) 2px 3px);
+}
+
+.kv-cell--tombstone {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--danger);
+}
+
+/* Written to the leader but not yet on every ISR replica. */
+.kv-cell--uncommitted {
+  opacity: 0.55;
+}
+
+.kv-cell__offset {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.6rem;
+  color: var(--c-ink, #121212);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The high watermark sits between two cells. */
+.kv-strip__hw {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  /* Cells share the width evenly (with a 2px gap), so position by fraction. */
+  left: calc((100% + 2px) * var(--at) / var(--cells) - 3px);
+  width: 3px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.kv-strip--lg .kv-strip__hw {
+  display: none;
+}
+
+.kv-strip__pin {
+  position: absolute;
+  bottom: -2px;
+  left: calc(var(--at) * (var(--kv-cell-size) + 2px) - 4px);
+  width: 0;
+  height: 0;
+  border-inline: 5px solid transparent;
+  border-bottom: 7px solid var(--link);
+}
+
+/* ---------- Producers and consumers ---------- */
+
+.kv-client,
+.kv-group {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.kv-client--paused {
+  opacity: 0.6;
+}
+
+.kv-client__head,
+.kv-group__head,
+.kv-member__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kv-client__head h3,
+.kv-group__head h3 {
+  margin: 0;
+  font: 700 var(--text-sm) / 1.2 var(--font-pixel);
+}
+
+.kv-client__line,
+.kv-group__meta {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.kv-group--PreparingRebalance {
+  border-style: dashed;
+  background: var(--accent-soft);
+}
+
+.kv-group__members {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-member {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.kv-member--dead {
+  border-style: dashed;
+  opacity: 0.65;
+}
+
+.kv-member__name {
+  flex: 1;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv-member__note {
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.kv-member__parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-chip {
+  display: inline-flex;
+  gap: 0.35rem;
+  padding: 0 0.35rem;
+  font-size: var(--text-xs);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.kv-chip span {
+  color: var(--text-muted);
+}
+
+.kv-chip--hot {
+  background: var(--accent-soft);
+  border-color: var(--danger);
+}
+
+.kv-member__actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ---------- Legend ---------- */
+
+.kv-legend summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.kv-legend ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.kv-legend .kv-cell {
+  margin-inline-end: 2px;
+}
+
+.kv-replica__role--demo {
+  vertical-align: middle;
+}
+
+.kv-swatch {
+  display: inline-block;
+  width: 0.8rem;
+  height: 0.8rem;
+  vertical-align: middle;
+  border: 1px solid var(--border);
+}
+
+.kv-swatch--hw {
+  width: 4px;
+  background: var(--accent);
+}
+
+.kv-swatch--leo {
+  border-style: dotted;
+}
+
+.kv-swatch--pin {
+  width: 0;
+  height: 0;
+  border: 0;
+  border-inline: 5px solid transparent;
+  border-bottom: 8px solid var(--link);
+}
+
+/* ---------- Panels ---------- */
+
+.kv-panels {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.kv-panels > .ui-segmented {
+  justify-self: start;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.kv-panels__body {
+  min-height: 16rem;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+.kv-panel {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.kv-row-actions,
+.kv-inline-controls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kv-form {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.kv-form__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  width: 100%;
+}
+
+/* ---------- Inspector ---------- */
+
+.kv-inspector {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.kv-inspector__title {
+  margin: 0;
+  font: 700 var(--text-md) / 1.2 var(--font-pixel);
+}
+
+.kv-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.kv-facts div {
+  padding: var(--space-2);
+  border: 1px solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.kv-facts dt {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.kv-facts dd {
+  margin: 0;
+  font: 700 var(--text-md) / 1.3 var(--font-mono);
+}
+
+.kv-disk {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  background: var(--kv-chassis);
+}
+
+.kv-disk--out {
+  border-style: dashed;
+}
+
+.kv-disk h4 {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.kv-files {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-xs);
+}
+
+.kv-files li {
+  display: grid;
+  grid-template-columns: minmax(12rem, auto) 6rem 4.5rem 1fr;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.kv-files__active {
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+@media (max-width: 40rem) {
+  .kv-files li {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.kv-legend-line {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* ---------- Terminal ---------- */
+
+.kv-terminal {
+  display: grid;
+  font: var(--text-sm) / 1.45 var(--font-mono);
+  color: #d8f5d0;
+  background: #0b0d0b;
+  border: var(--border-width) solid var(--border);
+}
+
+.kv-terminal__screen {
+  height: 22rem;
+  padding: var(--space-3);
+  overflow: auto;
+}
+
+.kv-terminal pre {
+  margin: 0;
+  font: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  tab-size: 4;
+}
+
+.kv-terminal__in {
+  color: #f2b51b;
+}
+
+.kv-terminal__input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid #2c3a2c;
+}
+
+.kv-terminal__input input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  outline: none;
+  caret-color: #f2b51b;
+}
+
+/* ---------- Events ---------- */
+
+.kv-events {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.kv-events__list {
+  display: grid;
+  gap: 2px;
+  max-height: 22rem;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.kv-events__list li {
+  padding: 2px var(--space-2);
+  border-left: 4px solid var(--border);
+}
+
+.kv-events__list time {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.kv-events__item--bad {
+  border-left-color: var(--danger) !important;
+}
+
+.kv-events__item--good {
+  border-left-color: var(--success) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kv-led--activity.kv-led--blink {
+    animation: none;
+  }
+}
