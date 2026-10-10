@@ -14,7 +14,7 @@ import {
 import type { Route } from './+types/root';
 import { ErrorScreen, errorStatus } from './components/ErrorScreen';
 import { recordVisitMiddleware } from './features/visits/middleware.server';
-import { HTML_LANG, I18nProvider, type Locale } from './i18n';
+import { I18nProvider, LANGUAGES, type Locale } from './i18n';
 import { useRootData } from './i18n/root-data';
 import { fillGaps } from './i18n/gaps.server';
 import { resolveLocale } from './i18n/locale.server';
@@ -50,7 +50,7 @@ export type RootData = Awaited<ReturnType<typeof loader>>;
 export function Layout({ children }: { children: ReactNode }) {
   const locale: Locale = useRootData()?.locale ?? 'en';
   return (
-    <html lang={HTML_LANG[locale]} suppressHydrationWarning>
+    <html lang={LANGUAGES[locale].tag} suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

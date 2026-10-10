@@ -11,7 +11,7 @@
 // With neither, translation is off and pages fall back to English.
 import { createHash } from 'node:crypto';
 import { cacheGet, cacheSet } from '~/lib/cache.server';
-import type { Locale } from './locales';
+import { LANGUAGES, type Locale } from './locales';
 
 export type TextFormat = 'text' | 'html';
 
@@ -171,7 +171,6 @@ async function postJson(url: string, body: unknown, headers: Record<string, stri
 
 /** Azure AI Translator v3: https://learn.microsoft.com/azure/ai-services/translator/ */
 function azure(key: string, region?: string): Provider {
-  const code: Record<Locale, string> = { en: 'en', zh: 'zh-Hans' };
   return {
     id: 'azure',
     async translate(texts, target, format) {
@@ -182,7 +181,7 @@ function azure(key: string, region?: string): Provider {
       url.search = new URLSearchParams({
         'api-version': '3.0',
         from: 'en',
-        to: code[target],
+        to: LANGUAGES[target].azure,
         textType: format === 'html' ? 'html' : 'plain',
       }).toString();
       const headers: Record<string, string> = { 'Ocp-Apim-Subscription-Key': key };
@@ -203,14 +202,13 @@ function azure(key: string, region?: string): Provider {
 
 /** LibreTranslate: https://libretranslate.com/docs */
 function libre(base: string, key?: string): Provider {
-  const code: Record<Locale, string> = { en: 'en', zh: 'zh' };
   return {
     id: 'libre',
     async translate(texts, target, format) {
       const body = (await postJson(new URL('/translate', base).toString(), {
         q: texts,
         source: 'en',
-        target: code[target],
+        target: LANGUAGES[target].libre,
         format: format === 'html' ? 'html' : 'text',
         ...(key ? { api_key: key } : {}),
       })) as { translatedText?: unknown };
