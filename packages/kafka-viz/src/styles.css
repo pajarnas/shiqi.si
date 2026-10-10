@@ -12,7 +12,8 @@
   --kv-key-5: #b07ce8;
   --kv-key-none: #9a968a;
   --kv-replica: var(--accent-2);
-  --kv-consume: var(--link);
+  /* Not --link: in some themes that is green like --accent-2. */
+  --kv-consume: #3b6fe0;
   --kv-chassis: var(--surface-sunken);
   --kv-cell-size: 1.1rem;
 }
@@ -658,7 +659,7 @@ button.kv-cell:focus-visible,
   width: 0;
   height: 0;
   border-inline: 5px solid transparent;
-  border-bottom: 7px solid var(--link);
+  border-bottom: 7px solid var(--kv-consume);
 }
 
 /* ---------- Producers and consumers ---------- */
@@ -830,7 +831,7 @@ button.kv-cell:focus-visible,
   height: 0;
   border: 0;
   border-inline: 5px solid transparent;
-  border-bottom: 8px solid var(--link);
+  border-bottom: 8px solid var(--kv-consume);
 }
 
 /* ---------- Panels ---------- */
@@ -1599,4 +1600,125 @@ button.kv-cell:focus-visible,
   .kv-builder__tok--on {
     animation: none;
   }
+}
+
+.kv-client--waiting {
+  border-style: dashed;
+}
+
+.kv-client__buffer {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+}
+
+/* ---------- Legend: every mark on the stage, explained ---------- */
+
+.kv-legend {
+  padding: var(--space-3);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+.kv-legend__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-3);
+}
+
+.kv-legend h4 {
+  margin: 0 0 var(--space-1);
+  font: 700 var(--text-xs) / 1.4 var(--font-pixel);
+  text-transform: uppercase;
+}
+
+.kv-legend section > ul + h4 {
+  margin-top: var(--space-3);
+}
+
+.kv-legend li {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kv-legend__sample {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.kv-legend__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--border);
+}
+
+.kv-legend__box {
+  display: inline-block;
+  width: 2.2rem;
+  height: 1.2rem;
+  background: var(--kv-chassis);
+  border: var(--border-width) solid var(--border);
+}
+
+.kv-legend__box--slow {
+  border-style: dashed;
+}
+
+.kv-legend__box--down {
+  opacity: 0.55;
+  background: repeating-linear-gradient(-45deg, var(--kv-chassis) 0 4px, var(--surface) 4px 8px);
+}
+
+.kv-legend__box--selected {
+  border-color: var(--focus);
+  border-width: 3px;
+}
+
+.kv-legend__meter {
+  display: inline-block;
+  width: 3rem;
+  height: 8px;
+  background: linear-gradient(90deg, var(--success) 40%, var(--surface) 40%);
+  border: 1px solid var(--border);
+}
+
+.kv-legend__pin {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-inline: 5px solid transparent;
+  border-bottom: 7px solid var(--kv-consume);
+}
+
+.kv-legend__pkt {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--pkt);
+  border: 1px solid var(--border);
+}
+
+.kv-legend__pkt--replica {
+  box-shadow: inset 0 0 0 3px var(--pkt);
+  background: var(--border);
+}
+
+.kv-legend__pkt--consume {
+  border-radius: 50%;
+}
+
+.kv-legend__pkt--error {
+  background:
+    linear-gradient(45deg, transparent 42%, var(--border) 42% 58%, transparent 58%),
+    linear-gradient(-45deg, transparent 42%, var(--border) 42% 58%, transparent 58%), var(--pkt);
+}
+
+.kv-legend__num {
+  font-variant-numeric: tabular-nums;
 }

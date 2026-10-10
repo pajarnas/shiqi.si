@@ -62,6 +62,9 @@ export const KAFKA_STRINGS = {
     },
     stats: 'sent {sent} · acked {acked} · failed {failed}',
     lastError: 'Last error: {error}',
+    buffered:
+      '{n} records waiting in the producer: no leader to send to. Nothing goes on the wire; they fail with a timeout after {timeout} s.',
+    bufferAge: 'Oldest has waited {age} of {timeout} s',
     pause: 'Pause',
     resume: 'Resume',
     remove: 'Remove',
@@ -79,6 +82,7 @@ export const KAFKA_STRINGS = {
     totalLag: 'Total lag {n}',
     noPartitions: 'No partitions (more members than partitions, or rebalancing)',
     crashed: 'Crashed: removed after the session timeout',
+    authError: 'Refused: {error}. It keeps retrying until an ACL allows it.',
     redelivered: '{n} records processed twice',
     leave: 'Leave',
     crash: 'Crash',
@@ -226,9 +230,23 @@ export const KAFKA_STRINGS = {
       produce: 'Produce',
       consume: 'Consume',
       groups: 'Consumer groups',
+      security: 'Security',
       cluster: 'Cluster',
     },
     specs: {
+      authorizer: {
+        title: 'Authorizer on or off',
+        what: 'Simulator only: like setting authorizer.class.name on every broker. On, every request needs an ACL that allows it.',
+      },
+      aclAdd: {
+        title: 'Grant or deny (add an ACL)',
+        what: 'Who may do what to which topic or group. A matching Deny always beats an Allow.',
+      },
+      aclRemove: {
+        title: 'Remove an ACL',
+        what: 'The ACL must match exactly: principal, operation, resource and pattern.',
+      },
+      aclList: { title: 'List ACLs', what: 'Every ACL, grouped by the topic or group it covers.' },
       topicCreate: {
         title: 'Create a topic',
         what: 'The controller picks a broker for each replica and a leader for each partition.',
@@ -320,6 +338,12 @@ export const KAFKA_STRINGS = {
       action: 'Action',
       broker: 'Broker',
       scope: 'Partitions',
+      state: 'Authorizer',
+      permission: 'Permission',
+      principal: 'Principal (who)',
+      operation: 'Operation',
+      resource: 'On a',
+      pattern: 'Name match',
     },
     choices: {
       '': 'none',
@@ -340,6 +364,14 @@ export const KAFKA_STRINGS = {
       start: 'start',
       slow: 'slow down',
       fast: 'back to normal',
+      on: 'on',
+      off: 'off',
+      allow: 'allow',
+      deny: 'deny',
+      topic: 'topic',
+      group: 'group',
+      literal: 'exact name',
+      prefixed: 'name prefix',
     },
     noTopics: 'No topics yet: create one first.',
     noGroups: 'No groups yet: start a consumer with a group first.',
@@ -389,24 +421,62 @@ export const KAFKA_STRINGS = {
     topicDeleted: 'Topic {topic} deleted',
     partitionsAdded: 'Topic {topic} now has {count} partitions',
     configChanged: '{topic}: {key} = {value}',
+    authDenied: '{client} ({principal}) may not {operation} {resource} {name}: {error}',
+    aclAdd: 'ACL added: {permission} {principal} to {operation} {resource} {name}',
+    aclRemove: 'ACL removed: {permission} {principal} to {operation} {resource} {name}',
+    authorizerOn: 'The authorizer is on: every request is now checked against the ACLs',
+    authorizerOff: 'The authorizer is off: every client may do anything',
     reasons: {
       join: 'a member joined',
       leave: 'a member left',
       timeout: 'a member timed out',
       metadata: 'topic metadata changed',
+      acl: 'ACLs changed',
     },
   },
   legend: {
-    title: 'How to read this',
-    record: 'A record; the colour is its key',
-    nullKey: 'No key',
+    title: 'How to read this picture',
+    sections: {
+      brokers: 'Brokers',
+      log: 'A partition’s log',
+      clients: 'Producers and consumers',
+      motion: 'What moves',
+    },
+    power: 'Power light. Green: running. Red: stopped.',
+    activity: 'Activity light. Blinks while records go in or out.',
+    controller: 'The KRaft controller. It decides which replica leads each partition.',
+    meters:
+      'In and Out: network bytes per second. Disk: bytes in its log files. Cache: bytes written but not yet on disk.',
+    slowBroker: 'Dashed border: a slow broker. Its followers fall behind.',
+    downBroker: 'Grey stripes: a stopped broker.',
     leader: 'Leader replica: takes writes and serves reads',
     follower: 'Follower replica: copies the leader',
-    outOfSync: 'Out of the ISR: too far behind',
-    hw: 'High watermark',
-    dirty: 'Only in the page cache (not yet on disk)',
-    diverged: 'Differs from the leader at the same offset',
-    ownHw: "A follower's own high watermark",
+    outOfSync: 'Out of the ISR: too far behind to count',
+    leo: 'Number on the right: the log end offset, the next offset this replica will write.',
+    record: 'A record; the colour is its key',
+    nullKey: 'No key',
+    dirty: 'Striped: only in the page cache, lost if the power goes',
+    uncommitted:
+      'Faded: above the high watermark, not yet on every ISR replica, so consumers can’t read it',
+    tombstone:
+      'Red inner border: a tombstone (null value) that deletes its key in a compacted topic',
+    gone: 'Grey hatching: deleted by retention or compaction',
+    missing: 'Dotted: an offset this replica doesn’t have yet',
+    diverged: 'Red outline: differs from the leader at the same offset',
+    hw: 'High watermark: consumers read only below this line',
+    ownHw: 'A follower’s own idea of the high watermark, which lags the leader’s',
+    pin: 'Blue mark (in Inspect): where a consumer group will read next',
+    selected: 'Gold frame: the partition you picked. The Inspect panel below shows it.',
+    producer:
+      'Envelope: a producer. acks says how many replicas must have a record before it counts as written.',
+    waiting: 'Dashed producer: records are waiting in it because no leader can be reached.',
+    consumer: 'Face: one consumer in a group. Lag is how many records it hasn’t read yet.',
+    group:
+      'Group: its state (Stable, rebalancing…), assignor and generation, which goes up at every rebalance.',
+    packetRecord: 'Solid square: a record on its way from a producer to the leader (colour = key)',
+    packetReplica: 'Hollow square: a follower copying records from the leader',
+    packetConsume: 'Round dot: records fetched by a consumer',
+    packetError: 'Crossed square: a request that failed',
   },
   glossary: {
     offset: {
@@ -528,6 +598,7 @@ export const KAFKA_STRINGS = {
       kip101: 'KIP-101: leader epochs',
       consumers: 'Consumer groups',
       log: 'Keys and the log',
+      security: 'Security',
     },
     start: 'Start',
     exit: 'Leave the scenario',
@@ -545,6 +616,7 @@ export const KAFKA_STRINGS = {
       kip101: 'KIP-101 (Apache Kafka)',
       vanlightly: 'Jack Vanlightly, "How to Lose Messages on a Kafka Cluster"',
       kip429: 'KIP-429 (Apache Kafka)',
+      acls: 'Apache Kafka documentation, "Authorization and ACLs"',
     },
     list: {
       'first-record': {
@@ -1066,6 +1138,60 @@ export const KAFKA_STRINGS = {
             ],
             result:
               '<compaction>Compaction</compaction> rewrote closed segments keeping the newest record per key. Offsets are never reused, so the log has holes. <tombstone>Tombstones</tombstone> (null values) delete a key.',
+          },
+        },
+      },
+      acls: {
+        title: 'Who is allowed?',
+        summary:
+          'Turn on the authorizer and grant a producer and a consumer exactly what they need.',
+        steps: {
+          open: {
+            title: 'An open cluster',
+            body: '<b>checkout</b> writes to <b>orders</b> and <b>billing-1</b> reads it in group <b>billing</b>. Nobody checks who they are: the authorizer is off.',
+            result: '',
+          },
+          on: {
+            title: 'Turn on the authorizer',
+            body: 'Like setting <b>authorizer.class.name</b> on every broker. There are no ACLs yet.',
+            question: 'What happens to checkout and billing-1?',
+            options: [
+              'Nothing: rules only apply to new clients',
+              'Both are refused: with no ACL that matches, the answer is no',
+              'Only writes are checked',
+            ],
+            result:
+              'checkout gets TOPIC_AUTHORIZATION_FAILED on every send, and billing-1 GROUP_AUTHORIZATION_FAILED: it can no longer join its group, so it owns no partitions. Kafka denies by default (allow.everyone.if.no.acl.found=false).',
+          },
+          group: {
+            title: 'Let billing-1 into its group',
+            body: '<b>kafka-acls --add --allow-principal User:billing-1 --operation Read --group billing</b>',
+            question: 'Can billing-1 read records now?',
+            options: [
+              'Yes, Read on the group is all a consumer needs',
+              'No, it still cannot join',
+              'It joins and gets partitions, but every fetch is refused',
+            ],
+            result:
+              'Joining a group and fetching from a topic are checked separately. billing-1 is back in the group with its partitions, but each fetch fails with TOPIC_AUTHORIZATION_FAILED.',
+          },
+          topic: {
+            title: 'Grant the topic',
+            body: 'Read on topic orders for billing-1, and Write on it for checkout. Everything flows again.',
+            result:
+              'A consumer needs Read on its group and on its topics; a producer needs Write on its topics. Read and Write also allow Describe, which clients use to fetch metadata.',
+          },
+          deny: {
+            title: 'One Deny for everyone',
+            body: 'Someone adds <b>--deny-principal User:* --operation Write --topic orders</b>.',
+            question: 'checkout still has its own Allow. Can it write?',
+            options: [
+              'No: a matching Deny always wins over any Allow',
+              'Yes: a rule for one user beats a rule for everyone',
+              'Only until it reconnects',
+            ],
+            result:
+              'checkout is refused again. Kafka checks Deny first, and User:* matches every principal.',
           },
         },
       },

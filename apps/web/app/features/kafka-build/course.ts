@@ -1,11 +1,11 @@
 // The "Build your own Kafka" course is a series of notes. Each chapter lives
-// at /notes/commonplace/build-kafka-<rest> and at /kafka/build/<rest>.
+// at /notes/commonplace/kafka/build-kafka-<rest> and at /kafka/build/<rest>.
 import { seriesNotes, type Note } from '~/content/notes';
 
 export const COURSE = 'build-kafka';
 const PREFIX = `${COURSE}-`;
 
 export const chapters = () => seriesNotes(COURSE);
-export const chapterPath = (n: Note) => `/kafka/build/${n.slug.slice(PREFIX.length)}`;
+export const chapterPath = (n: Note) => `/kafka/build/${n.name.slice(PREFIX.length)}`;
 export const findChapter = (slug: string | undefined) =>
-  chapters().find((n) => n.slug === `${PREFIX}${slug}`);
+  chapters().find((n) => n.name === `${PREFIX}${slug}`);

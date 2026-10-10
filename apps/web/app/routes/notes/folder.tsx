@@ -1,7 +1,9 @@
 import { data, redirect } from 'react-router';
+import { Section } from '@shiqi/ui';
 import { NoteList } from '~/components/NoteList';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
-import { findFolder, findNoteBySlug, notesIn } from '~/content/notes';
+import { findFolder, findNoteBySlug, notesIn, subfoldersIn } from '~/content/notes';
+import { subfolderTitle } from '~/content/notes/subfolders';
 import { stringsFor, useI18n } from '~/i18n';
 import { resolveLocale } from '~/i18n/locale.server';
 import { localizeNoteMeta } from '~/i18n/notes.server';
@@ -32,7 +34,17 @@ export default function NotesFolder({ loaderData }: Route.ComponentProps) {
       title={t.notes.folders[f.id].title}
       lede={t.notes.folders[f.id].description}
     >
-      <NoteList notes={notesIn(f.id)} text={loaderData.noteText} />
+      {subfoldersIn(f.id).map((sub) => (
+        <section key={sub} id={sub} className="note-subfolder">
+          <Section eyebrow={`${f.label}/${sub.toUpperCase()}`} title={subfolderTitle(t, sub)}>
+            <NoteList
+              notes={notesIn(f.id).filter((n) => n.subfolder === sub)}
+              text={loaderData.noteText}
+            />
+          </Section>
+        </section>
+      ))}
+      <NoteList notes={notesIn(f.id).filter((n) => !n.subfolder)} text={loaderData.noteText} />
     </PageWindow>
   );
 }

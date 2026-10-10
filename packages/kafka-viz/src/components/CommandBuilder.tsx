@@ -2,6 +2,7 @@ import {
   COMMAND_GROUPS,
   COMMAND_SPECS,
   commandLine,
+  principalsIn,
   fieldShown,
   type Cluster,
   type CommandField,
@@ -185,13 +186,15 @@ function FieldInput({
     );
 
   let control;
-  if (f.kind === 'topic' || f.kind === 'group' || f.kind === 'broker') {
+  if (f.kind === 'topic' || f.kind === 'group' || f.kind === 'broker' || f.kind === 'principal') {
     const names =
       f.kind === 'topic'
         ? [...cluster.topics.keys()].sort()
         : f.kind === 'group'
           ? [...cluster.groups.keys()].sort()
-          : [...cluster.brokers.keys()].sort((a, b) => a - b).map(String);
+          : f.kind === 'principal'
+            ? principalsIn(cluster)
+            : [...cluster.brokers.keys()].sort((a, b) => a - b).map(String);
     if (!names.length)
       return <p className="kv-muted">{f.kind === 'group' ? s.noGroups : s.noTopics}</p>;
     control = (

@@ -28,6 +28,8 @@ export interface TopicPartition {
 
 export const tpKey = (topic: string, partition: number) => `${topic}-${partition}`;
 
+import type { Acl, AclOperation, AclResource } from './acl';
+
 /** Error codes as the Java client names them. */
 export type KafkaErrorCode =
   | 'UNKNOWN_TOPIC_OR_PARTITION'
@@ -42,7 +44,10 @@ export type KafkaErrorCode =
   | 'INVALID_CONFIG'
   | 'GROUP_ID_NOT_FOUND'
   | 'NON_EMPTY_GROUP'
-  | 'BROKER_NOT_AVAILABLE';
+  | 'BROKER_NOT_AVAILABLE'
+  | 'TOPIC_AUTHORIZATION_FAILED'
+  | 'GROUP_AUTHORIZATION_FAILED'
+  | 'CLUSTER_AUTHORIZATION_FAILED';
 
 export class KafkaError extends Error {
   constructor(
@@ -108,6 +113,24 @@ export type ClusterEvent =
     }
   | { type: 'commit'; at: number; group: string; topic: string; partition: number; offset: number }
   | {
+      /** The authorizer turned a client away. Sent once per client and reason, not per request. */
+      type: 'auth-denied';
+      at: number;
+      principal: string;
+      client: string;
+      operation: AclOperation;
+      resource: AclResource;
+      name: string;
+      error: KafkaErrorCode;
+    }
+  | {
+      /** An ACL was added or removed, or the authorizer switched on or off. */
+      type: 'acl';
+      at: number;
+      change: 'add' | 'remove' | 'on' | 'off';
+      acl?: Acl;
+    }
+  | {
       type: 'isr-shrink' | 'isr-expand';
       at: number;
       topic: string;
@@ -153,7 +176,7 @@ export type ClusterEvent =
       at: number;
       group: string;
       generation: number;
-      reason: 'join' | 'leave' | 'timeout' | 'metadata';
+      reason: 'join' | 'leave' | 'timeout' | 'metadata' | 'acl';
     }
   | { type: 'rebalance-end'; at: number; group: string; generation: number; members: number }
   | {

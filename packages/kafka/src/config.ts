@@ -97,6 +97,11 @@ export interface ClusterSettings {
   slowFactor: number;
   /** Produce requests with acks=all fail after this long without an ack. */
   requestTimeoutMs: number;
+  /**
+   * delivery.timeout.ms: a record a producer can't send (no leader, no broker
+   * reachable) waits in its buffer this long, then fails with a timeout.
+   */
+  deliveryTimeoutMs: number;
   /** Time the group coordinator waits for members to (re)join. */
   rebalanceDelayMs: number;
   /** A consumer that stops heartbeating is removed after this long. */
@@ -124,6 +129,8 @@ export const CLUSTER_DEFAULTS: ClusterSettings = {
   replicaFetchMaxRecords: 50,
   slowFactor: 40,
   requestTimeoutMs: 10_000,
+  // Kafka's default is 120 s; scaled down like the other timeouts here.
+  deliveryTimeoutMs: 30_000,
   rebalanceDelayMs: 1_500,
   sessionTimeoutMs: 8_000,
   logCleanerIntervalMs: 2_000,

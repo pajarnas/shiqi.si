@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { NOTES } from './index';
+import { findMovedNote, findNote, NOTES, subfoldersIn } from './index';
 
 /** Markdown that shows up as literal text when the MDX pipeline doesn't understand it. */
 const LEAKS: [string, RegExp][] = [
@@ -23,7 +23,17 @@ describe('every note renders its Markdown', () => {
   }
 
   it('turns pipe tables into <table>', () => {
-    const isr = NOTES.find((n) => n.slug === 'kafka-replication-isr');
+    const isr = NOTES.find((n) => n.name === 'kafka-replication-isr');
     expect(renderToStaticMarkup(createElement(isr!.Component))).toContain('<table>');
+  });
+});
+
+describe('subfolders', () => {
+  it('puts notes in commonplace/kafka/ under /notes/commonplace/kafka/', () => {
+    const isr = findMovedNote('commonplace', 'kafka-replication-isr');
+    expect(isr?.subfolder).toBe('kafka');
+    expect(isr?.href).toBe('/notes/commonplace/kafka/kafka-replication-isr');
+    expect(findNote('commonplace', 'kafka/kafka-replication-isr')).toBe(isr);
+    expect(subfoldersIn('commonplace')).toContain('kafka');
   });
 });

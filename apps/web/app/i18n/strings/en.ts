@@ -67,6 +67,31 @@ export const en = {
     notesWindow: 'Notes — NOTES',
     aboutWindow: 'Under the hood — ABOUT',
     nextWindow: 'On the way — NEXT',
+    kafka: {
+      window: 'Kafka — KAFKA',
+      lede: 'Learn Kafka from the bytes up: watch a cluster work, break it, then write its pieces yourself.',
+      links: {
+        live: {
+          title: 'Kafka, live',
+          description:
+            'A three-broker cluster in your browser: guided scenarios, power cuts, and a terminal you can click commands into.',
+        },
+        real: {
+          title: 'The real cluster',
+          description:
+            'Three real Kafka brokers on this server, read live: leaders, ISR, offsets and lag.',
+        },
+        course: {
+          title: 'Build your own Kafka',
+          description:
+            'A course that rebuilds Kafka one function at a time, with a live demo running on your code.',
+        },
+        notes: {
+          title: 'Kafka notes',
+          description: 'Logs, partitions, replication, consumer groups: under Commonplace / Kafka.',
+        },
+      },
+    },
     soon: 'SOON',
     // One entry per key in ABOUT and NEXT (app/site.ts).
     about: {
@@ -364,6 +389,7 @@ export const en = {
         description: 'Thoughts on pixels, standards and this site.',
       },
     },
+    subfolders: { kafka: 'Kafka' },
     folderMissing: 'No such folder',
     topics: 'Topics',
     latest: 'Latest',

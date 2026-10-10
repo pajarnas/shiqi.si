@@ -148,7 +148,7 @@ function BrokerCard({
         />
         <span
           className={cx('kv-led', 'kv-led--activity', busy && 'kv-led--blink')}
-          aria-hidden="true"
+          title={t.legend.activity}
         />
         <h3 className="kv-broker__name">{format(t.broker.title, { id: broker.id })}</h3>
         {isController && (
@@ -299,9 +299,34 @@ function ReplicaRow({
           leader={leaderLog}
           ownHighWatermark={isLeader ? undefined : log.highWatermark}
         />
-        <span className="kv-replica__leo">{log.logEndOffset}</span>
+        <span className="kv-replica__leo" title={t.legend.leo}>
+          {log.logEndOffset}
+        </span>
       </button>
     </li>
+  );
+}
+
+/** Records stuck in the producer, and how close the oldest is to delivery.timeout.ms. */
+function BufferMeter({ cluster, producer: p }: { cluster: Cluster; producer: Producer }) {
+  const t = useKafkaStrings();
+  const timeout = cluster.settings.deliveryTimeoutMs;
+  const age = cluster.now - (p.buffered[0]?.at ?? cluster.now);
+  const sec = (ms: number) => Math.round(ms / 1000);
+  return (
+    <div className="kv-client__buffer">
+      <p className="kv-client__line">
+        {format(t.producer.buffered, { n: p.buffered.length, timeout: sec(timeout) })}
+      </p>
+      <Meter
+        label="⏱"
+        value={age}
+        max={timeout}
+        text={`${sec(age)}/${sec(timeout)}s`}
+        hint={format(t.producer.bufferAge, { age: sec(age), timeout: sec(timeout) })}
+        tone="dirty"
+      />
+    </div>
   );
 }
 
@@ -318,7 +343,11 @@ function ProducerCard({
   return (
     <article
       ref={anchorRef(anchors, anchorId.producer(p.id))}
-      className={cx('kv-client', p.paused && 'kv-client--paused')}
+      className={cx(
+        'kv-client',
+        p.paused && 'kv-client--paused',
+        p.buffered.length > 0 && 'kv-client--waiting',
+      )}
     >
       <header className="kv-client__head">
         <PixelIcon name="envelope" size={16} />
@@ -329,9 +358,11 @@ function ProducerCard({
         <span className="kv-tag">{format(t.producer.acks, { acks: String(p.acks) })}</span>
       </p>
       <p className="kv-client__line kv-muted">{t.producer.keys[p.keys]}</p>
+      {cluster.authorizer && <p className="kv-client__line kv-muted">{p.principal}</p>}
       <p className="kv-client__line kv-muted">
         {format(t.producer.stats, { sent: p.sent, acked: p.acked, failed: p.failed })}
       </p>
+      {p.buffered.length > 0 && <BufferMeter cluster={cluster} producer={p} />}
       {p.lastError && (
         <p className="kv-client__line kv-error">
           {format(t.producer.lastError, { error: p.lastError })}
@@ -410,6 +441,12 @@ function GroupCard({
               <span className="kv-muted">{format(t.group.rate, { rate: m.rate })}</span>
             </div>
             {!m.alive && <p className="kv-error kv-member__note">{t.group.crashed}</p>}
+            {cluster.authorizer && <p className="kv-muted kv-member__note">{m.principal}</p>}
+            {m.error && (
+              <p className="kv-error kv-member__note">
+                {format(t.group.authError, { error: m.error })}
+              </p>
+            )}
             {m.assignment.length === 0 ? (
               <p className="kv-muted kv-member__note">{t.group.noPartitions}</p>
             ) : (

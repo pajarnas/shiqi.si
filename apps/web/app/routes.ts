@@ -21,6 +21,7 @@ export default [
       index('routes/notes/index.tsx'),
       route(':folder', 'routes/notes/folder.tsx'),
       route(':folder/:slug', 'routes/notes/note.tsx'),
+      route(':folder/:sub/:slug', 'routes/notes/note.tsx', { id: 'notes-subfolder-note' }),
     ]),
     route('kafka', 'routes/kafka.tsx'),
     route('kafka/build', 'routes/kafka/build.tsx'),

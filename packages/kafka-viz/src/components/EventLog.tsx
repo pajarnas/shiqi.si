@@ -75,6 +75,15 @@ export function describeEvent(e: ClusterEvent, t: KafkaStrings['events']): strin
       return format(t.partitionsAdded, v);
     case 'config-changed':
       return format(t.configChanged, v);
+    case 'auth-denied':
+      return format(t.authDenied, v);
+    case 'acl':
+      if (e.change === 'on') return t.authorizerOn;
+      if (e.change === 'off') return t.authorizerOff;
+      return format(
+        e.change === 'add' ? t.aclAdd : t.aclRemove,
+        vars({ ...e, ...e.acl } as ClusterEvent),
+      );
   }
 }
 
@@ -83,6 +92,7 @@ const tone = (e: ClusterEvent) =>
   e.type === 'broker-down' ||
   e.type === 'truncate' ||
   e.type === 'isr-shrink' ||
+  e.type === 'auth-denied' ||
   (e.type === 'leader-elected' && (e.leader === null || e.unclean))
     ? 'bad'
     : e.type === 'isr-expand' || e.type === 'broker-up' || e.type === 'rebalance-end'
