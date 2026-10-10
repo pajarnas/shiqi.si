@@ -1506,3 +1506,97 @@ button.kv-cell:focus-visible,
   color: var(--accent-2-text);
   font-size: 0.75em;
 }
+
+/* ---------- Command builder (next to the terminal) ---------- */
+
+.kv-console {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 64rem) {
+  .kv-console {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.kv-builder {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.kv-builder > .ui-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.kv-builder > p {
+  margin: 0;
+}
+
+.kv-builder__specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.kv-builder__spec {
+  padding: 0.15rem 0.5rem;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.kv-builder__spec--on {
+  color: var(--accent-text);
+  background: var(--accent);
+}
+
+.kv-builder__what {
+  font-size: var(--text-sm);
+}
+
+.kv-builder__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-2) var(--space-3);
+  align-items: end;
+}
+
+.kv-builder__warn {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.kv-builder__line {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--text-sm) / 1.5 var(--font-mono);
+  color: #d8f5d0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #0b0d0b;
+  border: var(--border-width) solid var(--border);
+}
+
+.kv-builder__tok--on {
+  color: #0b0d0b;
+  background: #f2b51b;
+  animation: kv-builder-flash 0.6s steps(3);
+}
+
+@keyframes kv-builder-flash {
+  0%,
+  66% {
+    background: #fff3c4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kv-builder__tok--on {
+    animation: none;
+  }
+}

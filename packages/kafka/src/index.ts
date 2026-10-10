@@ -2,6 +2,7 @@
 export * from './assignors';
 export * from './cli';
 export * from './cluster';
+export * from './commands';
 export * from './config';
 export * from './log';
 export * from './murmur2';
