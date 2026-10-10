@@ -21,6 +21,14 @@ export class ReplicaLog {
   logStartOffset = 0;
   /** Log end offset: the offset the next record will get. */
   logEndOffset = 0;
+  /**
+   * This replica's own high watermark (its replication-offset-checkpoint). On
+   * the leader it is the partition's HW; a follower learns it from fetch
+   * responses, so it trails the leader's by one round trip.
+   */
+  highWatermark = 0;
+  /** Everything below this is on disk; the rest lives only in the page cache. */
+  flushedOffset = 0;
 
   constructor(private readonly now: () => number) {
     this.segments.push(this.newSegment(0));
@@ -40,6 +48,27 @@ export class ReplicaLog {
 
   get recordCount() {
     return this.segments.reduce((sum, s) => sum + s.records.length, 0);
+  }
+
+  /** Bytes written but not yet flushed: lost if the machine loses power. */
+  get dirtyBytes() {
+    let sum = 0;
+    for (let i = this.segments.length - 1; i >= 0; i--) {
+      const recs = (this.segments[i] as Segment).records;
+      for (let j = recs.length - 1; j >= 0; j--) {
+        const r = recs[j] as KRecord;
+        if (r.offset < this.flushedOffset) return sum;
+        sum += r.size;
+      }
+    }
+    return sum;
+  }
+
+  /** fsync: the page cache reaches the disk. Returns the bytes written. */
+  flush(): number {
+    const dirty = this.dirtyBytes;
+    this.flushedOffset = this.logEndOffset;
+    return dirty;
   }
 
   /** Leader epoch of the last record, or -1 for an empty log. */
@@ -95,6 +124,8 @@ export class ReplicaLog {
     this.segments = this.segments.filter((s, i) => i === 0 || s.records.length > 0);
     this.logEndOffset = Math.max(offset, this.logStartOffset);
     if (this.active.records.length === 0) this.active.baseOffset = this.logEndOffset;
+    this.highWatermark = Math.min(this.highWatermark, this.logEndOffset);
+    this.flushedOffset = Math.min(this.flushedOffset, this.logEndOffset);
     return removed;
   }
 
@@ -110,6 +141,8 @@ export class ReplicaLog {
     this.segments = [this.newSegment(offset)];
     this.logStartOffset = offset;
     this.logEndOffset = offset;
+    this.highWatermark = offset;
+    this.flushedOffset = offset;
   }
 
   /**

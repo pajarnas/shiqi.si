@@ -85,7 +85,7 @@ describe('CLI', () => {
     sh(c, 'kafka-topics --create --topic t --partitions 2 --replication-factor 1');
     for (let i = 0; i < 6; i++) c.produce({ topic: 't', key: `k${i}`, value: 'v' });
     const m = c.addConsumer({ group: 'g', topics: ['t'], offsetReset: 'earliest', rate: 1000 });
-    for (let i = 0; i < 40; i++) c.tick(100);
+    for (let i = 0; i < 60; i++) c.tick(100); // past the first auto-commit
     const desc = sh(c, 'kafka-consumer-groups --describe --group g');
     expect(desc[1]).toMatch(
       /^GROUP\s+TOPIC\s+PARTITION\s+CURRENT-OFFSET\s+LOG-END-OFFSET\s+LAG\s+CONSUMER-ID/,

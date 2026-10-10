@@ -1,18 +1,31 @@
-import type { Cluster } from '@shiqi/kafka';
+import { Timeline, type Cluster } from '@shiqi/kafka';
 import { useEffect, useRef, useState } from 'react';
 
 /** Longest simulated step per tick, so a slow frame can't skip past events. */
 const MAX_STEP_MS = 50;
 
+export interface SimulationOptions {
+  /** Stop as soon as this holds, checked after every step; then call onStop. */
+  stopWhen?: ((c: Cluster) => boolean) | null;
+  onStop?: () => void;
+}
+
 /**
  * Drive the cluster from requestAnimationFrame: real time × speed becomes
  * simulated time. Pauses while the tab is hidden.
  */
-export function useSimulation(cluster: Cluster, running: boolean, speed: number) {
+export function useSimulation(
+  cluster: Cluster,
+  running: boolean,
+  speed: number,
+  options: SimulationOptions = {},
+) {
   const speedRef = useRef(speed);
+  const optionsRef = useRef(options);
   useEffect(() => {
     speedRef.current = speed;
-  }, [speed]);
+    optionsRef.current = options;
+  });
 
   useEffect(() => {
     if (!running) return;
@@ -21,10 +34,15 @@ export function useSimulation(cluster: Cluster, running: boolean, speed: number)
     const loop = (now: number) => {
       let dt = Math.min(250, now - last) * speedRef.current;
       last = now;
+      const { stopWhen, onStop } = optionsRef.current;
       while (dt > 0) {
         const step = Math.min(MAX_STEP_MS, dt);
         cluster.tick(step);
         dt -= step;
+        if (stopWhen?.(cluster)) {
+          onStop?.();
+          return;
+        }
       }
       frame = requestAnimationFrame(loop);
     };
@@ -58,4 +76,15 @@ export function useClusterVersion(cluster: Cluster, intervalMs = 120): number {
     };
   }, [cluster, intervalMs]);
   return cluster.version;
+}
+
+/**
+ * A timeline over clusters made by `factory`, and the cluster to show: it
+ * changes when a rewind rebuilds the history.
+ */
+export function useTimeline(factory: () => Cluster) {
+  const [timeline] = useState(() => new Timeline(factory));
+  const [cluster, setCluster] = useState(() => timeline.cluster);
+  useEffect(() => timeline.onReplace(setCluster), [timeline]);
+  return { timeline, cluster };
 }

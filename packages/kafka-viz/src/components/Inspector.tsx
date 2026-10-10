@@ -1,8 +1,10 @@
 import { segmentFileName, type Cluster } from '@shiqi/kafka';
 import { cx } from '@shiqi/ui';
+import { useState } from 'react';
 import { bytes } from '../format';
 import { format, useKafkaStrings } from '../strings';
 import { LogStrip } from './LogStrip';
+import { RecordJourney } from './RecordJourney';
 import type { Selection } from './Stage';
 
 const DRAWN = 32;
@@ -14,8 +16,13 @@ const DRAWN = 32;
  */
 export function Inspector({ cluster, selected }: { cluster: Cluster; selected: Selection | null }) {
   const t = useKafkaStrings();
+  const [picked, setPicked] = useState<{ key: string; broker: number; offset: number } | null>(
+    null,
+  );
   const p = selected && cluster.topics.get(selected.topic)?.partitions[selected.partition];
   if (!p) return <p className="kv-muted">{t.inspect.pick}</p>;
+  const here = `${p.topic}-${p.id}`;
+  const pick = picked?.key === here ? picked : null;
 
   const leader = cluster.leaderLog(p);
   const end = Math.max(0, ...[...p.logs.values()].map((l) => l.logEndOffset));
@@ -50,6 +57,20 @@ export function Inspector({ cluster, selected }: { cluster: Cluster; selected: S
           </div>
         ))}
       </dl>
+      {p.gone > 0 && (
+        <p className="kv-error">{format(t.inspect.gone, { gone: p.gone, acked: p.goneAcked })}</p>
+      )}
+      <p className="kv-muted">{t.inspect.pickRecord}</p>
+
+      {pick && (
+        <RecordJourney
+          cluster={cluster}
+          partition={p}
+          broker={pick.broker}
+          offset={pick.offset}
+          onClose={() => setPicked(null)}
+        />
+      )}
 
       {p.replicas.map((id) => {
         const log = p.logs.get(id);
@@ -72,10 +93,19 @@ export function Inspector({ cluster, selected }: { cluster: Cluster; selected: S
               from={from}
               to={end}
               highWatermark={p.highWatermark}
+              leader={leader}
+              ownHighWatermark={role === 'leader' ? undefined : log.highWatermark}
               pins={pins}
               size="lg"
               showOffsets
+              picked={pick?.broker === id ? pick.offset : null}
+              onPick={(offset) => setPicked({ key: here, broker: id, offset })}
             />
+            {role !== 'leader' && (
+              <p className="kv-muted" title={t.inspect.ownHwHint}>
+                {format(t.inspect.ownHw, { hw: log.highWatermark })}
+              </p>
+            )}
             {from > log.logStartOffset && (
               <p className="kv-muted">
                 {format(t.inspect.hidden, { n: from - log.logStartOffset })}
@@ -99,7 +129,9 @@ export function Inspector({ cluster, selected }: { cluster: Cluster; selected: S
       })}
       <p className="kv-legend-line">
         <span className="kv-swatch kv-swatch--hw" /> {t.inspect.legendHw} ·{' '}
-        <span className="kv-swatch kv-swatch--leo" /> {t.inspect.legendLeo}
+        <span className="kv-swatch kv-swatch--leo" /> {t.inspect.legendLeo} ·{' '}
+        <span className="kv-swatch kv-swatch--dirty" /> {t.inspect.legendDirty} ·{' '}
+        <span className="kv-swatch kv-swatch--diverged" /> {t.inspect.legendDiverged}
         {pins.length > 0 && (
           <>
             {' '}

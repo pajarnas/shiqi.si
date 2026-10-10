@@ -5,7 +5,8 @@ import { rng, type Random } from '@shiqi/pixel';
 import { ASSIGNORS } from './assignors';
 import { CLUSTER_DEFAULTS, TOPIC_DEFAULTS, type ClusterSettings, type TopicConfig } from './config';
 import { ReplicaLog } from './log';
-import { partitionForKey } from './murmur2';
+import { murmur2, partitionForKey, toPositive } from './murmur2';
+
 import {
   KafkaError,
   tpKey,
@@ -18,6 +19,7 @@ import {
   type KafkaErrorCode,
   type OffsetReset,
   type TopicPartition,
+  type TruncateReason,
 } from './types';
 
 export interface Broker {
@@ -32,13 +34,39 @@ export interface Broker {
   /** Smoothed bytes per simulated second. */
   inRate: number;
   outRate: number;
+  /** When the OS next writes this broker's dirty pages to disk. */
+  nextFlushAt: number;
 }
 
-interface FollowerState {
+/** What the leader knows about one follower, from its fetch requests. */
+export interface FollowerState {
   lastCaughtUpAt: number;
   prevFetchAt: number;
   leaderLeoAtPrevFetch: number;
   nextFetchAt: number;
+  /** The follower's log end offset as of its last fetch; -1 until a new leader hears from it. */
+  fetchOffset: number;
+}
+
+/** The life of one record, for the record-journey view. */
+export interface RecordTrace {
+  producedAt: number;
+  acks: Acks;
+  /** The leader that took the write, and the partition count the producer saw. */
+  leader: BrokerId;
+  partitions: number;
+  ackedAt?: number;
+  ackError?: KafkaErrorCode;
+  /** When each follower got its copy. */
+  copies: Map<BrokerId, number>;
+  /** When the high watermark passed it: from then on consumers may read it. */
+  committedAt?: number;
+  /** First delivery to each group. */
+  consumed: Map<string, { at: number; member: string }>;
+  /** Deliveries in total, duplicates included. */
+  deliveries: number;
+  /** When the last copy was truncated away. */
+  goneAt?: number;
 }
 
 export interface Partition {
@@ -55,6 +83,9 @@ export interface Partition {
   /** Highest offset (exclusive) every ISR replica has: what consumers may read. */
   highWatermark: number;
   followers: Map<BrokerId, FollowerState>;
+  /** Records that no replica holds any more, and how many of those had been acked. */
+  gone: number;
+  goneAcked: number;
 }
 
 export interface Topic {
@@ -127,6 +158,10 @@ export interface Group {
   members: Map<string, Member>;
   /** Committed offsets by `topic-partition`. */
   committed: Map<string, number>;
+  /** Highest offset (exclusive) any member has processed, by `topic-partition`. */
+  processed: Map<string, number>;
+  /** Records delivered again after a crash or rewind: the cost of at-least-once. */
+  redelivered: number;
   rebalanceAt: number | null;
   autoCommitIntervalMs: number;
   nextCommitAt: number;
@@ -139,6 +174,7 @@ interface PendingAck {
   offset: number;
   epoch: number;
   at: number;
+  record: KRecord;
 }
 
 export interface CreateTopicOptions {
@@ -173,8 +209,12 @@ export class Cluster {
   groups = new Map<string, Group>();
   /** The most recent events, oldest first. */
   events: ClusterEvent[] = [];
+  /** Called before every fixed step; a Timeline uses it to replay recorded actions on time. */
+  beforeStep?: (now: number) => void;
 
   private random: Random;
+  private carry = 0;
+  private traces = new WeakMap<KRecord, RecordTrace>();
   private pending: PendingAck[] = [];
   private nextCleanAt = 0;
   private counters = { producer: 0, client: 0 };
@@ -229,6 +269,7 @@ export class Cluster {
       bytesOut: 0,
       inRate: 0,
       outRate: 0,
+      nextFlushAt: this.firstFlush(id),
     };
     this.brokers.set(id, broker);
     this.electController();
@@ -248,18 +289,32 @@ export class Cluster {
     return [...this.brokers.values()].filter((b) => b.up);
   }
 
-  /** Crash a broker: its leaderships move to other ISR members, and it leaves every ISR. */
-  stopBroker(id: BrokerId) {
+  /** Writeback is staggered per broker, as it would be on separate machines. */
+  private firstFlush(id: BrokerId) {
+    const every = this.settings.flushIntervalMs;
+    return every > 0 ? this.now + (every * ((id % 3) + 1)) / 3 : Infinity;
+  }
+
+  /**
+   * Stop a broker: its leaderships move to other ISR members, and it leaves
+   * every ISR. A clean stop flushes its logs first; `hard` is a power cut, and
+   * whatever was only in the page cache is gone. `keepIsr` is a bounce too
+   * quick for the controller to notice (see restartBroker).
+   */
+  stopBroker(id: BrokerId, { hard = false, keepIsr = false } = {}) {
     const b = this.broker(id);
     if (!b.up) return;
+    if (!hard) this.flush(b);
     b.up = false;
     b.inRate = 0;
     b.outRate = 0;
-    this.emit({ type: 'broker-down', at: this.now, broker: id });
+    this.emit({ type: 'broker-down', at: this.now, broker: id, hard });
     for (const p of this.allPartitions()) {
       if (!p.replicas.includes(id)) continue;
+      const log = p.logs.get(id) as ReplicaLog;
+      if (hard) this.truncate(p, id, log.flushedOffset, 'unflushed');
       // Kafka keeps the last ISR member even when it dies, so it can come back as leader.
-      if (p.isr.includes(id) && p.isr.length > 1) {
+      if (!keepIsr && p.isr.includes(id) && p.isr.length > 1) {
         p.isr = p.isr.filter((r) => r !== id);
         this.emit({
           type: 'isr-shrink',
@@ -277,20 +332,109 @@ export class Cluster {
     this.changed();
   }
 
-  /** Restart a broker: it truncates any diverged tail, catches up, and rejoins the ISR. */
+  /**
+   * Start a stopped broker: it catches up and rejoins the ISR. Before KIP-101 a
+   * follower first cut its log back to its own high watermark; with leader
+   * epochs it keeps everything until the leader says where its epoch ended.
+   */
   startBroker(id: BrokerId) {
     const b = this.broker(id);
     if (b.up) return;
     b.up = true;
+    b.nextFlushAt = this.firstFlush(id);
     this.emit({ type: 'broker-up', at: this.now, broker: id });
     for (const p of this.allPartitions()) {
       if (!p.replicas.includes(id)) continue;
       const st = p.followers.get(id);
       if (st) Object.assign(st, this.freshFollower());
       if (p.leader === null) this.elect(p);
+      else if (p.leader !== id && this.settings.truncation === 'high-watermark') {
+        const log = p.logs.get(id) as ReplicaLog;
+        this.truncate(p, id, log.highWatermark, 'hw');
+      }
     }
     this.electController();
     this.changed();
+  }
+
+  /**
+   * Bounce a broker faster than the controller notices: it stays in every ISR
+   * it was in, but restarts like any broker (and with `hard`, loses its page
+   * cache). Leaderships it held still move away.
+   */
+  restartBroker(id: BrokerId, { hard = false } = {}) {
+    const b = this.broker(id);
+    if (b.up) this.stopBroker(id, { hard, keepIsr: true });
+    this.startBroker(id);
+  }
+
+  /** fsync every log on a broker now (the OS writeback came early). */
+  flushBroker(id: BrokerId) {
+    this.flush(this.broker(id));
+    this.changed();
+  }
+
+  private flush(b: Broker) {
+    if (!b.up) return;
+    let bytes = 0;
+    for (const p of this.allPartitions()) bytes += p.logs.get(b.id)?.flush() ?? 0;
+    b.nextFlushAt =
+      this.settings.flushIntervalMs > 0 ? this.now + this.settings.flushIntervalMs : Infinity;
+    if (bytes > 0) this.emit({ type: 'flush', at: this.now, broker: b.id, bytes });
+  }
+
+  /** Bytes a broker holds only in its page cache. */
+  dirtyBytes(id: BrokerId): number {
+    return this.allPartitions().reduce((s, p) => s + (p.logs.get(id)?.dirtyBytes ?? 0), 0);
+  }
+
+  /** Change cluster settings on the fly (not the seed or the step size). */
+  configure(patch: Partial<Omit<ClusterSettings, 'seed' | 'tickMs'>>) {
+    Object.assign(this.settings, patch);
+    if ('flushIntervalMs' in patch)
+      for (const b of this.brokers.values()) b.nextFlushAt = this.firstFlush(b.id);
+    this.changed();
+  }
+
+  /** How a record has travelled so far, if the cluster saw it produced. */
+  trace(record: KRecord): RecordTrace | undefined {
+    return this.traces.get(record);
+  }
+
+  private truncate(p: Partition, broker: BrokerId, to: number, reason: TruncateReason): number {
+    const log = p.logs.get(broker) as ReplicaLog;
+    const removed = log.read(to);
+    const lost = log.truncateTo(to);
+    // A record is gone for good once no other replica has this very record.
+    let gone = 0;
+    let goneAcked = 0;
+    for (const r of removed) {
+      const kept = [...p.logs].some(
+        ([id, other]) => id !== broker && other.read(r.offset, r.offset + 1)[0] === r,
+      );
+      if (kept) continue;
+      gone++;
+      const tr = this.traces.get(r);
+      if (tr) tr.goneAt = this.now;
+      if (tr?.ackedAt !== undefined && !tr.ackError) goneAcked++;
+    }
+    p.gone += gone;
+    p.goneAcked += goneAcked;
+    if (lost > 0) {
+      this.emit({
+        type: 'truncate',
+        at: this.now,
+        topic: p.topic,
+        partition: p.id,
+        broker,
+        to,
+        lost,
+        gone,
+        goneAcked,
+        reason,
+      });
+    }
+    return lost;
   }
 
   setBrokerSlow(id: BrokerId, slow: boolean) {
@@ -376,8 +520,9 @@ export class Cluster {
     for (const pr of [...this.producers.values()])
       if (pr.topic === name) this.producers.delete(pr.id);
     for (const g of this.groups.values()) {
-      for (const k of [...g.committed.keys()])
-        if (k.startsWith(`${name}-`) && this.isTpOf(k, name)) g.committed.delete(k);
+      for (const map of [g.committed, g.processed])
+        for (const k of [...map.keys()])
+          if (k.startsWith(`${name}-`) && this.isTpOf(k, name)) map.delete(k);
       if ([...g.members.values()].some((m) => m.topics.includes(name)))
         this.startRebalance(g, 'metadata');
     }
@@ -422,6 +567,9 @@ export class Cluster {
     const t = this.topic(name);
     t.config[key] = value;
     this.emit({ type: 'config-changed', at: this.now, topic: name, key, value: String(value) });
+    // Turning on unclean election brings offline partitions back at once.
+    if (key === 'unclean.leader.election.enable' && value === true)
+      for (const p of t.partitions) if (p.leader === null) this.elect(p);
     this.changed();
   }
 
@@ -472,6 +620,8 @@ export class Cluster {
       followers: new Map(
         replicas.filter((r) => r !== leader).map((r) => [r, this.freshFollower()]),
       ),
+      gone: 0,
+      goneAcked: 0,
     };
   }
 
@@ -481,6 +631,7 @@ export class Cluster {
       prevFetchAt: this.now,
       leaderLeoAtPrevFetch: 0,
       nextFetchAt: this.now,
+      fetchOffset: -1,
     };
   }
 
@@ -524,6 +675,9 @@ export class Cluster {
     p.leader = leader;
     p.leaderEpoch++;
     const log = p.logs.get(leader) as ReplicaLog;
+    // Epochs that began past the new leader's end never happened as far as it
+    // knows: the leader epoch cache is cut back (truncateFromEnd) before the new one.
+    p.epochStarts = p.epochStarts.filter((e) => e.offset <= log.logEndOffset);
     p.epochStarts.push({ epoch: p.leaderEpoch, offset: log.logEndOffset });
     p.isr = unclean ? [leader] : p.isr.filter((r) => this.isUp(r));
     if (!p.isr.includes(leader)) p.isr.unshift(leader);
@@ -539,16 +693,22 @@ export class Cluster {
       epoch: p.leaderEpoch,
       unclean,
     });
-    if (unclean) p.highWatermark = Math.min(p.highWatermark, log.logEndOffset);
-    // Writes the new leader never got are gone; their producers hear about it.
+    // The new leader starts from its own high watermark, which may trail the
+    // old leader's until its followers fetch again.
+    p.highWatermark = Math.min(log.highWatermark, log.logEndOffset);
+    // Requests waiting on the old leader fail, even for records that survived:
+    // an error doesn't always mean the write is lost (retries then duplicate it).
     for (const a of this.pending) {
-      if (a.topic === p.topic && a.partition === p.id && a.offset >= log.logEndOffset) {
-        this.failAck(a, 'NOT_LEADER_OR_FOLLOWER');
+      if (a.topic === p.topic && a.partition === p.id) this.failAck(a, 'NOT_LEADER_OR_FOLLOWER');
+    }
+    this.pending = this.pending.filter((a) => !(a.topic === p.topic && a.partition === p.id));
+    // Before KIP-101 every follower cut back to its own high watermark on a leader change.
+    if (this.settings.truncation === 'high-watermark') {
+      for (const r of p.replicas) {
+        if (r === leader || !this.isUp(r)) continue;
+        this.truncate(p, r, (p.logs.get(r) as ReplicaLog).highWatermark, 'hw');
       }
     }
-    this.pending = this.pending.filter(
-      (a) => !(a.topic === p.topic && a.partition === p.id && a.offset >= log.logEndOffset),
-    );
     this.updateHighWatermark(p);
   }
 
@@ -574,12 +734,27 @@ export class Cluster {
     return next ? next.offset : (this.leaderLog(p)?.logEndOffset ?? 0);
   }
 
+  /**
+   * HW = the smallest log end offset in the ISR, as the leader knows it: its
+   * own, and each follower's last fetch offset. It only moves forward.
+   */
   private updateHighWatermark(p: Partition) {
     const leader = this.leaderLog(p);
     if (!leader) return;
-    const leos = p.isr.filter((r) => this.isUp(r)).map((r) => p.logs.get(r)?.logEndOffset ?? 0);
-    const hw = Math.min(leader.logEndOffset, ...leos);
-    if (hw > p.highWatermark) p.highWatermark = hw;
+    let hw = leader.logEndOffset;
+    for (const r of p.isr) {
+      if (r === p.leader || !this.isUp(r)) continue;
+      const known = p.followers.get(r)?.fetchOffset ?? -1;
+      if (known < 0) return; // a new leader hasn't heard from this follower yet
+      hw = Math.min(hw, known);
+    }
+    if (hw <= p.highWatermark) return;
+    for (const r of leader.read(p.highWatermark, hw)) {
+      const tr = this.traces.get(r);
+      if (tr && tr.committedAt === undefined) tr.committedAt = this.now;
+    }
+    p.highWatermark = hw;
+    leader.highWatermark = hw;
   }
 
   // ── Producing ────────────────────────────────────────────────────────────
@@ -620,6 +795,16 @@ export class Cluster {
       producer,
     };
     log.append(record, t.config['segment.bytes']);
+    this.traces.set(record, {
+      producedAt: this.now,
+      acks,
+      leader: p.leader,
+      partitions: t.partitions.length,
+
+      copies: new Map(),
+      consumed: new Map(),
+      deliveries: 0,
+    });
     this.broker(p.leader).bytesIn += record.size;
     this.emit({
       type: 'produce',
@@ -639,6 +824,7 @@ export class Cluster {
         offset: record.offset,
         epoch: p.leaderEpoch,
         at: this.now,
+        record,
       });
     } else {
       this.emit({
@@ -650,6 +836,7 @@ export class Cluster {
         offset: record.offset,
       });
       this.countAck(producer);
+      this.markAcked(record);
     }
     this.updateHighWatermark(p);
     this.changed();
@@ -751,7 +938,15 @@ export class Cluster {
     if (pr) pr.acked++;
   }
 
+  private markAcked(record: KRecord, error?: KafkaErrorCode) {
+    const tr = this.traces.get(record);
+    if (!tr || tr.ackedAt !== undefined) return;
+    tr.ackedAt = this.now;
+    tr.ackError = error;
+  }
+
   private failAck(a: PendingAck, error: KafkaErrorCode) {
+    this.markAcked(a.record, error);
     const pr = this.producers.get(a.producer);
     if (pr) {
       pr.failed++;
@@ -787,9 +982,12 @@ export class Cluster {
         generation: 0,
         members: new Map(),
         committed: new Map(),
+        processed: new Map(),
+        redelivered: 0,
         rebalanceAt: null,
-        autoCommitIntervalMs: 1000,
-        nextCommitAt: this.now + 1000,
+        // auto.commit.interval.ms: Kafka's default.
+        autoCommitIntervalMs: 5000,
+        nextCommitAt: this.now + 5000,
       };
       this.groups.set(id, g);
     }
@@ -863,6 +1061,16 @@ export class Cluster {
     }
     this.groups.delete(id);
     this.changed();
+  }
+
+  /**
+   * The broker that coordinates a group. Kafka hashes the group id onto a
+   * partition of __consumer_offsets and uses its leader; here the hash picks a
+   * live broker directly.
+   */
+  coordinator(group: string): BrokerId | null {
+    const live = this.liveBrokers.map((b) => b.id).sort((a, b) => a - b);
+    return live.length ? (live[toPositive(murmur2(group)) % live.length] as BrokerId) : null;
   }
 
   private isCooperative = (g: Group) => g.assignor === 'cooperative-sticky';
@@ -1040,9 +1248,38 @@ export class Cluster {
 
   // ── Time ─────────────────────────────────────────────────────────────────
 
-  /** Advance the simulation by `ms` of simulated time. */
+  /**
+   * Advance the simulation by `ms` of simulated time. Time moves in fixed
+   * steps of `tickMs`; a remainder waits for the next call, so the history is
+   * the same whatever size the calls are.
+   */
   tick(ms: number) {
-    if (ms <= 0) return;
+    if (!(ms > 0)) return;
+    this.carry += ms;
+    const q = this.settings.tickMs;
+    let stepped = false;
+    while (this.carry >= q - 1e-6) {
+      this.carry -= q;
+      this.step(q);
+      stepped = true;
+    }
+    if (stepped) this.changed();
+  }
+
+  /** Step until `now` reaches `time`, dropping any partial step. */
+  runUntil(time: number) {
+    this.carry = 0;
+    const q = this.settings.tickMs;
+    let stepped = false;
+    while (this.now + q <= time + 1e-6) {
+      this.step(q);
+      stepped = true;
+    }
+    if (stepped) this.changed();
+  }
+
+  private step(ms: number) {
+    this.beforeStep?.(this.now);
     this.now += ms;
     const before = new Map(
       [...this.brokers.values()].map((b) => [b.id, [b.bytesIn, b.bytesOut] as const]),
@@ -1063,6 +1300,7 @@ export class Cluster {
       this.nextCleanAt = this.now + this.settings.logCleanerIntervalMs;
       this.cleanLogs();
     }
+    for (const b of this.brokers.values()) if (this.now >= b.nextFlushAt) this.flush(b);
 
     for (const b of this.brokers.values()) {
       const [bin = 0, bout = 0] = before.get(b.id) ?? [];
@@ -1070,7 +1308,6 @@ export class Cluster {
       b.inRate = b.inRate * RATE_SMOOTHING + (b.bytesIn - bin) * k * (1 - RATE_SMOOTHING);
       b.outRate = b.outRate * RATE_SMOOTHING + (b.bytesOut - bout) * k * (1 - RATE_SMOOTHING);
     }
-    this.changed();
   }
 
   /** Followers fetch from the leader; the ISR shrinks and grows; the HW moves. */
@@ -1087,29 +1324,56 @@ export class Cluster {
         this.now + this.settings.replicaFetchIntervalMs * (b.slow ? this.settings.slowFactor : 1);
       const log = p.logs.get(id) as ReplicaLog;
 
-      // A follower whose log ran ahead in an older epoch drops the diverged tail.
-      if (log.lastEpoch >= 0 && log.lastEpoch < p.leaderEpoch) {
+      // KIP-101: a follower whose last record is from an older epoch asks the
+      // leader (OffsetsForLeaderEpoch) where that epoch ended, and drops what
+      // lies past it. Before KIP-101 nothing checked, and diverged logs stayed.
+      if (
+        this.settings.truncation === 'leader-epoch' &&
+        log.lastEpoch >= 0 &&
+        log.lastEpoch < p.leaderEpoch
+      ) {
         const end = this.endOffsetForEpoch(p, log.lastEpoch);
-        if (log.logEndOffset > end) {
-          const lost = log.truncateTo(end);
-          this.emit({
-            type: 'truncate',
-            at: this.now,
-            topic: p.topic,
-            partition: p.id,
-            broker: id,
-            to: end,
-            lost,
-          });
-        }
+        if (log.logEndOffset > end) this.truncate(p, id, end, 'epoch');
       }
+      // Fetching past the leader's end is OFFSET_OUT_OF_RANGE: cut back to it.
+      if (log.logEndOffset > leader.logEndOffset)
+        this.truncate(p, id, leader.logEndOffset, 'ahead');
       if (log.logEndOffset < leader.logStartOffset) log.resetTo(leader.logStartOffset);
 
+      // The fetch offset is how the leader learns this follower's log end.
       const from = log.logEndOffset;
+      if (from >= leader.logEndOffset) st.lastCaughtUpAt = this.now;
+      else if (from >= st.leaderLeoAtPrevFetch) st.lastCaughtUpAt = st.prevFetchAt;
+      st.prevFetchAt = this.now;
+      st.leaderLeoAtPrevFetch = leader.logEndOffset;
+      st.fetchOffset = from;
+      // The HW in this response is the one from before this fetch; the follower
+      // learns about its own progress one round later. That gap is KIP-101's scenario 1.
+      const responseHw = p.highWatermark;
+
+      // Back in the ISR once it has the HW and everything from the current epoch's start.
+      const epochStart = p.epochStarts[p.epochStarts.length - 1]?.offset ?? 0;
+      if (!p.isr.includes(id) && from >= Math.max(p.highWatermark, epochStart)) {
+        p.isr = [...p.isr, id].sort((a, c) => p.replicas.indexOf(a) - p.replicas.indexOf(c));
+        this.emit({
+          type: 'isr-expand',
+          at: this.now,
+          topic: p.topic,
+          partition: p.id,
+          broker: id,
+          isr: [...p.isr],
+        });
+      }
+      this.updateHighWatermark(p);
+
       const batch = leader.read(from, leader.logEndOffset, this.settings.replicaFetchMaxRecords);
-      for (const r of batch) log.append(r, segmentBytes);
+      for (const r of batch) {
+        log.append(r, segmentBytes);
+        this.traces.get(r)?.copies.set(id, this.now);
+      }
       // Nothing left in range (compacted away): jump straight to the leader's end.
       if (batch.length === 0) log.advanceTo(leader.logEndOffset);
+      log.highWatermark = Math.max(log.highWatermark, Math.min(responseHw, log.logEndOffset));
       if (batch.length > 0) {
         const bytes = batch.reduce((s, r) => s + r.size, 0);
         this.broker(leaderId).bytesOut += bytes;
@@ -1123,25 +1387,6 @@ export class Cluster {
           to: id,
           fromOffset: from,
           count: batch.length,
-        });
-      }
-
-      if (log.logEndOffset >= leader.logEndOffset) st.lastCaughtUpAt = this.now;
-      else if (log.logEndOffset >= st.leaderLeoAtPrevFetch) st.lastCaughtUpAt = st.prevFetchAt;
-      st.prevFetchAt = this.now;
-      st.leaderLeoAtPrevFetch = leader.logEndOffset;
-
-      // Back in the ISR once it has the HW and everything from the current epoch's start.
-      const epochStart = p.epochStarts[p.epochStarts.length - 1]?.offset ?? 0;
-      if (!p.isr.includes(id) && log.logEndOffset >= Math.max(p.highWatermark, epochStart)) {
-        p.isr = [...p.isr, id].sort((a, c) => p.replicas.indexOf(a) - p.replicas.indexOf(c));
-        this.emit({
-          type: 'isr-expand',
-          at: this.now,
-          topic: p.topic,
-          partition: p.id,
-          broker: id,
-          isr: [...p.isr],
         });
       }
     }
@@ -1179,6 +1424,7 @@ export class Cluster {
           offset: a.offset,
         });
         this.countAck(a.producer);
+        this.markAcked(a.record);
       } else if (this.now - a.at > this.settings.requestTimeoutMs) {
         this.failAck(a, 'REQUEST_TIMED_OUT');
       } else {
@@ -1245,6 +1491,18 @@ export class Cluster {
       const last = batch[batch.length - 1] as KRecord;
       const bytes = batch.reduce((s, r) => s + r.size, 0);
       this.broker(p.leader).bytesOut += bytes;
+      // Anything below what the group already processed is a second delivery.
+      const seen = g.processed.get(k) ?? -1;
+      let redelivered = 0;
+      for (const r of batch) {
+        if (r.offset < seen) redelivered++;
+        const tr = this.traces.get(r);
+        if (!tr) continue;
+        tr.deliveries++;
+        if (!tr.consumed.has(g.id)) tr.consumed.set(g.id, { at: this.now, member: m.id });
+      }
+      g.processed.set(k, Math.max(seen, last.offset + 1));
+      g.redelivered += redelivered;
       this.emit({
         type: 'consume',
         at: this.now,
@@ -1255,8 +1513,10 @@ export class Cluster {
         broker: p.leader,
         fromOffset: pos,
         count: batch.length,
+        redelivered,
       });
       m.credit -= batch.length;
+
       m.consumed += batch.length;
       pos = last.offset + 1;
     } else if (pos < p.highWatermark) {

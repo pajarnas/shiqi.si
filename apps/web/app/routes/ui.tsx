@@ -26,11 +26,11 @@ import {
   useTheme,
   useToast,
   type ThemePreference,
+  Rich,
 } from '@shiqi/ui';
 import { useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { format, useI18n } from '~/i18n';
-import { Rich } from '~/i18n/Rich';
 import type { Route } from './+types/ui';
 
 export const meta: Route.MetaFunction = ({ matches }) => pageMeta(matches, (t) => t.gallery);

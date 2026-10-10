@@ -1,6 +1,6 @@
 import type { Broker, Cluster, Group, Member, Partition, Producer } from '@shiqi/kafka';
 import { Button, cx, PixelIcon } from '@shiqi/ui';
-import { useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { anchorId, anchorRef, type AnchorRegistry } from '../anchors';
 import { bytes } from '../format';
 import { format, useKafkaStrings } from '../strings';
@@ -15,24 +15,38 @@ export interface Selection {
 const STRIP_CELLS = 14;
 /** Full scale of the network meters, bytes per simulated second. */
 const NET_SCALE = 2048;
+/** Full scale of the page-cache meter: dirty bytes waiting for writeback. */
+const CACHE_SCALE = 2048;
+const FOCUS_CLASS = 'kv-focus';
 
 interface StageProps {
   cluster: Cluster;
   speed: number;
   selected: Selection | null;
   onSelect: (s: Selection) => void;
+  /** Anchor ids to point at (a scenario step's subject). */
+  focus?: readonly string[];
 }
 
 /**
  * The live picture: producers on the left, brokers in the middle with every
  * replica's log, consumer groups on the right, and records flying between.
  */
-export function Stage({ cluster, speed, selected, onSelect }: StageProps) {
+export function Stage({ cluster, speed, selected, onSelect, focus = [] }: StageProps) {
   const t = useKafkaStrings();
   const stageRef = useRef<HTMLDivElement>(null);
   const [anchors] = useState<AnchorRegistry>(() => new Map());
   const producers = [...cluster.producers.values()];
   const groups = [...cluster.groups.values()];
+
+  // Re-applied after every render: React rewrites class names it owns.
+  useEffect(() => {
+    const els = focus.map((id) => anchors.get(id)).filter((el) => el !== undefined);
+    for (const el of els) el.classList.add(FOCUS_CLASS);
+    return () => {
+      for (const el of els) el.classList.remove(FOCUS_CLASS);
+    };
+  });
 
   return (
     <div className="kv-stage" ref={stageRef}>
@@ -78,15 +92,19 @@ function Meter({
   value,
   max,
   text,
+  hint,
+  tone,
 }: {
   label: string;
   value: number;
   max: number;
   text: string;
+  hint?: string;
+  tone?: 'dirty';
 }) {
   const fill = Math.max(0, Math.min(1, value / max));
   return (
-    <div className="kv-meter">
+    <div className={cx('kv-meter', tone && `kv-meter--${tone}`)} title={hint}>
       <span className="kv-meter__label">{label}</span>
       <span
         className="kv-meter__bar"
@@ -114,6 +132,7 @@ function BrokerCard({
   const t = useKafkaStrings();
   const replicas = cluster.allPartitions().filter((p) => p.replicas.includes(broker.id));
   const disk = replicas.reduce((s, p) => s + (p.logs.get(broker.id)?.sizeBytes ?? 0), 0);
+  const dirty = cluster.dirtyBytes(broker.id);
   const isController = cluster.controller === broker.id;
   const busy = broker.up && broker.inRate + broker.outRate > 1;
 
@@ -158,6 +177,14 @@ function BrokerCard({
           text={`${bytes(broker.outRate)}/s`}
         />
         <Meter label={t.broker.disk} value={disk} max={64 * 1024} text={bytes(disk)} />
+        <Meter
+          label={t.broker.pageCache}
+          value={dirty}
+          max={CACHE_SCALE}
+          text={bytes(dirty)}
+          hint={t.broker.pageCacheHint}
+          tone="dirty"
+        />
       </div>
 
       <ul className="kv-broker__replicas">
@@ -176,23 +203,34 @@ function BrokerCard({
       </ul>
 
       <footer className="kv-broker__actions">
-        <Button
-          size="sm"
-          variant={broker.up ? 'secondary' : 'accent'}
-          onClick={() =>
-            broker.up ? cluster.stopBroker(broker.id) : cluster.startBroker(broker.id)
-          }
-        >
-          {broker.up ? t.broker.stop : t.broker.start}
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={!broker.up}
-          onClick={() => cluster.setBrokerSlow(broker.id, !broker.slow)}
-        >
-          {broker.slow ? t.broker.makeFast : t.broker.makeSlow}
-        </Button>
+        {broker.up ? (
+          <>
+            <Button size="sm" variant="secondary" onClick={() => cluster.stopBroker(broker.id)}>
+              {t.broker.stop}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => cluster.stopBroker(broker.id, { hard: true })}
+            >
+              {t.broker.powerCut}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => cluster.restartBroker(broker.id)}>
+              {t.broker.restart}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => cluster.setBrokerSlow(broker.id, !broker.slow)}
+            >
+              {broker.slow ? t.broker.makeFast : t.broker.makeSlow}
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="accent" onClick={() => cluster.startBroker(broker.id)}>
+            {t.broker.start}
+          </Button>
+        )}
       </footer>
     </article>
   );
@@ -226,7 +264,8 @@ function ReplicaRow({
     follower: t.broker.follower,
     out: t.broker.outOfSync,
   }[role];
-  const end = Math.max(cluster.leaderLog(p)?.logEndOffset ?? 0, log.logEndOffset);
+  const leaderLog = cluster.leaderLog(p);
+  const end = Math.max(leaderLog?.logEndOffset ?? 0, log.logEndOffset);
   const from = Math.max(0, end - STRIP_CELLS);
 
   return (
@@ -252,7 +291,14 @@ function ReplicaRow({
         <span className="kv-replica__role" title={roleText}>
           {role === 'leader' ? 'L' : role === 'follower' ? 'F' : '×'}
         </span>
-        <LogStrip log={log} from={from} to={from + STRIP_CELLS} highWatermark={p.highWatermark} />
+        <LogStrip
+          log={log}
+          from={from}
+          to={from + STRIP_CELLS}
+          highWatermark={p.highWatermark}
+          leader={leaderLog}
+          ownHighWatermark={isLeader ? undefined : log.highWatermark}
+        />
         <span className="kv-replica__leo">{log.logEndOffset}</span>
       </button>
     </li>
@@ -343,6 +389,12 @@ function GroupCard({
         {g.assignor} · {format(t.group.generation, { n: g.generation })} ·{' '}
         {format(t.group.totalLag, { n: total })}
       </p>
+      {g.redelivered > 0 && (
+        <p className="kv-error kv-group__meta">
+          {format(t.group.redelivered, { n: g.redelivered })}
+        </p>
+      )}
+
       <ul className="kv-group__members">
         {members.map((m) => (
           <li

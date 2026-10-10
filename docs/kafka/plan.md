@@ -33,7 +33,7 @@ apps/web/app/content/notes/commonplace/kafka-*.mdx   笔记（topics 里有 kafk
 ## 路线图
 
 - **M1 舞台与引擎**：上面这些，加三篇笔记。
-- **M2 引导课程**：一步一步的情景（“杀掉 leader 会怎样”“acks=1 为什么会丢数据”“加一个消费者触发 rebalance”“compaction 之后的偏移空洞”），每步高亮相关部件，配小测验；笔记里一键打开对应情景（`/kafka?scenario=…`）。
+- **M2 引导课程（已完成）**：12 个情景，取材自 KIP-101、Jack Vanlightly 的丢数据测试和 KIP-429；每步先猜后看、高亮相关部件；时间轴可倒回重放；记录旅程、协议时序图、术语弹窗、集群设置面板；引擎加了 follower 自己的高水位、页缓存与断电、快速重启、两种截断方式、重复投递统计。设计和依据见 [learning-design.md](learning-design.md)。
 - **M3 更深的机制**：幂等生产者与事务（PID、序列号、`read_committed`、LSO）、`__consumer_offsets` 作为真实 topic 显示、分区重分配 `kafka-reassign-partitions`、机架感知放置、配额与限流、KRaft 控制器仲裁的选举动画、页缓存与零拷贝的“硬件层”视图。
 - **M4 安全与真集群**：SSL/SASL 证书和 ACL 的模拟（一键签发证书、`kafka-acls`、认证失败长什么样）；`ClusterApi` 适配器 + 小后端代理接真的 Kafka（本地 Docker 或 Oracle Arm 机器）。
 - **M5 独立出去**：`kafka.shiqi.si`（需要一条 DNS A 记录指向 52.162.142.136，再在 Caddy 里加一个站点），库拆到 GitHub 组织下的独立 repo，发 release。

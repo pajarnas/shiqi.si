@@ -23,4 +23,14 @@ What it models: murmur2 key partitioning and the sticky partitioner, Kafka's rep
 
 `runCli` speaks the stock scripts (`kafka-topics`, `kafka-configs`, `kafka-console-producer`, `kafka-console-consumer`, `kafka-consumer-groups`, `kafka-leader-election`, `kafka-metadata-quorum`, `kafka-producer-perf-test`) with their real flags and output formats.
 
-Every random choice comes from the seed, so a seed replays the same history.
+It also models what usually stays invisible: each follower's own high watermark (one fetch behind the leader's), the page cache (`flushIntervalMs`, `stopBroker(id, { hard: true })` loses what wasn't flushed), quick restarts (`restartBroker`), truncation by leader epoch or, as before Kafka 0.11, by high watermark (`truncation: 'high-watermark'`), records lost for good (`partition.gone`, `goneAcked`), redeliveries after a consumer crash, and a trace of every record (`cluster.trace(record)`).
+
+Time moves in fixed steps (`tickMs`), so every random choice comes from the seed and a seed plus the same actions replays the same history whatever the frame rate. `Timeline` builds on that: act through `timeline.cluster`, and `timeline.seek(t)` rewinds by replaying.
+
+```ts
+import { Timeline } from '@shiqi/kafka';
+const tl = new Timeline(() => new Cluster({ seed: 7 }));
+tl.cluster.tick(5000);
+tl.cluster.stopBroker(1);
+tl.seek(2000); // back before the stop
+```

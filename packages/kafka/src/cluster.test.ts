@@ -128,7 +128,9 @@ describe('Cluster', () => {
     run(c, 5000);
     const { rows } = c.describeGroup('g');
     expect(rows).toHaveLength(4);
-    expect(rows.reduce((s, r) => s + (r.lag ?? 0), 0)).toBeLessThan(40); // committed lags the position by up to one auto-commit interval;
+    // The members keep up; what they've committed trails by up to one auto-commit interval.
+    expect(rows.reduce((s, r) => s + r.logEndOffset - (r.position ?? 0), 0)).toBeLessThan(40);
+    expect(rows.reduce((s, r) => s + (r.lag ?? 0), 0)).toBeLessThanOrEqual(110);
 
     c.crashConsumer('g', m2.id);
     run(c, 3000);

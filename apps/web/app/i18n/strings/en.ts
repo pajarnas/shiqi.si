@@ -382,7 +382,7 @@ export const en = {
     title: 'Kafka, live',
     description:
       'A Kafka cluster running in your browser: watch records move between producers, brokers and consumers, break things, and type real Kafka commands.',
-    lede: 'Three brokers, two topics, two consumer groups, all running right here. Stop a broker, slow a disk, add a consumer, or open the terminal and type kafka-topics --describe.',
+    lede: 'Three brokers, two topics, two consumer groups, all running right here. Take a guided scenario, or break things yourself: stop a broker, cut its power, add a consumer, drag the timeline back to see it again, or type kafka-topics --describe in the terminal.',
     simulated:
       'This is a faithful simulation (leaders, ISR, high watermark, rebalances, retention, compaction), not a real broker: the server this site runs on has 1 GB of memory.',
     notes: 'Kafka notes',

@@ -60,6 +60,8 @@ export type Assignor = 'range' | 'roundrobin' | 'cooperative-sticky';
 
 export type OffsetReset = 'earliest' | 'latest';
 
+export type TruncateReason = 'epoch' | 'hw' | 'unflushed' | 'ahead';
+
 /** Everything that happens in the cluster, in order. Views animate these. */
 export type ClusterEvent =
   | {
@@ -101,6 +103,8 @@ export type ClusterEvent =
       broker: BrokerId;
       fromOffset: number;
       count: number;
+      /** Records in this batch the group had already processed: at-least-once duplicates. */
+      redelivered: number;
     }
   | { type: 'commit'; at: number; group: string; topic: string; partition: number; offset: number }
   | {
@@ -127,9 +131,22 @@ export type ClusterEvent =
       partition: number;
       broker: BrokerId;
       to: number;
+      /** Records this replica dropped. */
       lost: number;
+      /** Of those, records no other replica has either: gone for good. */
+      gone: number;
+      /** Of those, records a producer had been told were safely written. */
+      goneAcked: number;
+      /**
+       * epoch: the leader said where our last epoch ended (KIP-101). hw: cut back
+       * to our own high watermark (before KIP-101). unflushed: power loss took
+       * what was only in the page cache. ahead: we had more than the new leader.
+       */
+      reason: TruncateReason;
     }
-  | { type: 'broker-down' | 'broker-up' | 'controller'; at: number; broker: BrokerId }
+  | { type: 'broker-down'; at: number; broker: BrokerId; hard: boolean }
+  | { type: 'broker-up' | 'controller'; at: number; broker: BrokerId }
+  | { type: 'flush'; at: number; broker: BrokerId; bytes: number }
   | { type: 'broker-slow'; at: number; broker: BrokerId; slow: boolean }
   | {
       type: 'rebalance-start';

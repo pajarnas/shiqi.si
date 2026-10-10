@@ -6,7 +6,13 @@ import { format, useKafkaStrings, type KafkaStrings } from '../strings';
 
 const SHOWN = 80;
 /** Per-record events: there are many, so they are hidden unless asked for. */
-const DATA_EVENTS = new Set<ClusterEvent['type']>(['produce', 'replicate', 'consume', 'commit']);
+const DATA_EVENTS = new Set<ClusterEvent['type']>([
+  'produce',
+  'replicate',
+  'consume',
+  'commit',
+  'flush',
+]);
 
 /** Event fields as template values: numbers stay, lists join, the rest become text. */
 const vars = (e: object): Record<string, string | number> =>
@@ -37,10 +43,14 @@ export function describeEvent(e: ClusterEvent, t: KafkaStrings['events']): strin
       return format(t.isrExpand, v);
     case 'leader-elected':
       return format(e.leader === null ? t.leaderNone : e.unclean ? t.leaderUnclean : t.leader, v);
-    case 'truncate':
-      return format(t.truncate, v);
+    case 'truncate': {
+      const text = format(t.truncate, { ...v, reason: t.truncateReasons[e.reason] });
+      return e.gone > 0 ? `${text}. ${format(t.truncateGone, v)}` : text;
+    }
     case 'broker-down':
-      return format(t.brokerDown, v);
+      return format(e.hard ? t.brokerPowerLoss : t.brokerDown, v);
+    case 'flush':
+      return format(t.flush, v);
     case 'broker-up':
       return format(t.brokerUp, v);
     case 'controller':

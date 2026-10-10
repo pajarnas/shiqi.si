@@ -6,3 +6,4 @@ export * from './config';
 export * from './log';
 export * from './murmur2';
 export * from './types';
+export * from './timeline';

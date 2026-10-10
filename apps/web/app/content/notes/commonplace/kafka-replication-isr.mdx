@@ -41,6 +41,22 @@ The old leader may have had records beyond the HW that never got replicated (an 
 
 If no ISR replica is alive, the partition goes **offline** (`Leader: none`) and waits for one to come back. With `unclean.leader.election.enable=true` it instead elects any live replica, staying available at the cost of losing committed data. The default is false.
 
+## Why the HW lags, and what leader epochs fixed
+
+Followers pull. The only way the leader learns how far a follower got is the offset in its next fetch, so the HW moves one fetch after a copy arrives, and the follower hears the new HW one fetch later still. Before Kafka 0.11, a follower that restarted cut its log back to its own (stale) HW. KIP-101 showed two ways that loses data: a quick restart followed by a leader failure drops an acked record, and a power cut on both replicas leaves them holding different records at the same offset while both count as in sync.
+
+Since 0.11 every record carries its **leader epoch**. A returning follower asks the leader "where did my last epoch end?" (`OffsetsForLeaderEpoch`) and truncates only past that point.
+
+Kafka doesn't fsync each write either: records sit in the OS page cache, and durability comes from copies on separate machines. `acks=all` with `min.insync.replicas=2` and replication factor 3 is what makes one failure survivable.
+
+## Try it
+
+- [acks=1 loses acked writes](/kafka?scenario=acks-one)
+- [acks=all is only as strong as the ISR](/kafka?scenario=min-isr)
+- [Unclean leader election](/kafka?scenario=unclean)
+- [KIP-101: a restart loses an acked record](/kafka?scenario=kip101-restart-hw), then [the same with leader epochs](/kafka?scenario=kip101-restart-epoch)
+- [KIP-101: logs diverge after a power cut](/kafka?scenario=kip101-power-hw)
+
 ## Commands
 
 ```bash
