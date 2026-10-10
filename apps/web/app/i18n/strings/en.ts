@@ -23,8 +23,6 @@ export const en = {
   },
   language: {
     label: 'Language',
-    en: 'English',
-    zh: '中文',
   },
   ui: UI_STRINGS,
   // Error pages: today's critter holds up a sign with the status code.
@@ -79,9 +77,9 @@ export const en = {
           'Icons, critters, wallpapers and the sky are drawn on canvas by @shiqi/pixel. No sprite sheets.',
       },
       languages: {
-        title: 'English and Chinese',
+        title: 'Eight languages',
         description:
-          'Notes are written in English; Chinese comes from a free machine translator and is cached in Redis.',
+          'Everything is written in English. Chinese is hand-translated; the other languages come from a free machine translator, cached in Redis.',
       },
       server: {
         title: 'One small server',

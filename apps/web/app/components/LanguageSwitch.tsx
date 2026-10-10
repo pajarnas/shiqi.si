@@ -1,24 +1,37 @@
 import { Form, useLocation } from 'react-router';
-import { LOCALES, useI18n } from '~/i18n';
+import { LANGUAGES, LOCALES, useI18n } from '~/i18n';
 
-/** Switch to the other language. Works without JavaScript: it's a plain form post. */
+/**
+ * Language picker, styled like the theme picker. It's a plain form post, so it
+ * works without JavaScript too (the button shows only then).
+ */
 export function LanguageSwitch() {
   const { locale, t } = useI18n();
   const location = useLocation();
-  const next = LOCALES.find((l) => l !== locale) ?? 'en';
   return (
-    <Form method="post" action="/api/locale" className="lang-switch">
+    <Form method="post" action="/api/locale" className="ui-theme-select lang-switch">
       <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
-      <button
-        type="submit"
-        name="locale"
-        value={next}
-        className="lang-switch__btn"
-        aria-label={`${t.language.label}: ${t.language[next]}`}
-        lang={next === 'zh' ? 'zh-CN' : 'en'}
-      >
-        {t.language[next]}
-      </button>
+      <label>
+        <span className="ui-visually-hidden">{t.language.label}</span>
+        <select
+          className="ui-input"
+          name="locale"
+          defaultValue={locale}
+          key={locale}
+          onChange={(e) => e.currentTarget.form?.requestSubmit()}
+        >
+          {LOCALES.map((l) => (
+            <option key={l} value={l} lang={LANGUAGES[l].tag}>
+              {LANGUAGES[l].name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <noscript>
+        <button type="submit" className="lang-switch__btn">
+          {t.language.label}
+        </button>
+      </noscript>
     </Form>
   );
 }

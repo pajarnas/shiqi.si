@@ -22,8 +22,6 @@ export const zh: DeepPartial<Strings> = {
   },
   language: {
     label: '语言',
-    en: 'English',
-    zh: '中文',
   },
   ui: {
     copy: '复制',
@@ -85,8 +83,9 @@ export const zh: DeepPartial<Strings> = {
         description: '图标、小怪、壁纸和天空都由 @shiqi/pixel 在 canvas 上画出来，没有一张贴图。',
       },
       languages: {
-        title: '中英双语',
-        description: '笔记用英文写，中文由免费的机器翻译生成，翻译结果缓存在 Redis 里。',
+        title: '八种语言',
+        description:
+          '所有内容都用英文写。界面的中文是手写的，其它语言由免费的机器翻译生成，结果缓存在 Redis 里。',
       },
       server: {
         title: '一台小服务器',
