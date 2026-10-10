@@ -1,7 +1,51 @@
-# Production stack for a small VM: the site, Redis, MySQL, and Caddy for HTTPS.
+# Production stack for a small VM: the site, Redis, MySQL, and Caddy for HTTPS,
+# plus a 3-node Kafka cluster (profile `kafka`) once the VM has 4 GB.
 # bootstrap.sh writes .env next to this file (IMAGE, ACME_EMAIL) and ensure-env.sh
 # adds ADMIN_PASSWORD; deploy.sh updates IMAGE. Run from this folder: `docker compose ps`, `docker compose logs -f web`.
 name: shiqi
+
+# Shared by the three Kafka nodes below. The apache/kafka image turns each
+# KAFKA_FOO_BAR variable into the broker setting foo.bar. CLUSTER_ID is any 16
+# random bytes in base64url, fixed so the three nodes agree on first start.
+x-kafka-env: &kafka-env
+  CLUSTER_ID: BbkU177UR4C-DabI7vl5yw
+  KAFKA_PROCESS_ROLES: broker,controller
+  KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+  KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+  KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
+  KAFKA_LOG_DIRS: /var/lib/kafka/data
+  KAFKA_HEAP_OPTS: -Xmx256m -Xms256m
+  # Topics are made on purpose (the lab's admin API), never by a typo.
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+  KAFKA_NUM_PARTITIONS: 3
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+  KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 2
+  # Keep a day or 64 MB per partition, whichever is smaller. Small segments so
+  # the size limit can actually delete something.
+  KAFKA_LOG_RETENTION_HOURS: 24
+  KAFKA_LOG_RETENTION_BYTES: 67108864
+  KAFKA_LOG_SEGMENT_BYTES: 16777216
+  KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+
+x-kafka: &kafka
+  image: apache/kafka:4.1.1
+  profiles: [kafka]
+  restart: unless-stopped
+  networks: [kafka]
+  mem_limit: 512m
+  healthcheck:
+    # A port check; the kafka-*.sh tools start a second JVM, too big for 512 MB.
+    test: [CMD, nc, -z, localhost, '9092']
+    interval: 30s
+    timeout: 5s
+    start_period: 60s
 
 services:
   web:
@@ -18,6 +62,8 @@ services:
       # Password for /admin/visits; the page is off while it is empty.
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_TIME_ZONE: ${ADMIN_TIME_ZONE:-America/New_York}
+      # Set by deploy.sh when the kafka profile runs; empty = no real cluster.
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-}
     # API keys live in secrets.env next to this file (never in git), e.g.
     # AZURE_TRANSLATOR_KEY=... for the translation service. CI fills it from
     # GitHub Secrets named APP_<NAME> (see infra/deploy.sh).
@@ -35,6 +81,7 @@ services:
       timeout: 5s
       start_period: 20s
     depends_on: [redis, mysql]
+    networks: [default, kafka]
 
   redis:
     image: redis:8.8.3-alpine
@@ -89,8 +136,47 @@ services:
     mem_limit: 128m
     depends_on: [web]
 
+  # A real Kafka cluster for /kafka: three KRaft nodes, each both broker and
+  # controller, reachable only from the web container (no published ports).
+  # Off unless the `kafka` profile is enabled; deploy.sh does that only on a
+  # machine with at least 3.5 GB of RAM.
+  kafka-1:
+    <<: *kafka
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 1
+      KAFKA_BROKER_RACK: rack-1
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
+    volumes: [kafka-1:/var/lib/kafka/data]
+
+  kafka-2:
+    <<: *kafka
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 2
+      KAFKA_BROKER_RACK: rack-2
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
+    volumes: [kafka-2:/var/lib/kafka/data]
+
+  kafka-3:
+    <<: *kafka
+    environment:
+      <<: *kafka-env
+      KAFKA_NODE_ID: 3
+      KAFKA_BROKER_RACK: rack-3
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092
+    volumes: [kafka-3:/var/lib/kafka/data]
+
+networks:
+  # Kafka's own network: no route out, only web and the brokers are on it.
+  kafka:
+    internal: true
+
 volumes:
   redis:
   mysql:
   caddy_data:
   caddy_config:
+  kafka-1:
+  kafka-2:
+  kafka-3:

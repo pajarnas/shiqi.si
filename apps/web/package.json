@@ -11,6 +11,7 @@
     "typecheck": "react-router typegen && tsc -p ."
   },
   "dependencies": {
+    "@platformatic/kafka": "^2.14.0",
     "@react-router/node": "^8.4.0",
     "@react-router/serve": "^8.4.0",
     "@shiqi/kafka": "workspace:*",
