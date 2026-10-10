@@ -64,13 +64,58 @@ export const zh: DeepPartial<Strings> = {
   home: {
     window: 'shiqi.si — 你好',
     eyebrow: 'HELLO, WORLD',
-    title: '你好，我是 Shiqi。',
-    lede: '在加州 Fremont 做软件工程师，同时在 Georgia Tech 读在线硕士，方向是 AI。喜欢规范，喜欢像素，喜欢刚刚好的东西。这里是我的 sandbox：几个小玩具、几件顺手的工具、一些笔记，以后还会有课程笔记和在线小测验。',
+    title: '网上的一张小桌面。',
+    lede: 'shiqi.si 是一个一个像素画出来的 sandbox：有能玩的小玩具，有日常用得上的小工具，还有搭建这一切时写下的笔记。课程笔记和在线小测验也在路上了。',
     play: '去玩玩',
     tools: '工具箱',
     playWindow: '玩具 — PLAY',
     toolsWindow: '工具 — TOOLS',
     notesWindow: '笔记 — NOTES',
+    aboutWindow: '幕后 — ABOUT',
+    nextWindow: '接下来 — NEXT',
+    soon: 'SOON',
+    about: {
+      ssr: {
+        title: '服务器端渲染',
+        description:
+          'Node 上的 React Router 直接发回渲染好的 HTML，JavaScript 还没跑页面就出来了。',
+      },
+      pixels: {
+        title: '用代码画像素',
+        description: '图标、小怪、壁纸和天空都由 @shiqi/pixel 在 canvas 上画出来，没有一张贴图。',
+      },
+      languages: {
+        title: '中英双语',
+        description: '笔记用英文写，中文由免费的机器翻译生成，翻译结果缓存在 Redis 里。',
+      },
+      server: {
+        title: '一台小服务器',
+        description:
+          '1 GB 的 Azure 虚拟机上跑 Docker Compose：网站、Redis，加上负责 HTTPS 的 Caddy。每次推到 main 都会自动部署。',
+      },
+      private: {
+        title: '没有追踪',
+        description: '没有统计脚本，也没有第三方 Cookie；页面访问量只靠服务器自己的一份日志。',
+      },
+    },
+    next: {
+      courses: {
+        title: '课程笔记',
+        description: 'AI 课程的笔记，一页一个主题，公式都写出来。',
+      },
+      quizzes: {
+        title: '在线小测验',
+        description: '配合课程笔记的小练习，直接在浏览器里判分。',
+      },
+      apis: {
+        title: '小小的公开 API',
+        description: '这里的工具也做成 JSON 接口，用 curl 就能调。',
+      },
+      toys: {
+        title: '更多玩具',
+        description: '菜单栏里的像素时钟、一个小游戏，还有其它好玩的东西。',
+      },
+    },
   },
   critter: {
     pet: '摸一摸今天的小怪',

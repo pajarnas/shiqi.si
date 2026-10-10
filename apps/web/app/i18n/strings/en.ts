@@ -56,13 +56,62 @@ export const en = {
   home: {
     window: 'shiqi.si — hello',
     eyebrow: 'HELLO, WORLD',
-    title: 'Hi, I’m Shiqi.',
-    lede: 'I’m a software engineer in Fremont, CA, and an online master’s student in AI at Georgia Tech. I like standards, pixels and things that are just right. This is my sandbox: a few small toys, some handy tools and notes, with course notes and online quizzes on the way.',
+    title: 'A little desktop on the web.',
+    lede: 'shiqi.si is a sandbox drawn one pixel at a time: toys to play with, tools for everyday chores, and notes from building it all. Course notes and online quizzes are on the way.',
     play: 'Go play',
     tools: 'Toolbox',
     playWindow: 'Play — PLAY',
     toolsWindow: 'Tools — TOOLS',
     notesWindow: 'Notes — NOTES',
+    aboutWindow: 'Under the hood — ABOUT',
+    nextWindow: 'On the way — NEXT',
+    soon: 'SOON',
+    // One entry per key in ABOUT and NEXT (app/site.ts).
+    about: {
+      ssr: {
+        title: 'Rendered on the server',
+        description:
+          'React Router on Node sends finished HTML, so pages appear before any JavaScript runs.',
+      },
+      pixels: {
+        title: 'Pixels drawn in code',
+        description:
+          'Icons, critters, wallpapers and the sky are drawn on canvas by @shiqi/pixel. No sprite sheets.',
+      },
+      languages: {
+        title: 'English and Chinese',
+        description:
+          'Notes are written in English; Chinese comes from a free machine translator and is cached in Redis.',
+      },
+      server: {
+        title: 'One small server',
+        description:
+          'Docker Compose on a 1 GB Azure VM: the site, Redis and Caddy for HTTPS. Every push to main deploys itself.',
+      },
+      private: {
+        title: 'No trackers',
+        description:
+          'No analytics scripts and no third-party cookies; a plain server log counts page views.',
+      },
+    },
+    next: {
+      courses: {
+        title: 'Course notes',
+        description: 'Notes from AI courses, one topic per page, with the math written out.',
+      },
+      quizzes: {
+        title: 'Online quizzes',
+        description: 'Short self-checks to go with the course notes, graded right in the browser.',
+      },
+      apis: {
+        title: 'Small public APIs',
+        description: 'The tools here, also as JSON endpoints you can call with curl.',
+      },
+      toys: {
+        title: 'More toys',
+        description: 'A pixel clock for the menu bar, a tiny game, and whatever else seems fun.',
+      },
+    },
   },
   critter: {
     pet: 'Pet today’s critter',
