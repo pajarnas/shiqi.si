@@ -2,6 +2,7 @@ import { runCli, type CliSession, type Cluster } from '@shiqi/kafka';
 import { Button } from '@shiqi/ui';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useKafkaStrings } from '../strings';
+import { CommandBuilder } from './CommandBuilder';
 
 const MAX_LINES = 400;
 const POLL_MS = 100;
@@ -53,15 +54,8 @@ export function Terminal({ cluster }: { cluster: Cluster }) {
 
   const prompt = session ? session.prompt : '$';
 
-  const submit = () => {
-    const line = input;
-    setInput('');
-    if (session) {
-      print([`${session.prompt}${line}`], 'in');
-      print(session.input(line));
-      if (session.done) setSession(null);
-      return;
-    }
+  /** A command for the shell, even if a console producer or consumer is running. */
+  const runShell = (line: string) => {
     print([`$ ${line}`], 'in');
     if (line.trim()) {
       history.current.push(line);
@@ -71,6 +65,25 @@ export function Terminal({ cluster }: { cluster: Cluster }) {
     if (result.clear) setLines([]);
     print(result.lines);
     if (result.session) setSession(result.session);
+  };
+
+  const run = (line: string) => {
+    if (!session) return runShell(line);
+    print([`${session.prompt}${line}`], 'in');
+    print(session.input(line));
+    if (session.done) setSession(null);
+  };
+
+  const submit = () => {
+    const line = input;
+    setInput('');
+    run(line);
+  };
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const edit = (line: string) => {
+    setInput(line);
+    inputRef.current?.focus();
   };
 
   const interrupt = () => {
@@ -99,30 +112,41 @@ export function Terminal({ cluster }: { cluster: Cluster }) {
   };
 
   return (
-    <div className="kv-terminal" role="group" aria-label={t.terminal.label}>
-      <div className="kv-terminal__screen" ref={screen} role="log" aria-live="polite">
-        {lines.map((l) => (
-          <pre key={l.id} className={l.kind === 'in' ? 'kv-terminal__in' : undefined}>
-            {l.text || ' '}
-          </pre>
-        ))}
-      </div>
-      <div className="kv-terminal__input">
-        <span aria-hidden="true">{prompt}</span>
-        <input
-          aria-label={t.terminal.input}
-          value={input}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoComplete="off"
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        {session && (
-          <Button size="sm" variant="ghost" onClick={interrupt}>
-            {t.terminal.stop}
-          </Button>
-        )}
+    <div className="kv-console">
+      <CommandBuilder
+        cluster={cluster}
+        onRun={(line) => {
+          interrupt();
+          runShell(line);
+        }}
+        onEdit={edit}
+      />
+      <div className="kv-terminal" role="group" aria-label={t.terminal.label}>
+        <div className="kv-terminal__screen" ref={screen} role="log" aria-live="polite">
+          {lines.map((l) => (
+            <pre key={l.id} className={l.kind === 'in' ? 'kv-terminal__in' : undefined}>
+              {l.text || ' '}
+            </pre>
+          ))}
+        </div>
+        <div className="kv-terminal__input">
+          <span aria-hidden="true">{prompt}</span>
+          <input
+            ref={inputRef}
+            aria-label={t.terminal.input}
+            value={input}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoComplete="off"
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+          />
+          {session && (
+            <Button size="sm" variant="ghost" onClick={interrupt}>
+              {t.terminal.stop}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
