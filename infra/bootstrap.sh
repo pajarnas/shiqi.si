@@ -45,10 +45,9 @@ sudo usermod -aG docker "$USER"
 
 log "Settings ($SERVER_DIR/.env)"
 umask 077
-# Rewrite IMAGE and ACME_EMAIL; keep generated passwords from an earlier run
-# (MySQL only accepts the ones it was first set up with) and create missing ones.
+# Rewrite IMAGE and ACME_EMAIL; keep the admin password from an earlier run.
 touch "$SERVER_DIR/.env"
-KEPT="$(grep -E '^(ADMIN_PASSWORD|MYSQL_PASSWORD|MYSQL_ROOT_PASSWORD)=' "$SERVER_DIR/.env" || true)"
+KEPT="$(grep -E '^ADMIN_PASSWORD=' "$SERVER_DIR/.env" || true)"
 {
   echo "IMAGE=ghcr.io/${GITHUB_OWNER,,}/shiqi.si:latest"
   echo "ACME_EMAIL=${ACME_EMAIL}"

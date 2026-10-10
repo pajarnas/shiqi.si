@@ -1,6 +1,7 @@
 # Sourced by bootstrap.sh and deploy.sh from infra/server: makes sure .env has
-# every generated secret, creating the ones that are missing. Existing values
-# are never changed (MySQL keeps the passwords it was first set up with).
+# the passwords the server makes up for itself, creating missing ones and never
+# changing existing ones. Secrets set by hand live in GitHub Secrets (APP_*),
+# which CI writes to secrets.env instead.
 ensure_env() {
   local name
   umask 077
@@ -12,4 +13,4 @@ ensure_env() {
     }
   done
 }
-ensure_env ADMIN_PASSWORD MYSQL_PASSWORD MYSQL_ROOT_PASSWORD
+ensure_env ADMIN_PASSWORD

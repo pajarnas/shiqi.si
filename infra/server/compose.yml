@@ -1,6 +1,6 @@
 # Production stack for a small VM: the site, Redis, MySQL, and Caddy for HTTPS.
 # bootstrap.sh writes .env next to this file (IMAGE, ACME_EMAIL) and ensure-env.sh
-# adds generated passwords (ADMIN_PASSWORD, MYSQL_*); deploy.sh updates IMAGE. Run from this folder: `docker compose ps`, `docker compose logs -f web`.
+# adds ADMIN_PASSWORD; deploy.sh updates IMAGE. Run from this folder: `docker compose ps`, `docker compose logs -f web`.
 name: shiqi
 
 services:
@@ -10,7 +10,11 @@ services:
     environment:
       NODE_ENV: production
       REDIS_URL: redis://redis:6379
-      MYSQL_URL: mysql://shiqi:${MYSQL_PASSWORD:-}@mysql:3306/shiqi
+      # MYSQL_PASSWORD comes from secrets.env (GitHub Secret APP_MYSQL_PASSWORD);
+      # don't set it here, entries in environment: override env_file.
+      MYSQL_HOST: mysql
+      MYSQL_USER: shiqi
+      MYSQL_DATABASE: shiqi
       # Password for /admin/visits; the page is off while it is empty.
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_TIME_ZONE: ${ADMIN_TIME_ZONE:-America/New_York}
@@ -54,11 +58,16 @@ services:
       - --max-heap-table-size=8M
       - --thread-cache-size=4
       - --skip-name-resolve
+    # The app user's password comes from secrets.env (APP_MYSQL_PASSWORD) and is
+    # fixed when the data volume is first created. Root gets a random password
+    # nobody needs; use `docker compose exec mysql mysql -ushiqi -p` instead.
     environment:
       MYSQL_DATABASE: shiqi
       MYSQL_USER: shiqi
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?run infra/deploy.sh or source ensure-env.sh}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?run infra/deploy.sh or source ensure-env.sh}
+      MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+    env_file:
+      - path: secrets.env
+        required: false
     volumes: [mysql:/var/lib/mysql]
     mem_limit: 320m
     healthcheck:

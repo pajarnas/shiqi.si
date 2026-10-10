@@ -1,7 +1,7 @@
 // One shared MySQL pool for the server, opened on first use and migrated
-// before it is handed out. Resolves to null when MYSQL_URL is unset or the
-// database can't be reached, so callers fall back instead of failing the
-// page; the next call tries again.
+// before it is handed out. Resolves to null when no database is configured or
+// it can't be reached, so callers fall back instead of failing the page; the
+// next call tries again.
 import { createPool, type Pool } from 'mysql2/promise';
 import { within } from './redis.server';
 
@@ -52,8 +52,22 @@ export function afterConnect(task: (pool: Pool) => Promise<void>) {
   onReady.push(task);
 }
 
+/**
+ * MYSQL_URL when set; otherwise built from MYSQL_HOST, MYSQL_PASSWORD and
+ * optional MYSQL_USER / MYSQL_DATABASE / MYSQL_PORT. On the server the password
+ * comes from secrets.env (GitHub Secret APP_MYSQL_PASSWORD), the rest from compose.
+ */
+export function mysqlUrl(env: Record<string, string | undefined> = process.env): string | null {
+  if (env.MYSQL_URL) return env.MYSQL_URL;
+  const { MYSQL_HOST: host, MYSQL_PASSWORD: password } = env;
+  if (!host || !password) return null;
+  const user = encodeURIComponent(env.MYSQL_USER ?? 'shiqi');
+  const db = encodeURIComponent(env.MYSQL_DATABASE ?? 'shiqi');
+  return `mysql://${user}:${encodeURIComponent(password)}@${host}:${env.MYSQL_PORT ?? 3306}/${db}`;
+}
+
 export function getDb(): Promise<Pool | null> {
-  const url = process.env.MYSQL_URL;
+  const url = mysqlUrl();
   if (!url || Date.now() - failedAt < RETRY_MS) return Promise.resolve(null);
   pool ??= (async () => {
     const p = createPool({

@@ -79,7 +79,9 @@ DNS 生效后，第一次访问时 Caddy 就会去拿证书。拿不到时查日
 
 每次打开页面（包括站内跳转），网站会在 MySQL 的 `visits` 表里记一行：时间、IP、国家、页面、浏览器、来源、是不是爬虫。IP 取自 Caddy 加的 `X-Forwarded-For`，Caddy 会丢掉客户端自己伪造的那份；国家用 IP 查询服务查出来，结果在 Redis 里缓存 7 天。
 
-MySQL 跑在同一台机器的 Docker Compose 里（`mysql` 服务，数据在 `mysql` 卷里），内存限制 320 MB，平时用不到 200 MB。密码由 `infra/server/ensure-env.sh` 第一次部署时生成，写进 `.env` 的 `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD`，之后不会再改。表结构的变更写在 `apps/web/app/lib/db.server.ts` 的 `MIGRATIONS` 里，网站启动时自动执行。
+MySQL 跑在同一台机器的 Docker Compose 里（`mysql` 服务，数据在 `mysql` 卷里），内存限制 320 MB，平时用不到 200 MB。表结构的变更写在 `apps/web/app/lib/db.server.ts` 的 `MIGRATIONS` 里，网站启动时自动执行。
+
+密码和其他 secret 一样放在 GitHub：仓库 Settings → Environments → `production` → 加 secret `APP_MYSQL_PASSWORD`（比如 `openssl rand -hex 16` 生成一串）。部署时 CI 把它写进服务器的 `infra/server/secrets.env`，网站和 MySQL 都从那里读。MySQL 只在第一次建库时记下这个密码，之后在 GitHub 里改它没用，得先进 MySQL 改用户密码（`ALTER USER 'shiqi'@'%' IDENTIFIED BY '…'`）。没有这个 secret 时 MySQL 起不来，网站照常工作，只是不记访问。
 
 以前存在 Redis 里的访问记录，第一次连上 MySQL 时会自动导入（Redis 里的旧列表改名成 `visits:log:imported` 留作备份）。
 
@@ -91,13 +93,13 @@ MySQL 跑在同一台机器的 Docker Compose 里（`mysql` 服务，数据在 `
 
 ```bash
 cd ~/shiqi.si/infra/server
-docker compose exec mysql sh -c 'mysql -ushiqi -p"$MYSQL_PASSWORD" shiqi'
+docker compose exec mysql sh -c 'mysql -ushiqi -p"$MYSQL_PASSWORD" shiqi'   # 密码从 secrets.env 来
 # 然后比如：SELECT country, COUNT(DISTINCT ip) FROM visits WHERE bot = 0 GROUP BY country;
 ```
 
 时间默认按美东时间显示，想换就在 `.env` 里加 `ADMIN_TIME_ZONE=Asia/Shanghai`，再 `docker compose up -d web`。
 
-以后想换成 Azure 的托管 MySQL（Azure Database for MySQL 灵活服务器），只要把 `compose.yml` 里 web 的 `MYSQL_URL` 指过去、去掉 `mysql` 服务，代码不用动。
+以后想换成 Azure 的托管 MySQL（Azure Database for MySQL 灵活服务器），只要把 `compose.yml` 里 web 的 `MYSQL_HOST` 指过去、去掉 `mysql` 服务，代码不用动。
 
 ## 5. 打开翻译服务（可选）
 

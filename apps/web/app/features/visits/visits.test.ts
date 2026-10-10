@@ -117,3 +117,14 @@ describe('world map', () => {
     expect(shade(100, 100)).toBe(4);
   });
 });
+
+describe('mysqlUrl', () => {
+  it('prefers MYSQL_URL, else builds one from parts', async () => {
+    const { mysqlUrl } = await import('~/lib/db.server');
+    expect(mysqlUrl({ MYSQL_URL: 'mysql://a:b@h/d' })).toBe('mysql://a:b@h/d');
+    expect(mysqlUrl({ MYSQL_HOST: 'mysql', MYSQL_PASSWORD: 'p@ss/w' })).toBe(
+      'mysql://shiqi:p%40ss%2Fw@mysql:3306/shiqi',
+    );
+    expect(mysqlUrl({ MYSQL_HOST: 'mysql' })).toBeNull();
+  });
+});
