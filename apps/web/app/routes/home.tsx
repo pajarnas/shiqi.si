@@ -75,49 +75,51 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <ToyGrid />
       </Window>
 
-      <div className="home__pair">
-        <Window title={t.home.toolsWindow}>
-          <List className="flush">
-            {TOOLS.map((tool) => (
-              <ListItem
-                key={tool.path}
-                as={Link}
-                to={tool.path}
-                icon={<PixelIcon name={tool.icon} />}
-                title={t.entries[tool.key].title}
-                description={t.entries[tool.key].description}
-                meta="›"
-              />
-            ))}
-          </List>
-        </Window>
-        <Window title={t.home.notesWindow}>
-          <List className="flush">
-            {latestNotes(LATEST).map((n) => (
-              <ListItem
-                key={n.href}
-                as={Link}
-                to={n.href}
-                icon={<PixelIcon name="book" />}
-                title={loaderData.noteText[n.href]?.title ?? n.title}
-                description={loaderData.noteText[n.href]?.summary ?? n.summary}
-                meta={n.date.slice(5)}
-              />
-            ))}
-          </List>
-        </Window>
-      </div>
-
-      <div className="home__pair">
-        <Window title={t.home.aboutWindow}>
-          <FactList items={ABOUT.map((f) => ({ ...f, ...t.home.about[f.key] }))} />
-        </Window>
-        <Window title={t.home.nextWindow}>
-          <FactList
-            items={NEXT.map((f) => ({ ...f, ...t.home.next[f.key] }))}
-            meta={<Badge>{t.home.soon}</Badge>}
-          />
-        </Window>
+      {/* Two columns that stack on their own, so a short window never leaves a gap. */}
+      <div className="home__columns">
+        <div className="home__stack">
+          <Window title={t.home.toolsWindow}>
+            <List className="flush">
+              {TOOLS.map((tool) => (
+                <ListItem
+                  key={tool.path}
+                  as={Link}
+                  to={tool.path}
+                  icon={<PixelIcon name={tool.icon} />}
+                  title={t.entries[tool.key].title}
+                  description={t.entries[tool.key].description}
+                  meta="›"
+                />
+              ))}
+            </List>
+          </Window>
+          <Window title={t.home.aboutWindow}>
+            <FactList items={ABOUT.map((f) => ({ ...f, ...t.home.about[f.key] }))} />
+          </Window>
+        </div>
+        <div className="home__stack">
+          <Window title={t.home.notesWindow}>
+            <List className="flush">
+              {latestNotes(LATEST).map((n) => (
+                <ListItem
+                  key={n.href}
+                  as={Link}
+                  to={n.href}
+                  icon={<PixelIcon name="book" />}
+                  title={loaderData.noteText[n.href]?.title ?? n.title}
+                  description={loaderData.noteText[n.href]?.summary ?? n.summary}
+                  meta={n.date.slice(5)}
+                />
+              ))}
+            </List>
+          </Window>
+          <Window title={t.home.nextWindow}>
+            <FactList
+              items={NEXT.map((f) => ({ ...f, ...t.home.next[f.key] }))}
+              meta={<Badge>{t.home.soon}</Badge>}
+            />
+          </Window>
+        </div>
       </div>
     </div>
   );
