@@ -1,0 +1,89 @@
+import { Quiz } from '@shiqi/ui';
+
+export const frontmatter = {
+  title: 'Kafka: topics, partitions, offsets and the log',
+  date: '2026-10-10',
+  summary:
+    'A topic is a set of append-only logs. How records get an offset, which partition a key lands on, and what the files on a broker’s disk look like.',
+  topics: ['kafka', 'distributed-systems'],
+};
+
+Try everything below on [the live cluster](/kafka): click any partition row to look inside it.
+
+## The log
+
+Kafka stores records in **append-only logs**. A record has an optional **key**, a **value**, a timestamp and headers. Appending gives it the next **offset**: 0, 1, 2… Offsets never get reused and records are never edited in place. Consumers read by offset, so reading is just "give me everything from offset N".
+
+## Topics are split into partitions
+
+A **topic** is a name for a group of logs called **partitions**. Each partition is its own log with its own offsets, so `orders-0` offset 5 and `orders-1` offset 5 are different records.
+
+- **Order is only guaranteed inside one partition.** Two records in different partitions have no order relative to each other.
+- Partitions are the unit of parallelism: a consumer group can use at most one consumer per partition.
+- You can add partitions to a topic but never remove them (`kafka-topics --alter --partitions N`).
+
+## Which partition a record goes to
+
+The producer decides, not the broker:
+
+| The record has…       | Partition                                                                                                                                          |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| An explicit partition | That one.                                                                                                                                          |
+| A key                 | `toPositive(murmur2(key)) % partitionCount`. Same key, same partition, so all events for one user stay in order.                                   |
+| No key                | The **sticky partitioner** (since Kafka 2.4) fills one batch for one partition, then picks another. Fewer, fuller batches than strict round-robin. |
+
+Adding partitions changes `% partitionCount`, so existing keys can move to a different partition. That is why people over-provision partitions up front.
+
+## On disk: segments
+
+Each replica of a partition is a directory such as `orders-0/` on a broker. The log inside is cut into **segments**, files named after their first offset:
+
+```
+00000000000000000000.log        records, in batches
+00000000000000000000.index      offset -> byte position (sparse)
+00000000000000000000.timeindex  timestamp -> offset (sparse)
+00000000000000001024.log        the active segment: the only one written to
+```
+
+A new segment starts when the active one reaches `segment.bytes` (1 GiB by default) or `segment.ms` passes. Segments matter because cleanup works on whole closed segments.
+
+## Cleanup: delete or compact
+
+- `cleanup.policy=delete` (default): closed segments are deleted when they are older than `retention.ms` (7 days by default) or when the log is larger than `retention.bytes`. The **log start offset** moves forward; a consumer asking for an older offset gets `OFFSET_OUT_OF_RANGE` and falls back to `auto.offset.reset`.
+- `cleanup.policy=compact`: the log cleaner keeps only the newest record for each key in closed segments. A record with a null value is a **tombstone**: it deletes the key, and is itself removed after `delete.retention.ms`. Good for "latest state per key" topics such as `profiles`. Offsets keep their numbers, so a compacted log has gaps.
+
+## Commands
+
+```bash
+kafka-topics --bootstrap-server localhost:9092 --create --topic orders --partitions 3 --replication-factor 3
+kafka-topics --bootstrap-server localhost:9092 --describe --topic orders
+kafka-console-producer --bootstrap-server localhost:9092 --topic orders --property parse.key=true --property key.separator=:
+kafka-console-consumer --bootstrap-server localhost:9092 --topic orders --from-beginning --property print.key=true --property print.offset=true
+kafka-configs --bootstrap-server localhost:9092 --entity-type topics --entity-name orders --alter --add-config retention.ms=60000
+```
+
+<Quiz
+  title="Check yourself"
+  questions={[
+    {
+      q: 'A topic has 6 partitions. Records with key "alice" are sent ten times. How many partitions do they end up in?',
+      options: ['One', 'Up to six', 'Six, round-robin'],
+      answer: 0,
+      explain:
+        'The key is hashed with murmur2 and taken modulo 6, so every "alice" record goes to the same partition.',
+    },
+    {
+      q: 'Retention deletes…',
+      options: ['Single expired records', 'Whole closed segments', 'The active segment first'],
+      answer: 1,
+      explain: 'Cleanup works segment by segment and never touches the active segment.',
+    },
+    {
+      q: 'What does a record with a null value mean on a compacted topic?',
+      options: ['A corrupt record', 'Delete this key', 'Keep the previous value'],
+      answer: 1,
+      explain:
+        'It is a tombstone. Compaction drops older values for the key, and later the tombstone too.',
+    },
+  ]}
+/>

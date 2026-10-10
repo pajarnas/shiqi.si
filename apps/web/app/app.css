@@ -41,6 +41,17 @@
   padding-block: var(--space-6) var(--space-7);
 }
 
+/* Grid items default to min-width: auto; let windows shrink to the screen. */
+.desk > *,
+.home > * {
+  min-width: 0;
+}
+
+/* Wide pages (the Kafka lab) get more of the screen. */
+.desk:has(.desk-wide) {
+  --container: 120rem;
+}
+
 .site-footer {
   padding-bottom: var(--space-6);
 }

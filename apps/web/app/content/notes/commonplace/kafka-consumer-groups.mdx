@@ -1,0 +1,52 @@
+export const frontmatter = {
+  title: 'Kafka: consumer groups, rebalances and lag',
+  date: '2026-10-10',
+  summary:
+    'How a group splits partitions between its members, what happens when someone joins, leaves or crashes, where committed offsets live, and how to read lag.',
+  topics: ['kafka', 'distributed-systems'],
+};
+
+On [the live cluster](/kafka), the right column shows each group, its members and the partitions they own. Try **Crash** on a member and watch its partitions stall until the session times out.
+
+## One partition, one member
+
+Consumers with the same `group.id` share the work: every partition of the subscribed topics is assigned to **exactly one** member of the group. A second group reading the same topic gets every record again, independently. So:
+
+- More members than partitions means some members sit idle.
+- Each partition is read in order by one member, so per-key ordering survives.
+
+## Assignment strategies
+
+| Strategy             | How it splits                                                                                      |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| `range`              | Per topic, contiguous ranges over sorted members. Many small topics pile onto the first members.   |
+| `roundrobin`         | All partitions of all topics dealt one by one.                                                     |
+| `cooperative-sticky` | Keeps partitions where they were as long as the split stays balanced, and only moves what it must. |
+
+## Rebalances
+
+A rebalance runs when a member joins, leaves, misses heartbeats for `session.timeout.ms` (45 s by default), or a subscribed topic changes. The group coordinator (a broker) collects the members, one member computes the assignment, and everyone gets their share. The group's **generation** goes up by one.
+
+- **Eager** protocols (`range`, `roundrobin`): every member gives up all partitions first, so the **whole group stops** for the rebalance.
+- **Cooperative** (`cooperative-sticky`): members keep consuming the partitions that don't move; only moved ones pause.
+
+A graceful close sends LeaveGroup and the rebalance starts at once. A crash sends nothing, so its partitions are stuck until the session timeout.
+
+## Committed offsets and lag
+
+A consumer's **position** is the next offset it will read. Its **committed offset** is what it has told the group coordinator, stored in the internal topic `__consumer_offsets`. With `enable.auto.commit` (default) that happens every `auto.commit.interval.ms` (5 s). After a rebalance or restart, the new owner starts from the committed offset, so anything processed but not committed is processed **again**: at-least-once.
+
+With no committed offset, `auto.offset.reset` decides: `latest` (default) starts at the end, `earliest` at the log start.
+
+**Lag** = log end offset (the HW) − committed offset. Growing lag means consumers are slower than producers.
+
+## Commands
+
+```bash
+kafka-consumer-groups --bootstrap-server localhost:9092 --list
+kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group billing
+kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group billing --members
+kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group billing --state
+# Only while the group has no active members:
+kafka-consumer-groups --bootstrap-server localhost:9092 --reset-offsets --group billing --topic orders --to-earliest --execute
+```
