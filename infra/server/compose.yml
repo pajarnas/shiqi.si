@@ -10,8 +10,16 @@ name: shiqi
 x-kafka-env: &kafka-env
   CLUSTER_ID: BbkU177UR4C-DabI7vl5yw
   KAFKA_PROCESS_ROLES: broker,controller
-  KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+  # PLAINTEXT is for the web app inside Docker. EXTERNAL is for your own
+  # computer through an SSH tunnel (see infra/local/connect.sh): TLS, and only
+  # with a client certificate from certs.sh.
+  KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:SSL
+  KAFKA_LISTENER_NAME_EXTERNAL_SSL_KEYSTORE_TYPE: PEM
+  KAFKA_LISTENER_NAME_EXTERNAL_SSL_KEYSTORE_LOCATION: /certs/server.pem
+  KAFKA_LISTENER_NAME_EXTERNAL_SSL_TRUSTSTORE_TYPE: PEM
+  KAFKA_LISTENER_NAME_EXTERNAL_SSL_TRUSTSTORE_LOCATION: /certs/ca.crt
+  KAFKA_LISTENER_NAME_EXTERNAL_SSL_CLIENT_AUTH: required
   KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
   KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
   KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-1:9093,2@kafka-2:9093,3@kafka-3:9093
@@ -38,7 +46,9 @@ x-kafka: &kafka
   image: apache/kafka:4.1.1
   profiles: [kafka]
   restart: unless-stopped
-  networks: [kafka]
+  # kafka for the web app; default only so the EXTERNAL port can be mapped
+  # onto the server's localhost.
+  networks: [kafka, default]
   mem_limit: 512m
   healthcheck:
     # A port check; the kafka-*.sh tools start a second JVM, too big for 512 MB.
@@ -105,6 +115,13 @@ services:
       - --max-heap-table-size=8M
       - --thread-cache-size=4
       - --skip-name-resolve
+      # TLS with the certificates from certs.sh; init.sql (also from certs.sh)
+      # runs as root on every start and adds one certificate-only user per
+      # certificate issued.
+      - --ssl-ca=/certs/ca.crt
+      - --ssl-cert=/certs/server.crt
+      - --ssl-key=/certs/server.key
+      - --init-file=/certs/init.sql
     # The app user's password comes from secrets.env (APP_MYSQL_PASSWORD) and is
     # fixed when the data volume is first created. Root gets a random password
     # nobody needs; use `docker compose exec mysql mysql -ushiqi -p` instead.
@@ -115,7 +132,9 @@ services:
     env_file:
       - path: secrets.env
         required: false
-    volumes: [mysql:/var/lib/mysql]
+    # The server's localhost only: reach it from your computer through an SSH tunnel.
+    ports: ['127.0.0.1:3306:3306']
+    volumes: [mysql:/var/lib/mysql, ./certs/mysql:/certs:ro]
     mem_limit: 320m
     healthcheck:
       test: [CMD, mysqladmin, ping, -h, 127.0.0.1, --silent]
@@ -137,7 +156,8 @@ services:
     depends_on: [web]
 
   # A real Kafka cluster for /kafka: three KRaft nodes, each both broker and
-  # controller, reachable only from the web container (no published ports).
+  # controller. The web app uses the internal network; the EXTERNAL listeners
+  # are on the server's localhost only (ports 19094/29094/39094).
   # Off unless the `kafka` profile is enabled; deploy.sh does that only on a
   # machine with at least 3.5 GB of RAM.
   kafka-1:
@@ -146,8 +166,9 @@ services:
       <<: *kafka-env
       KAFKA_NODE_ID: 1
       KAFKA_BROKER_RACK: rack-1
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092
-    volumes: [kafka-1:/var/lib/kafka/data]
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-1:9092,EXTERNAL://localhost:19094
+    ports: ['127.0.0.1:19094:9094']
+    volumes: [kafka-1:/var/lib/kafka/data, ./certs/kafka:/certs:ro]
 
   kafka-2:
     <<: *kafka
@@ -155,8 +176,9 @@ services:
       <<: *kafka-env
       KAFKA_NODE_ID: 2
       KAFKA_BROKER_RACK: rack-2
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092
-    volumes: [kafka-2:/var/lib/kafka/data]
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-2:9092,EXTERNAL://localhost:29094
+    ports: ['127.0.0.1:29094:9094']
+    volumes: [kafka-2:/var/lib/kafka/data, ./certs/kafka:/certs:ro]
 
   kafka-3:
     <<: *kafka
@@ -164,8 +186,9 @@ services:
       <<: *kafka-env
       KAFKA_NODE_ID: 3
       KAFKA_BROKER_RACK: rack-3
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092
-    volumes: [kafka-3:/var/lib/kafka/data]
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-3:9092,EXTERNAL://localhost:39094
+    ports: ['127.0.0.1:39094:9094']
+    volumes: [kafka-3:/var/lib/kafka/data, ./certs/kafka:/certs:ro]
 
 networks:
   # Kafka's own network: no route out, only web and the brokers are on it.

@@ -164,6 +164,24 @@ docker compose exec kafka-1 /opt/kafka/bin/kafka-metadata-quorum.sh --bootstrap-
 
 本地开发直接 `docker compose up -d` 就有 Redis 和单节点 Kafka；`KAFKA_BROKERS=localhost:9092 pnpm dev` 让网站连上它。
 
+## 从自己电脑用证书登录 Kafka 和 MySQL
+
+服务器上有一个自建的 CA（`infra/server/certs.sh`，每次部署自动检查）。Kafka 的 TLS 端口（19094/29094/39094）和 MySQL（3306）只开在服务器的 `127.0.0.1` 上，互联网上看不到；你的电脑通过 SSH 隧道连过去，再用自己的客户端证书登录。不需要改 Azure 防火墙。
+
+在自己电脑上，仓库根目录里：
+
+```bash
+bash infra/local/connect.sh setup saige   # 只做一次：本地生成私钥和 CSR，服务器签名，文件放在 ~/.shiqi
+bash infra/local/connect.sh tunnel        # 开着这个窗口 = 隧道开着
+bash infra/local/connect.sh mysql         # 另开一个窗口：MySQL 命令行（用户 saige，不用密码，只认证书）
+bash infra/local/connect.sh kafka         # 打印 Kafka 命令行怎么用（brew install kafka）
+```
+
+- 私钥只在你电脑上生成，服务器只看到 CSR。证书有效期一年，到期再跑一次 `setup`。
+- 默认 SSH 到 `saige@shiqi.si`；用别的密钥或地址就设 `SHIQI_SSH`，或者写进 `~/.ssh/config`。
+- 签名时 MySQL 会自动加一个同名用户（对 `shiqi` 库有全部权限）并重启几秒。
+- 在服务器上看发过哪些证书：`bash ~/shiqi.si/infra/server/certs.sh list`。想让所有证书作废：删掉 `infra/server/certs/ca`，再部署一次并重新 `setup`。
+
 ## 常用运维
 
 在服务器上，先 `cd ~/shiqi.si/infra/server`：
