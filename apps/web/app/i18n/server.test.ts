@@ -24,7 +24,7 @@ describe('resolveLocale', () => {
       await resolveLocale(
         req('https://shiqi.si/', { 'accept-language': 'zh-TW', 'x-forwarded-for': '10.0.0.2' }),
       ),
-    ).toEqual({ locale: 'zh', source: 'header' });
+    ).toEqual({ locale: 'zh-Hant', source: 'header' });
     expect(await resolveLocale(req('https://shiqi.si/'))).toEqual({
       locale: 'en',
       source: 'default',

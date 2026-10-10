@@ -52,15 +52,20 @@ describe('merge helpers', () => {
 describe('locale detection', () => {
   it('maps countries', () => {
     expect(localeForCountry('CN')).toBe('zh');
-    expect(localeForCountry('tw')).toBe('zh');
+    expect(localeForCountry('tw')).toBe('zh-Hant');
+    expect(localeForCountry('JP')).toBe('ja');
+    expect(localeForCountry('MX')).toBe('es');
     expect(localeForCountry('US')).toBe('en');
     expect(localeForCountry(null)).toBe(null);
   });
 
   it('reads Accept-Language by weight', () => {
     expect(localeFromAcceptLanguage('zh-CN,zh;q=0.9,en;q=0.8')).toBe('zh');
-    expect(localeFromAcceptLanguage('fr;q=1, en;q=0.5, zh;q=0.7')).toBe('zh');
-    expect(localeFromAcceptLanguage('de-DE')).toBe(null);
+    expect(localeFromAcceptLanguage('zh-TW,zh;q=0.9')).toBe('zh-Hant');
+    expect(localeFromAcceptLanguage('pt;q=1, en;q=0.5, zh;q=0.7')).toBe('zh');
+    expect(localeFromAcceptLanguage('fr-CA,fr;q=0.9')).toBe('fr');
+    expect(localeFromAcceptLanguage('de-DE')).toBe('de');
+    expect(localeFromAcceptLanguage('pt-BR')).toBe(null);
     expect(localeFromAcceptLanguage(null)).toBe(null);
   });
 });

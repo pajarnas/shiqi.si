@@ -1,5 +1,6 @@
-import { PixelIcon, List, ListItem, Window, buttonClass, useMounted } from '@shiqi/ui';
-import { useState } from 'react';
+import { Badge, PixelIcon, List, ListItem, Window, buttonClass, useMounted } from '@shiqi/ui';
+import type { IconName } from '@shiqi/pixel';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   CritterCanvas,
@@ -16,11 +17,11 @@ import { Rich } from '~/i18n/Rich';
 import { localizeNoteMeta } from '~/i18n/notes.server';
 import { metaStrings } from '~/i18n/root-data';
 import { resolveLocale } from '~/i18n/locale.server';
-import { HTML_LANG } from '~/i18n/locales';
+import { LANGUAGES } from '~/i18n/locales';
 import { VisitorMap } from '~/components/VisitorMap';
 import { publicCountryCounts } from '~/features/visits/visits.server';
 import { within } from '~/lib/redis.server';
-import { SITE, TOOLS } from '~/site';
+import { ABOUT, NEXT, SITE, TOOLS } from '~/site';
 import type { Route } from './+types/home';
 
 const LATEST = 4;
@@ -36,7 +37,7 @@ export async function loader({ request }: Route.LoaderArgs) {
     localizeNoteMeta(latestNotes(LATEST), locale),
     within(publicCountryCounts(), 1500).catch(() => ({}) as Record<string, number>),
   ]);
-  const regionName = new Intl.DisplayNames([HTML_LANG[locale]], { type: 'region' });
+  const regionName = new Intl.DisplayNames([LANGUAGES[locale].tag], { type: 'region' });
   const names = Object.fromEntries(
     Object.keys(visitors).map((code) => [code, regionName.of(code) ?? code]),
   );
@@ -98,12 +99,24 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 as={Link}
                 to={n.href}
                 icon={<PixelIcon name="book" />}
-                title={loaderData.noteText[n.slug]?.title ?? n.title}
-                description={loaderData.noteText[n.slug]?.summary ?? n.summary}
+                title={loaderData.noteText[n.href]?.title ?? n.title}
+                description={loaderData.noteText[n.href]?.summary ?? n.summary}
                 meta={n.date.slice(5)}
               />
             ))}
           </List>
+        </Window>
+      </div>
+
+      <div className="home__pair">
+        <Window title={t.home.aboutWindow}>
+          <FactList items={ABOUT.map((f) => ({ ...f, ...t.home.about[f.key] }))} />
+        </Window>
+        <Window title={t.home.nextWindow}>
+          <FactList
+            items={NEXT.map((f) => ({ ...f, ...t.home.next[f.key] }))}
+            meta={<Badge>{t.home.soon}</Badge>}
+          />
         </Window>
       </div>
     </div>
@@ -203,5 +216,28 @@ function SkyWindow() {
         </p>
       </div>
     </Window>
+  );
+}
+
+/** A plain list of icon + title + description rows (no links). */
+function FactList({
+  items,
+  meta,
+}: {
+  items: readonly { key: string; icon: IconName; title: string; description: string }[];
+  meta?: ReactNode;
+}) {
+  return (
+    <List className="flush">
+      {items.map((f) => (
+        <ListItem
+          key={f.key}
+          icon={<PixelIcon name={f.icon} />}
+          title={f.title}
+          description={f.description}
+          meta={meta}
+        />
+      ))}
+    </List>
   );
 }
