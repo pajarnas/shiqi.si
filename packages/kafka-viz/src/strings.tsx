@@ -62,6 +62,9 @@ export const KAFKA_STRINGS = {
     },
     stats: 'sent {sent} · acked {acked} · failed {failed}',
     lastError: 'Last error: {error}',
+    buffered:
+      '{n} records waiting in the producer: no leader to send to. Nothing goes on the wire; they fail with a timeout after {timeout} s.',
+    bufferAge: 'Oldest has waited {age} of {timeout} s',
     pause: 'Pause',
     resume: 'Resume',
     remove: 'Remove',

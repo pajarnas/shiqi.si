@@ -492,6 +492,9 @@ export const zh: DeepPartial<Strings> = {
         },
         stats: '已发 {sent} · 已确认 {acked} · 失败 {failed}',
         lastError: '最近的错误：{error}',
+        buffered:
+          '{n} 条记录在生产者自己的缓冲区里等着：没有 leader 可发。网络上什么都不发；等满 {timeout} 秒还没有 leader，就以超时失败。',
+        bufferAge: '最早的一条已经等了 {age} 秒（上限 {timeout} 秒）',
         pause: '暂停',
         resume: '继续',
         remove: '删除',

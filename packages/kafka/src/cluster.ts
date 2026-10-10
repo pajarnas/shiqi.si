@@ -121,7 +121,23 @@ export interface Producer extends Required<Omit<ProducerOptions, 'id'>> {
   lastError?: KafkaErrorCode;
   credit: number;
   sticky: { partition: number; left: number };
+  /**
+   * Records waiting in the producer's own memory because their partition has
+   * no leader it can reach (the RecordAccumulator). Nothing goes on the wire
+   * for them until a leader appears or delivery.timeout.ms runs out.
+   */
+  buffered: BufferedRecord[];
 }
+
+export interface BufferedRecord {
+  key: string | null;
+  value: string | null;
+  partition: number;
+  at: number;
+}
+
+/** Most records a producer holds before send() blocks (buffer.memory, at toy scale). */
+export const PRODUCER_BUFFER_MAX = 200;
 
 export interface ConsumerOptions {
   group: string;
@@ -867,6 +883,7 @@ export class Cluster {
       failed: 0,
       credit: 0,
       sticky: { partition: -1, left: 0 },
+      buffered: [],
     };
     this.producers.set(id, producer);
     this.changed();
@@ -906,17 +923,57 @@ export class Cluster {
       partition = pr.sticky.partition;
       pr.sticky.left--;
     }
+    const value =
+      t.config['cleanup.policy'] === 'compact' && this.random() < 0.05 ? null : `{"n":${n}}`;
+    const target = partition ?? (key === null ? 0 : partitionForKey(key, t.partitions.length));
+    // No leader to send to (every broker down, or an election pending): the
+    // record waits in the producer, and nothing goes on the wire.
+    if (t.partitions[target]?.leader === null) {
+      if (pr.buffered.length >= PRODUCER_BUFFER_MAX) return; // send() blocks
+      pr.sent++;
+      pr.buffered.push({ key, value, partition: target, at: this.now });
+      return;
+    }
     pr.sent++;
+    this.sendRecord(pr, t.name, key, value, partition);
+  }
+
+  /** Send buffered records whose partition has a leader again; expire the ones past delivery.timeout.ms. */
+  private drainBuffer(pr: Producer) {
+    if (!pr.buffered.length) return;
+    const t = this.topics.get(pr.topic);
+    const keep: BufferedRecord[] = [];
+    for (const r of pr.buffered) {
+      if (!t || this.now - r.at >= this.settings.deliveryTimeoutMs) {
+        pr.failed++;
+        pr.lastError = 'REQUEST_TIMED_OUT';
+        this.emit({
+          type: 'ack',
+          at: this.now,
+          producer: pr.id,
+          topic: pr.topic,
+          partition: r.partition,
+          offset: -1,
+          error: 'REQUEST_TIMED_OUT',
+        });
+      } else if (t.partitions[r.partition]?.leader == null) {
+        keep.push(r);
+      } else {
+        this.sendRecord(pr, t.name, r.key, r.value, r.partition);
+      }
+    }
+    pr.buffered = keep;
+  }
+
+  private sendRecord(
+    pr: Producer,
+    topic: string,
+    key: string | null,
+    value: string | null,
+    partition: number | undefined,
+  ) {
     try {
-      this.produce({
-        topic: t.name,
-        key,
-        value:
-          t.config['cleanup.policy'] === 'compact' && this.random() < 0.05 ? null : `{"n":${n}}`,
-        partition,
-        acks: pr.acks,
-        producer: pr.id,
-      });
+      this.produce({ topic, key, value, partition, acks: pr.acks, producer: pr.id });
     } catch (e) {
       const code = e instanceof KafkaError ? e.code : 'INVALID_RECORD';
       pr.failed++;
@@ -925,7 +982,7 @@ export class Cluster {
         type: 'ack',
         at: this.now,
         producer: pr.id,
-        topic: t.name,
+        topic,
         partition: partition ?? -1,
         offset: -1,
         error: code,
@@ -1286,6 +1343,7 @@ export class Cluster {
     );
 
     for (const pr of this.producers.values()) {
+      this.drainBuffer(pr);
       if (pr.paused) continue;
       pr.credit += (pr.rate * ms) / 1000;
       let n = Math.min(Math.floor(pr.credit), MAX_SENDS_PER_TICK);

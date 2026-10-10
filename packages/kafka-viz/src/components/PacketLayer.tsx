@@ -45,10 +45,12 @@ function packetFor(e: ClusterEvent, c: Cluster): Omit<Packet, 'born' | 'duration
       if (!e.error) return null;
       const p = c.topics.get(e.topic)?.partitions[e.partition];
       const target = p?.leader ?? p?.replicas[0];
+      // A request that never left (no broker up to take it) flashes at the producer.
+      const reachable = target !== undefined && c.brokers.get(target)?.up;
       return {
         from: anchorId.producer(e.producer),
         to:
-          target === undefined
+          !reachable || target === undefined
             ? anchorId.producer(e.producer)
             : anchorId.replica(e.topic, e.partition, target),
         color: 'error',

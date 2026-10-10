@@ -305,6 +305,29 @@ function ReplicaRow({
   );
 }
 
+/** Records stuck in the producer, and how close the oldest is to delivery.timeout.ms. */
+function BufferMeter({ cluster, producer: p }: { cluster: Cluster; producer: Producer }) {
+  const t = useKafkaStrings();
+  const timeout = cluster.settings.deliveryTimeoutMs;
+  const age = cluster.now - (p.buffered[0]?.at ?? cluster.now);
+  const sec = (ms: number) => Math.round(ms / 1000);
+  return (
+    <div className="kv-client__buffer">
+      <p className="kv-client__line">
+        {format(t.producer.buffered, { n: p.buffered.length, timeout: sec(timeout) })}
+      </p>
+      <Meter
+        label="⏱"
+        value={age}
+        max={timeout}
+        text={`${sec(age)}/${sec(timeout)}s`}
+        hint={format(t.producer.bufferAge, { age: sec(age), timeout: sec(timeout) })}
+        tone="dirty"
+      />
+    </div>
+  );
+}
+
 function ProducerCard({
   cluster,
   producer: p,
@@ -318,7 +341,11 @@ function ProducerCard({
   return (
     <article
       ref={anchorRef(anchors, anchorId.producer(p.id))}
-      className={cx('kv-client', p.paused && 'kv-client--paused')}
+      className={cx(
+        'kv-client',
+        p.paused && 'kv-client--paused',
+        p.buffered.length > 0 && 'kv-client--waiting',
+      )}
     >
       <header className="kv-client__head">
         <PixelIcon name="envelope" size={16} />
@@ -332,6 +359,7 @@ function ProducerCard({
       <p className="kv-client__line kv-muted">
         {format(t.producer.stats, { sent: p.sent, acked: p.acked, failed: p.failed })}
       </p>
+      {p.buffered.length > 0 && <BufferMeter cluster={cluster} producer={p} />}
       {p.lastError && (
         <p className="kv-client__line kv-error">
           {format(t.producer.lastError, { error: p.lastError })}
