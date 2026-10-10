@@ -360,7 +360,7 @@ export const zh: DeepPartial<Strings> = {
     title: 'Kafka 现场',
     description:
       '在浏览器里跑的一个 Kafka 集群：看消息在生产者、broker 和消费者之间流动，故意弄坏它，再敲真正的 Kafka 命令。',
-    lede: '三个 broker、两个 topic、两个消费者组，都在这一页里运行。停掉一个 broker，让一块盘变慢，加一个消费者，或者打开终端输入 kafka-topics --describe。',
+    lede: '三个 broker、两个 topic、两个消费者组，都在这一页里运行。跟着引导情景走一遍，或者自己动手弄坏它：停掉一个 broker，拔掉它的电源，加一个消费者，把时间轴拖回去再看一遍，或者在终端里输入 kafka-topics --describe。',
     simulated:
       '这是一个尽量忠实的模拟（leader、ISR、高水位、rebalance、保留和压缩都有），不是真的 broker：这个网站的服务器只有 1 GB 内存。',
     notes: 'Kafka 笔记',
@@ -374,6 +374,11 @@ export const zh: DeepPartial<Strings> = {
         speed: '模拟速度',
         reset: '重置',
         clock: '模拟时间 {time}',
+        timeline: '倒回或重放模拟时间',
+        rewound: '已倒回。点运行会重放当时发生的事；在这里做任何操作，会从这一刻开出一段新的历史。',
+        live: '现在',
+        goLive: '回到现在',
+        lost: '已确认却丢失的记录：{n}',
       },
       lanes: {
         producers: '生产者',
@@ -393,6 +398,11 @@ export const zh: DeepPartial<Strings> = {
         disk: '磁盘',
         stop: '停止',
         start: '启动',
+        restart: '重启',
+        powerCut: '断电',
+        downHard: '已断电',
+        pageCache: '缓存',
+        pageCacheHint: '已经写了，但只在页缓存里：断电就没了',
         makeSlow: '变慢',
         makeFast: '恢复',
         leader: 'Leader',
@@ -430,6 +440,7 @@ export const zh: DeepPartial<Strings> = {
         totalLag: '总落后 {n}',
         noPartitions: '没有分区（成员比分区多，或正在重平衡）',
         crashed: '已崩溃：会话超时后才会被移出',
+        redelivered: '{n} 条被处理了两次',
         leave: '离开',
         crash: '崩溃',
         rate: '{rate}/秒',
@@ -442,6 +453,8 @@ export const zh: DeepPartial<Strings> = {
         consume: '消费者',
         terminal: '终端',
         events: '事件',
+        wire: '协议',
+        settings: '设置',
       },
       inspect: {
         pick: '点任意 broker 里的一行分区，看看它里面有什么。',
@@ -462,6 +475,74 @@ export const zh: DeepPartial<Strings> = {
         legendLeo: '日志末端：下一条要写入的偏移',
         tombstone: '墓碑',
         hidden: '还有 {n} 条更早的记录没有画出来',
+        ownHw: '自己的高水位 {hw}',
+        ownHwHint: '这个副本自己记下的高水位，从 fetch 响应里得知',
+        legendDirty: '只在页缓存里',
+        legendDiverged: '同一偏移上和 leader 的记录不一样',
+        gone: '{gone} 条记录彻底丢失，其中 {acked} 条已经确认过',
+        pickRecord: '点一条记录，看它一路经历了什么。',
+      },
+      journey: {
+        title: '{topic}-{partition} 的第 {offset} 条记录',
+        close: '关闭',
+        key: 'Key',
+        value: '值',
+        none: 'null',
+        hash: 'murmur2("{key}") = {hash}；toPositive → {positive}；对 {n} 个分区取模 = {partition}',
+        sticky: '没有 key：粘性分区器选了分区 {partition}，整批都写在这里',
+        produced: '{producer} 在 {time} 写到 leader broker {broker}，leader 纪元 {epoch}',
+        copy: 'Broker {broker}',
+        copied: '{time} 复制到',
+        leaderCopy: 'leader',
+        missing: '没有这条',
+        onDisk: '已落盘',
+        inCache: '只在页缓存里',
+        committed: '{time} 已提交：高水位越过了它，消费者可以读了',
+        notCommitted: '还没提交：有同步副本还没有它',
+        acked: '{time} 生产者收到确认（acks={acks}）',
+        ackFailed: '生产者收到 {error}',
+        waiting: '生产者还在等确认（acks=all）',
+        consumed: '{group} 在 {time} 第一次读到它',
+        notConsumed: '{group} 还没读到它',
+        committedBy: '{group} 的提交已经越过了它',
+        skipped: '{group} 从没读过它：它是从这个偏移之后开始读的',
+        twice: '一共被投递了 {n} 次',
+        gone: '{time} 彻底丢失：没有任何副本还有它',
+        unknown: '模拟器没看到这条记录被写入的过程。',
+      },
+      settings: {
+        truncation: 'Follower 怎么决定丢掉哪些记录',
+        truncationModes: {
+          'leader-epoch': 'Leader 纪元（Kafka 0.11 起，KIP-101）',
+          'high-watermark': '自己的高水位（0.11 之前）',
+        },
+        flush: '页缓存回写',
+        flushEvery: '每 {s} 秒',
+        flushNever: '从不（不 fsync）',
+        lag: 'replica.lag.time.max.ms',
+        fetch: 'Follower 拉取间隔（毫秒）',
+        session: 'session.timeout.ms',
+        rebalanceDelay: 'group.initial.rebalance.delay.ms',
+        note: '改动立即生效，也会记进时间轴，倒回就能撤销。',
+      },
+      wire: {
+        intro:
+          '{topic}-{partition} 动画背后的请求，最新的在最下面。时间往下走；箭头从发请求的一方指向回答的一方。',
+        pick: '选一个分区，看看它的请求。',
+        empty: '还没有请求。让模拟跑一会儿。',
+        coordinator: '协调者',
+        controller: '控制器',
+        produce: 'Produce key={key} → 偏移 {offset}',
+        ackOk: 'ProduceResponse 偏移 {offset}',
+        ackError: 'ProduceResponse {error}',
+        fetch: 'Fetch offset={fromOffset} → {count} 条',
+        consume: 'Fetch offset={fromOffset} → {count} 条',
+        commit: 'OffsetCommit {offset}',
+        join: 'JoinGroup（{reason}）',
+        sync: 'SyncGroup 第 {generation} 代',
+        leader: 'leader={leader} epoch={epoch}',
+        epochQuery: 'OffsetsForLeaderEpoch → 截断到 {to}',
+        truncate: '截断到 {to}（{reason}）',
       },
       topics: {
         create: '创建 topic',
@@ -510,8 +591,18 @@ export const zh: DeepPartial<Strings> = {
         leader: '{topic}-{partition}：broker {leader} 成为新 leader（纪元 {epoch}）',
         leaderUnclean: '{topic}-{partition}：不干净选举，broker {leader} 成为 leader，可能丢数据',
         leaderNone: '{topic}-{partition} 离线：没有活着的同步副本',
-        truncate: 'Broker {broker} 把 {topic}-{partition} 截断到偏移 {to}，丢掉了 {lost} 条',
+        truncate:
+          'Broker {broker} 把 {topic}-{partition} 截断到偏移 {to}，丢掉了 {lost} 条（{reason}）',
+        truncateGone: '其中 {gone} 条别处也没有了，{goneAcked} 条曾经确认过',
+        truncateReasons: {
+          epoch: 'leader 告诉它自己的纪元在哪里结束',
+          hw: '退回到自己的高水位',
+          unflushed: '它们只在页缓存里',
+          ahead: '它比新 leader 多出了一截',
+        },
         brokerDown: 'Broker {broker} 停止了',
+        brokerPowerLoss: 'Broker {broker} 断电了',
+        flush: 'Broker {broker} 把页缓存里的 {bytes} 字节写到了磁盘',
         brokerUp: 'Broker {broker} 启动了',
         controller: 'Broker {broker} 是当前的控制器',
         brokerSlow: 'Broker {broker} 变慢了',
@@ -541,6 +632,647 @@ export const zh: DeepPartial<Strings> = {
         follower: 'Follower 副本：从 leader 复制',
         outOfSync: '掉出 ISR：落后太多',
         hw: '高水位',
+        dirty: '只在页缓存里（还没落盘）',
+        diverged: '同一偏移上和 leader 的记录不一样',
+        ownHw: 'Follower 自己记下的高水位',
+      },
+      glossary: {
+        offset: {
+          term: '偏移（offset）',
+          def: '一条记录在分区里的位置：0、1、2……永远不会被重复使用，哪怕这条记录已经被删了。',
+        },
+        partition: {
+          term: '分区',
+          def: '一个有序、只追加的日志。topic 切成多个分区，才能分散到多个 broker 上并行读写；顺序只在一个分区内成立。',
+        },
+        replica: {
+          term: '副本',
+          def: '一个分区在某个 broker 上的一份拷贝。副本因子 3 就是三个 broker 上各一份。',
+        },
+        leader: {
+          term: 'Leader',
+          def: '一个分区里唯一负责写入和读取的副本，其他副本都从它复制。',
+        },
+        follower: {
+          term: 'Follower',
+          def: '不停地从 leader 拉取新记录的副本，随时准备接班。',
+        },
+        isr: {
+          term: 'ISR（同步副本）',
+          def: '在 replica.lag.time.max.ms 之内一直跟得上 leader 的副本。干净选举只能从它们里面选新 leader。',
+        },
+        hw: {
+          term: '高水位（HW）',
+          def: '所有同步副本都已经有了的记录到这里为止。消费者只能读高水位之前的，acks=all 也是等高水位越过这条记录才回复。',
+        },
+        leo: {
+          term: '日志末端偏移（LEO）',
+          def: '下一条写进这个副本的记录会拿到的偏移，也就是最后一条记录再往后一位。',
+        },
+        epoch: {
+          term: 'Leader 纪元',
+          def: '每换一次 leader 就加一的计数器。每条记录都带着写入时的纪元，回来的副本可以问清楚自己的纪元在哪里结束，只截掉真正分叉的部分（KIP-101）。',
+        },
+        acks: {
+          term: 'acks',
+          def: '生产者等多久：0 是不等，1 是等 leader 写完，all 是等所有同步副本都有了。',
+        },
+        minIsr: {
+          term: 'min.insync.replicas',
+          def: '用 acks=all 时，只要 ISR 比这个数小，leader 就拒绝写入（NOT_ENOUGH_REPLICAS）。有了它，acks=all 才真正意味着“在 N 个 broker 上”。',
+        },
+        unclean: {
+          term: '不干净的 leader 选举',
+          def: '同步副本都死了的时候，允许 ISR 之外的副本当 leader。分区能恢复，但只在旧 leader 上的记录就丢了。',
+        },
+        pageCache: {
+          term: '页缓存',
+          def: '操作系统用来缓冲文件写入的内存。Kafka 的写入先到这里，稍后才落盘；Kafka 靠复制而不是 fsync 来保证不丢数据。',
+        },
+        fsync: {
+          term: 'fsync',
+          def: '强制把页缓存写到磁盘上。Kafka 默认交给操作系统去做；一断电，还没写下去的就没了。',
+        },
+        truncate: {
+          term: '截断',
+          def: '副本发现自己和 leader 对不上时，把日志末尾切掉。这样切掉的记录，只有别的副本还有才算还在。',
+        },
+        segment: {
+          term: '段（segment）',
+          def: '分区在磁盘上是一串文件，每个文件以它的第一个偏移命名。保留和压缩都以已经关闭的整段为单位。',
+        },
+        retention: {
+          term: '保留策略',
+          def: '按时间（retention.ms）或大小（retention.bytes）删除旧的段，不管有没有人读过。',
+        },
+        compaction: {
+          term: '日志压缩',
+          def: '每个 key 只保留最新的一条，让日志变成一张“当前值”的表。被删掉的记录会在偏移上留下空洞。',
+        },
+        tombstone: {
+          term: '墓碑',
+          def: '有 key、值为 null 的记录：在压缩 topic 上表示删除这个 key，它自己会在 delete.retention.ms 之后被清掉。',
+        },
+        group: {
+          term: '消费者组',
+          def: '用同一个组 id 的消费者分摊一个 topic 的分区；每个分区只交给组里的一个成员。',
+        },
+        rebalance: {
+          term: '重平衡',
+          def: '有成员加入、离开或超时时，重新分配分区。由组协调者主持，分配器决定谁拿哪些。',
+        },
+        commit: {
+          term: '已提交偏移',
+          def: '消费者组为某个分区存下的位置：重启或重平衡之后，成员从这里接着读。',
+        },
+        lag: {
+          term: '落后量（lag）',
+          def: '消费者组落后多少：高水位减去它的位置（或已提交偏移）。',
+        },
+        coordinator: {
+          term: '组协调者',
+          def: '管理一个消费者组的 broker：成员、代数和已提交偏移（存在 __consumer_offsets 这个 topic 里）。',
+        },
+        controller: {
+          term: '控制器',
+          def: '负责选举分区 leader、记录元数据变化的 broker。KRaft 模式下由一组控制器共同维护元数据日志。',
+        },
+        murmur2: {
+          term: 'murmur2 分区器',
+          def: '默认分区器用 murmur2 对 key 的字节做哈希，再对分区数取模。只要分区数不变，同一个 key 永远进同一个分区。',
+        },
+        session: {
+          term: 'session.timeout.ms',
+          def: '协调者等一个没动静的消费者多久才把它移出。消费者崩溃，要过了这段时间才会被发现。',
+        },
+      },
+      scenarios: {
+        open: '引导情景',
+        intro:
+          '在一个真在运行的集群上演的小故事，取材自 Kafka 的设计文档和丢数据测试。每一步先猜会发生什么，再看它真的发生。',
+        groups: {
+          basics: '基础',
+          durability: '持久性',
+          kip101: 'KIP-101：leader 纪元',
+          consumers: '消费者组',
+          log: 'Key 与日志',
+        },
+        start: '开始',
+        exit: '离开情景',
+        progress: '第 {n} 步，共 {total} 步',
+        play: '播放这一步',
+        playing: '播放中……',
+        lockIn: '锁定我的猜测并播放',
+        next: '下一步',
+        back: '上一步',
+        replay: '重放这一步',
+        finished: '这个故事讲完了。',
+        continueWith: '接着看：{title}',
+        source: '依据',
+        sources: {
+          kip101: 'KIP-101（Apache Kafka）',
+          vanlightly: 'Jack Vanlightly，《How to Lose Messages on a Kafka Cluster》',
+          kip429: 'KIP-429（Apache Kafka）',
+        },
+        list: {
+          'first-record': {
+            title: '一条记录的一生',
+            summary: '跟着一条记录，从生产者到三个 broker，再到消费者。',
+            steps: {
+              cluster: {
+                title: '三个 broker，一个 topic',
+                body: '每个方框是一个 broker：一台带磁盘的服务器。topic <b>orders</b> 有 3 个<partition>分区</partition>，每个分区有 3 个<replica>副本</replica>，每个 broker 上一个。每一行里，<b>L</b> 是 <leader>leader</leader>，<b>F</b> 是 <follower>follower</follower>。leader 是错开的，每个 broker 各领一个分区。',
+                result: '',
+              },
+              send: {
+                title: '发一条记录',
+                body: '生产者 <b>app</b> 发送 key <b>alice</b>，值 "order #1"，用 <acks>acks=all</acks>。<murmur2>分区器</murmur2>对 "alice" 做哈希，选中分区 {partition}。',
+                question: 'app 什么时候收到回复？',
+                options: ['leader 一写完就回', '所有同步副本都有了才回', '消费者读到之后才回'],
+                result:
+                  '记录先落在 leader 上。follower 拉走它，等它们下一次拉取让 leader 知道它们已经有了，<hw>高水位</hw>才越过这条记录。这时 acks=all 才得到回复。',
+              },
+              hw: {
+                title: '为什么高水位总慢半拍',
+                body: 'Follower 是主动拉的：每 250 毫秒，各自从自己的<leo>日志末端</leo>开始向 leader 要新记录。这个拉取偏移就是 leader 知道 follower 进度的唯一途径，所以拷贝到了之后还要再拉一次，高水位才前进；而 follower 要再下一次才听说新的高水位。看看分区详情里每个 follower 那一行上小小的“自己的高水位”标记。',
+                result: '',
+              },
+              read: {
+                title: '来了一个消费者',
+                body: '消费者组 <b>billing</b> 只有一个成员，auto.offset.reset=earliest。',
+                question: '它从哪里开始读？',
+                options: [
+                  '从偏移 0：这个组还没有已提交偏移，earliest 就是从日志开头读',
+                  '从末尾：只看加入之后发来的记录',
+                  '从别的组停下的地方',
+                ],
+                result:
+                  '它加入了组，经过一次短暂的<rebalance>重平衡</rebalance>，<coordinator>协调者</coordinator>把三个分区都给了它，它从偏移 0 开始拉。它只能读到高水位之前的记录。',
+              },
+              commit: {
+                title: '保存进度',
+                body: '读了不等于告诉了 Kafka。每隔 auto.commit.interval.ms（默认 5 秒），消费者把自己的位置发出去，作为这个组的<commit>已提交偏移</commit>。',
+                result:
+                  '分区详情里的小三角就是 billing 的已提交偏移：1，也就是下一条要读的。billing 重启后从这里接着读。读了还没提交的会再读一遍：这就是“至少一次”投递。',
+              },
+            },
+          },
+          'acks-one': {
+            title: 'acks=1 会丢掉已确认的写入',
+            summary: 'Leader 确认了一条 follower 都没有的写入，然后死了。',
+            steps: {
+              flow: {
+                title: '又快又有确认',
+                body: '<b>pay-svc</b> 每秒发 20 条，用 <acks>acks=1</acks>：leader 自己一写完就回复，不等任何 follower。',
+                result: '',
+              },
+              lag: {
+                title: 'Follower 落后了',
+                body: '两个 follower 的磁盘都变慢了，现在每 10 秒才拉一次。它们还会在 <isr>ISR</isr> 里待一阵：要过了 replica.lag.time.max.ms（这里是 6 秒）还没追上才会被移出。',
+                question: 'pay-svc 会察觉吗？',
+                options: [
+                  '不会：acks=1 本来就不等 follower，每条写入照样被确认',
+                  '会：它开始收到错误',
+                  '会：它会放慢速度配合 follower',
+                ],
+                result:
+                  '对生产者来说什么都没变。但 leader 手里已经有几十条确认过、别的 broker 都没有的记录。',
+              },
+              crash: {
+                title: 'Leader 死了',
+                body: 'Leader 所在的 broker 崩溃了。还有一个 follower 在 ISR 里，控制器选它当新 leader，<epoch>leader 纪元</epoch>加一。',
+                question: '只在旧 leader 上的那些记录会怎样？',
+                options: [
+                  '新 leader 也有',
+                  '没了，可 pay-svc 被告知它们写成功了',
+                  'pay-svc 每条都收到一个错误',
+                ],
+                result:
+                  '新 leader 从自己的日志末端接着写。pay-svc 继续往它这里写，新记录占用的正是丢掉的那些记录的偏移。',
+              },
+              back: {
+                title: '旧 leader 回来了',
+                body: '旧 leader 重启，变成 follower。它的日志里有新 leader 从没见过的记录，而这些偏移已经被别的记录占了。',
+                result:
+                  '它问新 leader 自己的纪元在哪里结束，把之后的全部<truncate>截断</truncate>：{lost} 条已确认的记录彻底没了。Jack Vanlightly 在真集群上测到的是一样的：acks=1 下的干净故障转移，每一轮都丢写入。',
+              },
+              lesson: {
+                title: '应该怎么做',
+                body: '用 acks=all、副本因子 3、<minIsr>min.insync.replicas</minIsr>=2：两个 broker 都有了才确认，坏一台不会丢。下一个情景讲为什么 min.insync.replicas 很重要。',
+                result: '',
+              },
+            },
+          },
+          'min-isr': {
+            title: 'acks=all 只和 ISR 一样可靠',
+            summary: 'min.insync.replicas=1 时，“all” 可能只是一台 broker。',
+            steps: {
+              healthy: {
+                title: '三个副本都同步',
+                body: '<b>ledger-svc</b> 用 acks=all。每条记录要三个副本都有了才确认。',
+                result: '',
+              },
+              shrink: {
+                title: 'Follower 掉队了',
+                body: '两个 follower 的磁盘都变慢了。超过 replica.lag.time.max.ms 还没追上，leader 就把它们移出 <isr>ISR</isr>。',
+                question: '现在 acks=all 在等什么？',
+                options: [
+                  '还是三个副本',
+                  '只等 leader：它只等 ISR，而 ISR 只剩 leader 自己',
+                  '什么都不等：写入被拒绝',
+                ],
+                result: 'ISR 只剩 leader。acks=all 现在的意思是“leader 写完了”。',
+              },
+              acked: {
+                title: '照样确认',
+                body: '生产者照样收到确认，一个错误都没有，和之前一模一样。',
+                result: '',
+              },
+              cut: {
+                title: 'Leader 断电',
+                body: 'Kafka 不会每写一条就 fsync：记录待在操作系统的<pageCache>页缓存</pageCache>里，等回写（这里每 5 秒一次）。现在 leader 的机器断电重启了。',
+                question: 'Leader 上还剩什么？',
+                options: [
+                  '它确认过的全部',
+                  '只有操作系统已经写到磁盘上的',
+                  'Follower 会帮它补上丢的',
+                ],
+                result:
+                  '{lost} 条已确认的记录只在内存里，别人也没有，就这么没了。Jack Vanlightly 在 acks=all、ISR 缩到只剩 leader 的测试里，也是这样丢了数据。',
+              },
+              fix: {
+                title: '设 min.insync.replicas=2',
+                body: '趁 follower 还慢着，把 <minIsr>min.insync.replicas</minIsr> 调到 2。',
+                question: 'ledger-svc 会看到什么？',
+                options: [
+                  '什么都没变',
+                  'NOT_ENOUGH_REPLICAS 错误，直到有 follower 重新同步',
+                  'Follower 变快了',
+                ],
+                result:
+                  'Leader 拒绝它保护不了的写入。生产者收到错误，可以稍后重试：Kafka 用可用性换持久性，记账就该这样。',
+              },
+              heal: {
+                title: 'Follower 恢复',
+                body: '磁盘修好了。Follower 恢复正常拉取，追上高水位，重新加入 ISR。',
+                result:
+                  '两个副本同步后，写入又被接受了。副本因子 3 加 min.insync.replicas=2，坏一台 broker 既不丢已确认的写入，也不停服务。',
+              },
+            },
+          },
+          unclean: {
+            title: '不干净的 leader 选举',
+            summary: '唯一的同步副本死了：要可用性，还是要不丢数据。',
+            steps: {
+              shrink: {
+                title: '只剩一个同步副本',
+                body: '<b>tracker</b> 用 acks=1 写入。两个 follower 都慢了下来，掉出 <isr>ISR</isr>；只剩 leader。',
+                result: '',
+              },
+              die: {
+                title: '最后一个同步副本死了',
+                body: 'Leader 崩溃。两个 follower 都活着，但都不在 ISR 里。',
+                question: '分区会怎样？',
+                options: [
+                  '某个 follower 立刻接手',
+                  '离线：没有活着的同步副本可以当 leader',
+                  '生产者改写到别的 broker',
+                ],
+                result:
+                  '<unclean>unclean.leader.election.enable</unclean>=false（默认）时，分区一直离线，直到有同步副本回来。没有 leader，写入全部失败。',
+              },
+              allow: {
+                title: '允许不干净选举',
+                body: '给这个 topic 打开 unclean.leader.election.enable。',
+                question: '你得到什么，又付出什么？',
+                options: [
+                  '恢复了，什么都没丢',
+                  '恢复了，但新 leader 没拉到的记录全丢了',
+                  '要等旧 leader 回来才有变化',
+                ],
+                result:
+                  '一个落后很多的 follower 立刻当上 leader，分区又能写了。它没拉到的那些，它的日志里全都没有。',
+              },
+              back: {
+                title: '旧 leader 回来了',
+                body: '旧 leader 重启，发现新 leader 的日志更短，而且对不上。',
+                result:
+                  '它截断自己来对齐：{lost} 条已确认的记录没了。在 Vanlightly 的测试里，不干净选举比干净的故障转移丢得多得多，因为新 leader 落后太远。',
+              },
+            },
+          },
+          'kip101-restart-hw': {
+            title: 'KIP-101 之一：一次重启丢掉一条已确认的记录（Kafka 0.10）',
+            summary: '以前 follower 会退回到自己的高水位。看看这为什么是错的。',
+            steps: {
+              m1: {
+                title: '两个 broker，一条记录',
+                body: '这个集群的行为和 0.11 之前的 Kafka 一样。Broker 1 是 leader，broker 2 是 follower。生产者用 acks=all 发送 m1。',
+                result: '',
+              },
+              m2: {
+                title: '第二条记录',
+                body: '生产者发送 m2。Follower 拉走了它，leader 在下一次拉取时得知，把<hw>高水位</hw>推到 2，并确认 m2。',
+                question: '这一刻，follower 自己记下的高水位是多少？',
+                options: ['2，和 leader 一样', '1：它要等下一次拉取的响应才知道新的高水位', '0'],
+                result:
+                  'Follower 手里有 m2，但它自己的高水位还是 1。看分区详情里 broker 2 的“自己的高水位”。',
+              },
+              bounce: {
+                title: 'Follower 重启',
+                body: 'Broker 2 很快地重启了一下，快到没人察觉；它还在 ISR 里。',
+                question: '它怎么处理 m2？',
+                options: [
+                  '留着',
+                  '把日志退回到自己的高水位，丢掉 m2，打算之后再拉',
+                  '删掉整个日志',
+                ],
+                result:
+                  'KIP-101 之前，follower 重启时会截断到自己的高水位，把可能还没提交的东西扔掉。可这一下扔掉的 m2 是已经提交的。',
+              },
+              fail: {
+                title: 'Leader 死了',
+                body: '在 broker 2 重新拉到 m2 之前，broker 1 崩溃了。Broker 2 在 ISR 里，于是当上 leader。',
+                question: 'm2 还在分区里吗？',
+                options: ['在', '不在'],
+                result: '新 leader 没有 m2。它的日志在偏移 1 结束。',
+              },
+              back: {
+                title: 'Broker 1 回来了',
+                body: 'Broker 1 重启，跟随 broker 2。',
+                result:
+                  'Broker 1 比 leader 多，于是它也截断了。{lost} 条已确认的记录丢了，没有不干净选举，也没有配置错误。这就是 KIP-101 的场景一。下一个：同一个故事，换成 leader 纪元。',
+              },
+            },
+          },
+          'kip101-restart-epoch': {
+            title: 'KIP-101 之二：同样的重启，用 leader 纪元（Kafka 0.11+）',
+            summary: 'Follower 不再相信自己的高水位，而是问 leader 自己的纪元在哪里结束。',
+            steps: {
+              m1: {
+                title: '同样的开头',
+                body: '同样两个 broker、同样的生产者，但这个集群用 <epoch>leader 纪元</epoch>来决定截断，和 0.11 之后所有的 Kafka 一样。',
+                result: '',
+              },
+              m2: {
+                title: '第二条记录',
+                body: '生产者发送 m2。和上次一样，leader 在 follower 下一次拉取后确认它。',
+                question: 'Follower 自己记下的高水位是多少？',
+                options: ['2', '1：它晚一次拉取才听说新的高水位', '0'],
+                result: '和上次一样：follower 有 m2，自己的高水位是 1。',
+              },
+              bounce: {
+                title: 'Follower 重启',
+                body: 'Broker 2 快速重启，还在 ISR 里。',
+                question: '这次它怎么处理 m2？',
+                options: [
+                  '留着：它不再靠自己的高水位做决定',
+                  '退回到高水位，丢掉 m2',
+                  '删掉整个日志',
+                ],
+                result:
+                  '它保留了日志。每条记录都带着写入时的纪元；下一次拉取时，follower 发一个 OffsetsForLeaderEpoch 请求：“纪元 0 在哪里结束？”，只截掉那个偏移之后的部分。',
+              },
+              fail: {
+                title: 'Leader 死了',
+                body: 'Broker 1 崩溃，broker 2 当上 leader。',
+                question: 'm2 还在分区里吗？',
+                options: ['在', '不在'],
+                result: '在：broker 2 还有 m1 和 m2。',
+              },
+              back: {
+                title: 'Broker 1 回来了',
+                body: 'Broker 1 重启，跟随 broker 2。',
+                result:
+                  '在新 leader 上，纪元 0 结束于偏移 2，所以 broker 1 什么都不用丢。丢失的记录：{lost}。下一个：KIP-101 的场景二，两个 broker 一起断电。',
+              },
+            },
+          },
+          'kip101-power-hw': {
+            title: 'KIP-101 之三：断电之后日志分叉（Kafka 0.10）',
+            summary: '两个副本在同一个偏移上存着不同的记录，看起来却都是同步的。',
+            steps: {
+              m1: {
+                title: '一条记录，各处都已落盘',
+                body: '又回到 0.11 之前。这里关掉了操作系统的自动回写，改成手动刷盘，好让你看清到底什么到了磁盘上。',
+                result: '',
+              },
+              m2: {
+                title: '第二条记录',
+                body: '两个 broker 都把 m1 写到磁盘，然后生产者发送 m2 并得到确认。m2 在两边的<pageCache>页缓存</pageCache>里，却都没有落盘。',
+                result: '带斜纹的格子就是只在内存里的记录。',
+              },
+              writeback: {
+                title: '有一边回写了',
+                body: 'Broker 1 的操作系统碰巧把脏页写到了磁盘。Broker 2 的还没轮到。',
+                result: '',
+              },
+              outage: {
+                title: '全部断电',
+                body: '整个机柜断电：先是 broker 1，然后是 broker 2。',
+                question: '断电之后 broker 2 上还有什么？',
+                options: ['m1 和 m2', '只有 m1：m2 在它的页缓存里', '什么都没有'],
+                result: 'Broker 1 的磁盘上还有 m1 和 m2；broker 2 只有 m1。',
+              },
+              'b-first': {
+                title: 'Broker 2 先开机',
+                body: 'Broker 2 是最后一个同步副本，于是在新的纪元里当上 leader，生产者发来 m3。它落在偏移 1，而 broker 1 在这个位置存的是 m2。',
+                result: '',
+              },
+              'a-back': {
+                title: 'Broker 1 开机',
+                body: 'Broker 1 以 follower 身份启动。它自己的高水位是 2，日志也在 2 结束。',
+                question: '偏移 1 上会发生什么？',
+                options: [
+                  '什么都不发生：broker 1 留着 m2，leader 存着 m3，两边都算同步',
+                  'Broker 1 丢掉 m2，复制 m3',
+                  'Leader 从 broker 1 复制 m2',
+                ],
+                result:
+                  'Broker 1 截断到自己的高水位（2），从偏移 2 开始拉，什么新东西都没有，于是重新加入 ISR。两个副本在偏移 1 上从此不一致（高亮的格子），而且永远不会有人发现。这就是 KIP-101 的场景二。',
+              },
+            },
+          },
+          'kip101-power-epoch': {
+            title: 'KIP-101 之四：同样的断电，用 leader 纪元',
+            summary: '纪元让副本保持一致，不过没落盘的那次写入还是没了。',
+            steps: {
+              m1: {
+                title: '同样的开头',
+                body: '同样的断电故事，这次用 leader 纪元。',
+                result: '',
+              },
+              m2: {
+                title: '第二条记录',
+                body: 'm1 在两边的磁盘上；m2 已确认，但只在页缓存里。',
+                result: '',
+              },
+              writeback: {
+                title: '有一边回写了',
+                body: 'Broker 1 把脏页写到了磁盘。Broker 2 没有。',
+                result: '',
+              },
+              outage: {
+                title: '全部断电',
+                body: '先是 broker 1，然后 broker 2，都断电了。',
+                question: '断电之后 broker 2 上还有什么？',
+                options: ['m1 和 m2', '只有 m1', '什么都没有'],
+                result: 'Broker 2 只有 m1。',
+              },
+              'b-first': {
+                title: 'Broker 2 先开机',
+                body: 'Broker 2 在新的纪元里当上 leader，把 m3 写在偏移 1。',
+                result: '',
+              },
+              'a-back': {
+                title: 'Broker 1 开机',
+                body: 'Broker 1 以 follower 身份启动，偏移 1 上是纪元 0 写入的 m2。',
+                question: '偏移 1 上会发生什么？',
+                options: [
+                  'Broker 1 留着 m2',
+                  'Broker 1 问清纪元 0 在哪里结束，丢掉 m2，复制 m3',
+                  'Leader 复制 m2',
+                ],
+                result:
+                  'Leader 回答纪元 0 结束于偏移 1，于是 broker 1 截掉 m2，拉来 m3。两个副本又一致了。m2 依然丢了：它被确认过，但只在一块被否决的磁盘上。Kafka 的解法不是 fsync，而是把副本放在不同的电源、机柜或可用区。',
+              },
+            },
+          },
+          rebalance: {
+            title: '急切式 vs 协作式重平衡',
+            summary: '两个组在同一刻各来一个新成员。一个停下，一个照常读。',
+            steps: {
+              steady: {
+                title: '两个组，同样的活',
+                body: '<b>eager-app</b> 用 range 分配器和急切式协议；<b>coop-app</b> 用 cooperative-sticky。两个组各有两个成员，读 orders 的六个分区。',
+                result: '',
+              },
+              join: {
+                title: '各加入第三个成员',
+                body: '两个组在同一刻各来一个新消费者，两边都开始<rebalance>重平衡</rebalance>。',
+                question: '哪个组在重平衡时停止读取？',
+                options: [
+                  '两个都停',
+                  '只有 eager-app：每个成员都先交出所有分区，再等新的分配',
+                  '只有 coop-app',
+                ],
+                result:
+                  'eager-app 全组暂停：所有成员交出全部分区，一起等。coop-app 继续读没有挪动的分区，只暂停换了主人的那几个（KIP-429）。',
+              },
+              kip848: {
+                title: '下一代协议',
+                body: 'Kafka 4.0 正式推出了新的消费者协议（KIP-848，group.protocol=consumer）：由协调者自己计算分配，成员一个分区一个分区地对齐，根本没有全组同步的栅栏。',
+                result: '',
+              },
+            },
+          },
+          'crash-vs-leave': {
+            title: '崩溃不是告别',
+            summary: '正常关闭 vs 崩溃，以及为什么“至少一次”意味着重复。',
+            steps: {
+              steady: {
+                title: '三个 worker',
+                body: '组 <b>workers</b> 有三个成员，分摊 jobs 的四个分区。它们每 5 秒提交一次。',
+                result: '',
+              },
+              leave: {
+                title: 'worker-3 正常关闭',
+                body: 'worker-3 提交自己的位置，并发送 LeaveGroup。',
+                question: '它的分区多久之后有人接手？',
+                options: [
+                  '马上：协调者一收到 LeaveGroup 就重平衡',
+                  '等过了 session.timeout.ms',
+                  '永远不会',
+                ],
+                result: '组立刻重平衡，没有任何记录被读两次。',
+              },
+              crash: {
+                title: 'worker-2 崩溃',
+                body: 'worker-2 死了：没有 LeaveGroup，没有最后一次提交，只是不再发心跳。',
+                question: '它的分区会怎样？',
+                options: [
+                  '马上被接手',
+                  '没人读，直到 session.timeout.ms（这里 8 秒）耗尽',
+                  '里面的记录丢了',
+                ],
+                result:
+                  '协调者分不清是崩溃还是卡顿，只好等满<session>会话超时</session>。这期间落后量一直在涨。然后它移除 worker-2，开始重平衡。',
+              },
+              dupes: {
+                title: '谁来读 worker-2 的记录？',
+                body: 'worker-1 现在拥有全部四个分区，每个都从组的已提交偏移开始读。',
+                question: 'worker-2 已经处理、但还没提交的那些记录呢？',
+                options: ['跳过', '被 worker-1 再处理一遍', '丢了'],
+                result:
+                  '{n} 条记录被处理了两次。这就是“至少一次”投递：要么让处理幂等，要么用事务把输出和偏移一起提交。',
+              },
+            },
+          },
+          keys: {
+            title: 'Key、顺序与分区',
+            summary: '同一个 key 进同一个分区；直到分区数变了。',
+            steps: {
+              'same-key': {
+                title: 'Key 决定分区',
+                body: '<b>bank</b> 为六个账户发送更新，以名字为 key。颜色代表 key。',
+                question: '一个 key 的分区是怎么选的？',
+                options: ['轮流', 'murmur2(key) 对分区数取模', '选最闲的分区'],
+                result:
+                  '3 个分区时：{map}。同一个账户的所有更新都进同一个分区，所以读出来的顺序和写入顺序一致。Kafka 只保证分区内的顺序。',
+              },
+              grow: {
+                title: '加一个分区',
+                body: '把 accounts 从 3 个分区扩到 4 个。',
+                question: 'Key 还留在原来的分区吗？',
+                options: ['是，永远是', '很多会换地方：模数变了', 'Kafka 会把旧记录一起搬过去'],
+                result:
+                  '这些 key 现在去了别的分区：{moved}。它们的旧记录还在原地，所以消费者可能先看到新的更新、后看到旧的。带 key 的 topic，分区数要一开始就规划好。',
+              },
+              idle: {
+                title: '五个消费者，四个分区',
+                body: '又有四个 auditor 加入，加上原来那一个。',
+                question: '第五个消费者做什么？',
+                options: [
+                  '和别的成员共用一个分区',
+                  '什么都不做：组里一个分区只给一个成员',
+                  '读所有分区',
+                ],
+                result: '有一个 auditor 闲着。消费者比分区多不会提高吞吐，只是多了一个备胎。',
+              },
+            },
+          },
+          retention: {
+            title: '保留与压缩',
+            summary: '旧数据按时删除，读没读过都一样；压缩只保留每个 key 的最新值。',
+            steps: {
+              segments: {
+                title: '段文件滚动',
+                body: '每个分区存成一串<segment>段</segment>文件，以第一个偏移命名。app-logs 每 600 字节滚一个新段，保留 15 秒。',
+                result: '',
+              },
+              expire: {
+                title: '一个慢读者',
+                body: '<b>archiver</b> 每两秒读一条；生产者每秒写八条。',
+                question: '它还没读的记录过期了，会怎样？',
+                options: [
+                  'Kafka 等它读完再删',
+                  '照样删除，它的位置跳到日志新的开头',
+                  '挪到别的 broker 上',
+                ],
+                result:
+                  '<retention>保留策略</retention>按时间删掉了整段。archiver 下一次拉取越界了，auto.offset.reset 把它挪到剩下的最早偏移。中间那些记录从来没被读过。',
+              },
+              compact: {
+                title: '压缩 topic',
+                body: 'profiles 是压缩 topic：三个 key 反复更新。看分区详情。',
+                question: '一个更新了二十次的 key 还剩什么？',
+                options: ['全部二十条', '最新的一条，旧偏移被删掉的地方留下空洞', '什么都不剩'],
+                result:
+                  '<compaction>压缩</compaction>重写已关闭的段，每个 key 只留最新的一条。偏移永不复用，所以日志里有洞。<tombstone>墓碑</tombstone>（值为 null）用来删除 key。',
+              },
+            },
+          },
+        },
       },
     },
   },

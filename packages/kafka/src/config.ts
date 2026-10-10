@@ -75,6 +75,14 @@ export function parseTopicConfigs(raw: Record<string, string>): Partial<TopicCon
   return out as Partial<TopicConfig>;
 }
 
+/**
+ * How a follower that restarts or changes leader decides what to throw away.
+ * 'high-watermark' is Kafka before 0.11: cut the log back to the follower's own
+ * high watermark. 'leader-epoch' is KIP-101: ask the leader where the epoch of
+ * your last record ended and cut there.
+ */
+export type TruncationMode = 'leader-epoch' | 'high-watermark';
+
 /** Cluster-wide settings, with simulator-friendly timings. */
 export interface ClusterSettings {
   /** Seed for every random choice: same seed, same cluster. */
@@ -97,6 +105,16 @@ export interface ClusterSettings {
   logCleanerIntervalMs: number;
   /** Bytes added to every record for headers, offsets and CRC. */
   recordOverhead: number;
+  /** Simulated time advances in steps of this size, so any frame rate replays the same history. */
+  tickMs: number;
+  /** See TruncationMode. */
+  truncation: TruncationMode;
+  /**
+   * How often a broker's OS writes dirty page-cache pages to disk; -1 = never.
+   * Kafka doesn't fsync by default (log.flush.interval.messages is unbounded) and
+   * leaves it to the kernel, whose writeback runs every 5 s.
+   */
+  flushIntervalMs: number;
 }
 
 export const CLUSTER_DEFAULTS: ClusterSettings = {
@@ -110,4 +128,7 @@ export const CLUSTER_DEFAULTS: ClusterSettings = {
   sessionTimeoutMs: 8_000,
   logCleanerIntervalMs: 2_000,
   recordOverhead: 20,
+  tickMs: 50,
+  truncation: 'leader-epoch',
+  flushIntervalMs: 5_000,
 };

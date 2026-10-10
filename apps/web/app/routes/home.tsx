@@ -1,4 +1,4 @@
-import { Badge, PixelIcon, List, ListItem, Window, buttonClass, useMounted } from '@shiqi/ui';
+import { Badge, PixelIcon, List, ListItem, Window, buttonClass, useMounted, Rich } from '@shiqi/ui';
 import type { IconName } from '@shiqi/pixel';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
@@ -13,7 +13,6 @@ import {
 import { ToyGrid } from '~/components/ToyGrid';
 import { latestNotes } from '~/content/notes';
 import { format, useI18n } from '~/i18n';
-import { Rich } from '~/i18n/Rich';
 import { localizeNoteMeta } from '~/i18n/notes.server';
 import { metaStrings } from '~/i18n/root-data';
 import { resolveLocale } from '~/i18n/locale.server';

@@ -65,8 +65,184 @@
 }
 
 .kv-toolbar__clock {
-  margin-inline-start: auto;
   font-size: var(--text-sm);
+}
+
+.kv-toolbar__timeline {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+}
+
+.kv-toolbar__note {
+  margin: calc(-1 * var(--space-3)) 0 0;
+}
+
+.kv-tag--bad {
+  color: var(--c-white, #fff);
+  background: var(--danger);
+}
+
+/* ---------- Guided scenarios ---------- */
+
+/* Wide screens: the story on the left, the cluster it is about on the right. */
+@media (min-width: 80rem) {
+  .kv-app--guided {
+    grid-template-columns: minmax(18rem, 25rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .kv-app--guided > .kv-toolbar,
+  .kv-app--guided > .kv-toolbar__note {
+    grid-column: 1 / -1;
+  }
+
+  .kv-app--guided > :not(.kv-toolbar, .kv-toolbar__note, .kv-scenario) {
+    grid-column: 2;
+  }
+
+  .kv-app--guided > .kv-scenario {
+    position: sticky;
+    top: var(--space-4);
+    grid-row: span 3;
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow-y: auto;
+  }
+}
+
+.kv-scenario {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--border);
+}
+
+.kv-scenario p {
+  margin: 0;
+}
+
+.kv-scenario {
+  min-width: 0;
+}
+
+/* Long labels ("Continue: …") wrap instead of widening the panel. */
+.kv-scenario .ui-btn {
+  white-space: normal;
+  text-align: start;
+}
+
+.kv-scenario__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.kv-scenario__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.kv-scenario__step {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.kv-scenario__dots {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-scenario__dots li {
+  flex: 1;
+  height: 6px;
+  border: 1px solid var(--border);
+}
+
+.kv-scenario__dot--done {
+  background: var(--accent-2);
+}
+
+.kv-scenario__dot--now {
+  background: var(--accent);
+}
+
+.kv-scenario__question {
+  padding: var(--space-3);
+  gap: var(--space-3);
+  border: 1px dashed var(--border);
+}
+
+.kv-scenario__result {
+  padding: var(--space-2) var(--space-3);
+  border-left: 4px solid var(--accent-2);
+  background: var(--surface-sunken);
+}
+
+.kv-scenario__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.kv-scenario__source {
+  font-size: var(--text-xs);
+}
+
+.kv-scenarios > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.kv-scenarios {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.kv-scenarios__group h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-family: var(--font-pixel);
+}
+
+.kv-scenarios__group ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-scenarios__item {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+}
+
+.kv-scenarios__item p {
+  margin: var(--space-1) 0 0;
+}
+
+/* What a scenario step is about: a stepped, sprite-like pulse. */
+.kv-focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  animation: kv-focus 1.2s steps(2) infinite;
+}
+
+@keyframes kv-focus {
+  50% {
+    outline-color: transparent;
+  }
 }
 
 /* ---------- Stage ---------- */
@@ -239,6 +415,12 @@
   border: 1px solid var(--border);
   background:
     linear-gradient(90deg, var(--accent-2) calc(var(--fill) * 100%), transparent 0),
+    repeating-linear-gradient(90deg, transparent 0 3px, var(--surface-sunken) 3px 4px);
+}
+
+.kv-meter--dirty .kv-meter__bar {
+  background:
+    linear-gradient(90deg, var(--accent) calc(var(--fill) * 100%), transparent 0),
     repeating-linear-gradient(90deg, transparent 0 3px, var(--surface-sunken) 3px 4px);
 }
 
@@ -423,6 +605,52 @@
   display: none;
 }
 
+/* A follower's own high watermark: where it thinks the HW is. */
+.kv-strip__own-hw {
+  position: absolute;
+  top: -3px;
+  height: 5px;
+  left: calc((100% + 2px) * var(--at) / var(--cells) - 4px);
+  width: 6px;
+  background: var(--accent);
+  border: 1px solid var(--border);
+}
+
+.kv-strip--lg .kv-strip__own-hw {
+  display: none;
+}
+
+/* Only in the page cache: lost if the machine loses power. */
+.kv-cell--dirty {
+  background:
+    repeating-linear-gradient(45deg, transparent 0 3px, var(--surface) 3px 5px),
+    var(--cell, var(--surface));
+}
+
+/* A different record from the leader's at the same offset. */
+.kv-cell--diverged {
+  outline: 2px solid var(--danger);
+  outline-offset: -1px;
+  z-index: 1;
+}
+
+button.kv-cell {
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.kv-cell:disabled {
+  cursor: default;
+}
+
+button.kv-cell:focus-visible,
+.kv-cell--picked {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+  z-index: 2;
+}
+
 .kv-strip__pin {
   position: absolute;
   bottom: -2px;
@@ -580,6 +808,21 @@
 
 .kv-swatch--leo {
   border-style: dotted;
+}
+
+.kv-swatch--own-hw {
+  width: 6px;
+  height: 5px;
+  background: var(--accent);
+}
+
+.kv-swatch--dirty {
+  background: repeating-linear-gradient(45deg, transparent 0 2px, var(--text-muted) 2px 3px);
+}
+
+.kv-swatch--diverged {
+  outline: 2px solid var(--danger);
+  outline-offset: -1px;
 }
 
 .kv-swatch--pin {
@@ -806,8 +1049,142 @@
   border-left-color: var(--success) !important;
 }
 
+/* ---------- Record journey ---------- */
+
+.kv-journey {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.kv-journey__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.kv-journey__head h4 {
+  flex: 1;
+  margin: 0;
+}
+
+.kv-journey__calc {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.kv-journey__replicas,
+.kv-journey__steps {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.kv-journey__replicas {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.kv-journey__missing {
+  color: var(--text-muted);
+}
+
+.kv-journey__steps li {
+  padding-inline-start: var(--space-2);
+  border-left: 3px solid var(--border);
+}
+
+.kv-journey__steps time {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.kv-journey__step--good {
+  border-left-color: var(--success) !important;
+}
+
+.kv-journey__step--bad {
+  border-left-color: var(--danger) !important;
+}
+
+.kv-journey__step--pending {
+  border-left-style: dotted !important;
+  color: var(--text-muted);
+}
+
+/* ---------- Protocol view ---------- */
+
+.kv-wire {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.kv-wire__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.kv-wire svg {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.kv-wire text {
+  fill: var(--text);
+}
+
+.kv-wire__actor text {
+  font-weight: 700;
+}
+
+.kv-wire__actor line {
+  stroke: var(--text-muted);
+  stroke-dasharray: 3 3;
+}
+
+.kv-wire__msg line,
+.kv-wire__msg path {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.kv-wire__head {
+  fill: var(--text);
+}
+
+.kv-wire__time {
+  fill: var(--text-muted) !important;
+}
+
+.kv-wire__msg--data line {
+  stroke: var(--accent-2);
+}
+
+.kv-wire__msg--meta line,
+.kv-wire__msg--meta path {
+  stroke: var(--link);
+}
+
+.kv-wire__msg--bad line,
+.kv-wire__msg--bad path {
+  stroke: var(--danger);
+}
+
+.kv-wire__msg--bad text {
+  fill: var(--danger);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .kv-led--activity.kv-led--blink {
+  .kv-led--activity.kv-led--blink,
+  .kv-focus {
     animation: none;
   }
 }

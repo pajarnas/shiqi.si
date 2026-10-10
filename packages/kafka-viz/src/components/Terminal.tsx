@@ -24,6 +24,12 @@ export function Terminal({ cluster }: { cluster: Cluster }) {
   const cursor = useRef(0);
   const nextId = useRef(1);
   const screen = useRef<HTMLDivElement>(null);
+  // A rewind swaps the cluster; a console session on the old one can't go on.
+  const [owner, setOwner] = useState(cluster);
+  if (owner !== cluster) {
+    setOwner(cluster);
+    setSession(null);
+  }
 
   const print = (texts: string[], kind: Line['kind'] = 'out') => {
     if (!texts.length) return;

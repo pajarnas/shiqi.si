@@ -3,8 +3,10 @@ import {
   type Acks,
   type Assignor,
   type Cluster,
+  type ClusterSettings,
   type KeyMode,
   type OffsetReset,
+  type TruncationMode,
 } from '@shiqi/kafka';
 import {
   Button,
@@ -358,6 +360,61 @@ export function ConsumersPanel({ cluster }: { cluster: Cluster }) {
           onChange={setReset}
         />
       </Form>
+    </div>
+  );
+}
+
+const TRUNCATION_MODES: TruncationMode[] = ['leader-epoch', 'high-watermark'];
+const FLUSH_INTERVALS = [-1, 1000, 5000, 30_000];
+const NUMBER_SETTINGS = [
+  { key: 'replicaLagTimeMaxMs', label: 'lag', min: 1000, max: 30_000, step: 500 },
+  { key: 'replicaFetchIntervalMs', label: 'fetch', min: 50, max: 2000, step: 50 },
+  { key: 'sessionTimeoutMs', label: 'session', min: 2000, max: 45_000, step: 1000 },
+  { key: 'rebalanceDelayMs', label: 'rebalanceDelay', min: 0, max: 5000, step: 250 },
+] as const satisfies readonly {
+  key: keyof ClusterSettings;
+  label: keyof ReturnType<typeof useKafkaStrings>['settings'];
+  min: number;
+  max: number;
+  step: number;
+}[];
+
+/** Cluster-wide behaviour: how followers truncate, page-cache writeback, timeouts. */
+export function SettingsPanel({ cluster }: { cluster: Cluster }) {
+  const t = useKafkaStrings();
+  const s = cluster.settings;
+  return (
+    <div className="kv-panel kv-form__fields">
+      <Segmented
+        label={t.settings.truncation}
+        options={TRUNCATION_MODES.map((m) => ({ value: m, label: t.settings.truncationModes[m] }))}
+        value={s.truncation}
+        onChange={(truncation) => cluster.configure({ truncation })}
+      />
+      <Segmented
+        label={t.settings.flush}
+        options={FLUSH_INTERVALS.map((ms) => ({
+          value: String(ms),
+          label: ms < 0 ? t.settings.flushNever : format(t.settings.flushEvery, { s: ms / 1000 }),
+        }))}
+        value={String(s.flushIntervalMs)}
+        onChange={(v) => cluster.configure({ flushIntervalMs: Number(v) })}
+      />
+      {NUMBER_SETTINGS.map((n) => (
+        <Field key={n.key} label={`${t.settings[n.label]}: ${s[n.key]}`}>
+          {(p) => (
+            <Range
+              {...p}
+              min={n.min}
+              max={n.max}
+              step={n.step}
+              value={s[n.key]}
+              onChange={(e) => cluster.configure({ [n.key]: Number(e.target.value) })}
+            />
+          )}
+        </Field>
+      ))}
+      <p className="kv-muted">{t.settings.note}</p>
     </div>
   );
 }

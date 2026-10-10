@@ -40,6 +40,12 @@ With no committed offset, `auto.offset.reset` decides: `latest` (default) starts
 
 **Lag** = log end offset (the HW) − committed offset. Growing lag means consumers are slower than producers.
 
+## Try it
+
+- [Eager vs cooperative rebalancing](/kafka?scenario=rebalance)
+- [A crash is not a goodbye](/kafka?scenario=crash-vs-leave): why at-least-once means some records are processed twice
+- [Keys, order and partitions](/kafka?scenario=keys): five consumers on four partitions leave one idle
+
 ## Commands
 
 ```bash

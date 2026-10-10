@@ -62,6 +62,12 @@ kafka-console-consumer --bootstrap-server localhost:9092 --topic orders --from-b
 kafka-configs --bootstrap-server localhost:9092 --entity-type topics --entity-name orders --alter --add-config retention.ms=60000
 ```
 
+## Try it
+
+- [The life of one record](/kafka?scenario=first-record): click any record in the inspector to follow its journey
+- [Keys, order and partitions](/kafka?scenario=keys)
+- [Retention and compaction](/kafka?scenario=retention)
+
 <Quiz
   title="Check yourself"
   questions={[

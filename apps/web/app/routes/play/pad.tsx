@@ -9,6 +9,7 @@ import {
   Stack,
   Swatches,
   useMounted,
+  Rich,
 } from '@shiqi/ui';
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
@@ -25,7 +26,6 @@ import {
   type Grid,
 } from '~/features/play/pad';
 import { useI18n } from '~/i18n';
-import { Rich } from '~/i18n/Rich';
 import type { Route } from './+types/pad';
 
 export const meta: Route.MetaFunction = ({ matches }) =>
