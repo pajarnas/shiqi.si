@@ -1,5 +1,6 @@
-import { PixelIcon, List, ListItem, Window, buttonClass, useMounted } from '@shiqi/ui';
-import { useState } from 'react';
+import { Badge, PixelIcon, List, ListItem, Window, buttonClass, useMounted } from '@shiqi/ui';
+import type { IconName } from '@shiqi/pixel';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
   CritterCanvas,
@@ -16,7 +17,7 @@ import { Rich } from '~/i18n/Rich';
 import { localizeNoteMeta } from '~/i18n/notes.server';
 import { metaStrings } from '~/i18n/root-data';
 import { resolveLocale } from '~/i18n/locale.server';
-import { SITE, TOOLS } from '~/site';
+import { ABOUT, NEXT, SITE, TOOLS } from '~/site';
 import type { Route } from './+types/home';
 
 const LATEST = 4;
@@ -84,12 +85,24 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 as={Link}
                 to={n.href}
                 icon={<PixelIcon name="book" />}
-                title={loaderData.noteText[n.slug]?.title ?? n.title}
-                description={loaderData.noteText[n.slug]?.summary ?? n.summary}
+                title={loaderData.noteText[n.href]?.title ?? n.title}
+                description={loaderData.noteText[n.href]?.summary ?? n.summary}
                 meta={n.date.slice(5)}
               />
             ))}
           </List>
+        </Window>
+      </div>
+
+      <div className="home__pair">
+        <Window title={t.home.aboutWindow}>
+          <FactList items={ABOUT.map((f) => ({ ...f, ...t.home.about[f.key] }))} />
+        </Window>
+        <Window title={t.home.nextWindow}>
+          <FactList
+            items={NEXT.map((f) => ({ ...f, ...t.home.next[f.key] }))}
+            meta={<Badge>{t.home.soon}</Badge>}
+          />
         </Window>
       </div>
     </div>
@@ -150,5 +163,28 @@ function SkyWindow() {
         </p>
       </div>
     </Window>
+  );
+}
+
+/** A plain list of icon + title + description rows (no links). */
+function FactList({
+  items,
+  meta,
+}: {
+  items: readonly { key: string; icon: IconName; title: string; description: string }[];
+  meta?: ReactNode;
+}) {
+  return (
+    <List className="flush">
+      {items.map((f) => (
+        <ListItem
+          key={f.key}
+          icon={<PixelIcon name={f.icon} />}
+          title={f.title}
+          description={f.description}
+          meta={meta}
+        />
+      ))}
+    </List>
   );
 }

@@ -44,6 +44,22 @@ export const TOOLS: readonly Entry[] = [
   { path: '/tools/json', key: 'json', label: 'JSON', icon: 'braces' },
 ];
 
+/** Facts about the site and what's coming, listed on the home page; words in strings.home. */
+export const ABOUT = [
+  { key: 'ssr', icon: 'bolt' },
+  { key: 'pixels', icon: 'grid' },
+  { key: 'languages', icon: 'swap' },
+  { key: 'server', icon: 'terminal' },
+  { key: 'private', icon: 'heart' },
+] as const satisfies readonly { key: keyof Strings['home']['about']; icon: IconName }[];
+
+export const NEXT = [
+  { key: 'courses', icon: 'book' },
+  { key: 'quizzes', icon: 'quiz' },
+  { key: 'apis', icon: 'braces' },
+  { key: 'toys', icon: 'glider' },
+] as const satisfies readonly { key: keyof Strings['home']['next']; icon: IconName }[];
+
 /** Window title (shown like a file name) and eyebrow of each page. */
 export const PAGES = {
   play: { file: 'play/', eyebrow: 'PLAY' },
