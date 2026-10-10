@@ -3,6 +3,7 @@
 // Placeholders look like {name}; tags like <b>…</b> mark rich text (see Rich).
 import { KAFKA_STRINGS } from '@shiqi/kafka-viz/strings';
 import { UI_STRINGS } from '@shiqi/ui';
+import { CODE_STRINGS } from '@shiqi/code';
 
 export const en = {
   site: {
@@ -27,6 +28,7 @@ export const en = {
     label: 'Language',
   },
   ui: UI_STRINGS,
+  code: CODE_STRINGS,
   // Error pages: today's critter holds up a sign with the status code.
   errors: {
     critter: 'Today’s critter holding a {code} sign',
@@ -389,6 +391,23 @@ export const en = {
     notesLede: 'The concepts behind what you see above. They also live under Notes, tagged #kafka.',
     noNotes: 'No Kafka notes yet.',
     lab: KAFKA_STRINGS,
+    course: 'New: build Kafka yourself, one function at a time.',
+    courseLink: 'Start the course',
+  },
+  build: {
+    title: 'Build your own Kafka',
+    description:
+      'A course that rebuilds Kafka from an append-only file up. Write each piece yourself, test it, and watch a live demo run on your code.',
+    lede: 'Every chapter starts with something that breaks. You write the one function that fixes it, the tests go green, and the demo next to it switches to your code. Then you break it on purpose and compare with the class in Kafka that does the same job.',
+    chapter: 'Chapter {n}',
+    contents: 'Chapters',
+    start: 'Start with chapter 0',
+    prev: 'Previous: {title}',
+    next: 'Next: {title}',
+    back: 'Build your own Kafka',
+    lab: 'Kafka, live',
+    soon: 'Coming next: compaction, partitions and keys, idempotent producers, replication and the high watermark, ISR and acks, leader epochs, KRaft, consumer groups, committed offsets and transactions.',
+    saved: 'Your code is saved in this browser only.',
   },
   gallery: {
     title: 'Components',

@@ -55,6 +55,8 @@
 
 每一批单独发一个 PR，做完就上线。
 
+**进度**：第一批已完成（2026-10-10），包括 `@shiqi/kafka/storage`（逐字节的 v2 记录批次、CRC-32C、段、稀疏索引、页缓存、断电和恢复）、`@shiqi/code`（编辑器、带循环保护的编译和测试）、`@shiqi/kafka-viz/course`（练习和演示），以及第 0 到 4 章。网址是 `/kafka/build`。章节里的演示用 `<Island>` 挂载，所以机器翻译过的笔记也能交互。
+
 ## 参考
 
 - Jay Kreps, [The Log: What every software engineer should know about real-time data's unifying abstraction](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying)

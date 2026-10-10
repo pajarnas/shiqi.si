@@ -3,6 +3,7 @@
 // i18n/strings and lets the translation service fill the rest).
 import { format } from '@shiqi/ui';
 import { createContext, useContext, type ReactNode } from 'react';
+import { BUILD_STRINGS } from './course/strings';
 
 export const KAFKA_STRINGS = {
   toolbar: {
@@ -939,6 +940,7 @@ export const KAFKA_STRINGS = {
       },
     },
   },
+  build: BUILD_STRINGS,
 };
 
 export type KafkaStrings = typeof KAFKA_STRINGS;

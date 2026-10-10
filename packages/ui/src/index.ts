@@ -3,6 +3,7 @@ export * from './components/Button';
 export * from './components/Card';
 export * from './components/Clock';
 export * from './components/Form';
+export * from './components/Island';
 export * from './components/Layout';
 export * from './components/List';
 export * from './components/MenuBar';

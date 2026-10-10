@@ -703,3 +703,16 @@ select.ui-input {
   pointer-events: none;
   image-rendering: auto;
 }
+
+/* Island: where a page mounts an interactive widget inside static HTML. */
+.ui-island {
+  margin-block: var(--space-4);
+  min-width: 0;
+}
+
+.ui-island:empty,
+.ui-island__loading {
+  min-height: 6rem;
+  border: var(--border-width) dashed var(--border);
+  background: var(--surface-sunken);
+}

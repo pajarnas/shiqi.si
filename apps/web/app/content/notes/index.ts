@@ -13,6 +13,8 @@ export interface NoteMeta {
   summary: string;
   /** Lowercase, hyphenated topic tags, e.g. `docker`, `ssh`. */
   topics: readonly string[];
+  /** A note that is one part of a series, e.g. a chapter of a course. */
+  series?: { id: string; part: number };
 }
 
 export interface Note extends NoteMeta {
@@ -60,3 +62,9 @@ export const TOPICS: readonly { topic: string; count: number }[] = [
 ]
   .map(([topic, count]) => ({ topic, count }))
   .sort((a, b) => b.count - a.count || a.topic.localeCompare(b.topic));
+
+/** Every note in a series, in order. */
+export const seriesNotes = (id: string) =>
+  NOTES.filter((n) => n.series?.id === id).sort(
+    (a, b) => (a.series?.part ?? 0) - (b.series?.part ?? 0),
+  );

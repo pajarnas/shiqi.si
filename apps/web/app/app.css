@@ -677,3 +677,26 @@ ul.topic-tags {
   width: 112px;
   height: 112px;
 }
+
+/* Build your own Kafka: chapter list and chapter navigation. */
+.course-toc {
+  display: grid;
+  gap: var(--space-3);
+  padding-left: 0;
+  list-style: none;
+}
+
+.course-toc__summary {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+}
+
+.course-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) dashed var(--border);
+}

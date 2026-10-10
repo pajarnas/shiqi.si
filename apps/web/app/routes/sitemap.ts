@@ -1,4 +1,5 @@
 import { FOLDERS, NOTES } from '~/content/notes';
+import { chapterPath, chapters } from '~/features/kafka-build/course';
 import { SITE, TOOLS, TOYS } from '~/site';
 
 export function loader() {
@@ -7,6 +8,8 @@ export function loader() {
     '/tools',
     '/notes',
     '/kafka',
+    '/kafka/build',
+    ...chapters().map(chapterPath),
     '/ui',
     ...TOYS.map((t) => t.path),
     ...TOOLS.map((t) => t.path),

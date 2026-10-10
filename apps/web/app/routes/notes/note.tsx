@@ -1,34 +1,13 @@
-import { Callout, Window } from '@shiqi/ui';
-import { Link, data } from 'react-router';
-import { TopicTags } from '~/components/NoteList';
+import { Link } from 'react-router';
+import { NoteArticle } from '~/components/NoteArticle';
 import { findFolder, findNote } from '~/content/notes';
-import { format, stringsFor, useI18n } from '~/i18n';
-import { resolveLocale } from '~/i18n/locale.server';
-import { localizeNoteBody, localizeNoteMeta, type NoteBody } from '~/i18n/notes.server';
+import { notePageData } from '~/content/notes/page.server';
+import { format, useI18n } from '~/i18n';
 import { metaStrings } from '~/i18n/root-data';
 import type { Route } from './+types/note';
 
-export async function loader({ request, params }: Route.LoaderArgs) {
-  const { locale } = await resolveLocale(request);
-  const note = findNote(params.folder, params.slug);
-  if (!note) throw data(null, { status: 404, statusText: stringsFor(locale).notes.missing });
-  const original = new URL(request.url).searchParams.has('original');
-  const target = original ? 'en' : locale;
-  const [text, body] = await Promise.all([
-    localizeNoteMeta([note], target),
-    localizeNoteBody(note.Component, target),
-  ]);
-  const translated = body.status === 'translated';
-  return {
-    folder: note.folder,
-    slug: note.slug,
-    title: (translated && text[note.href]?.title) || note.title,
-    summary: (translated && text[note.href]?.summary) || note.summary,
-    body: body as NoteBody,
-    // Offer the other version when this visitor would normally read a translation.
-    canSwitch: locale !== 'en',
-  };
-}
+export const loader = ({ request, params }: Route.LoaderArgs) =>
+  notePageData(request, findNote(params.folder, params.slug));
 
 export const meta: Route.MetaFunction = ({ loaderData, matches }) => {
   const t = metaStrings(matches);
@@ -44,39 +23,17 @@ export default function NotePage({ loaderData }: Route.ComponentProps) {
   const { t } = useI18n();
   const note = findNote(loaderData.folder, loaderData.slug);
   if (!note) return null;
-  const { Component } = note;
   const folder = findFolder(note.folder)!;
-  const { body } = loaderData;
   return (
-    <Window title={`notes/${note.folder}/${note.slug}.mdx`}>
-      <article className="prose">
-        <p className="prose__meta ui-pixel">
+    <NoteArticle
+      note={note}
+      data={loaderData}
+      crumbs={
+        <>
           <Link to="/notes">{t.notes.back}</Link> /{' '}
-          <Link to={`/notes/${folder.id}`}>{t.notes.folders[folder.id].title}</Link> ·{' '}
-          <time dateTime={note.date}>{note.date}</time>
-        </p>
-        <h1 lang={body.status === 'translated' ? undefined : 'en'}>{loaderData.title}</h1>
-        <TopicTags topics={note.topics} />
-        {loaderData.canSwitch && (
-          <Callout>
-            {body.status === 'translated' && (
-              <>
-                {t.notes.machine} <Link to="?original">{t.notes.original}</Link>
-              </>
-            )}
-            {body.status === 'original' && <Link to=".">{t.notes.translated}</Link>}
-            {body.status === 'pending' && t.notes.pending}
-            {body.status === 'unavailable' && t.notes.unavailable}
-          </Callout>
-        )}
-        {body.status === 'translated' ? (
-          <div dangerouslySetInnerHTML={{ __html: body.html }} />
-        ) : (
-          <div lang="en">
-            <Component />
-          </div>
-        )}
-      </article>
-    </Window>
+          <Link to={`/notes/${folder.id}`}>{t.notes.folders[folder.id].title}</Link>
+        </>
+      }
+    />
   );
 }
