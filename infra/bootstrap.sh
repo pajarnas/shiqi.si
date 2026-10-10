@@ -4,7 +4,7 @@
 #   ACME_EMAIL=you@example.com GITHUB_OWNER=your-github-name bash infra/bootstrap.sh
 #
 # Installs: swap, automatic security updates, Docker, then runs the site,
-# Redis and Caddy (HTTPS) with Docker Compose. For a bigger node running
+# Redis, MySQL and Caddy (HTTPS) with Docker Compose. For a bigger node running
 # Kubernetes, see infra/k8s/bootstrap-k3s.sh.
 set -euo pipefail
 
@@ -45,14 +45,17 @@ sudo usermod -aG docker "$USER"
 
 log "Settings ($SERVER_DIR/.env)"
 umask 077
-# Keep the admin password across re-runs; make one up the first time.
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(sed -n 's/^ADMIN_PASSWORD=//p' "$SERVER_DIR/.env" 2>/dev/null || true)}"
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-$(openssl rand -hex 16)}"
-cat >"$SERVER_DIR/.env" <<ENV
-IMAGE=ghcr.io/${GITHUB_OWNER,,}/shiqi.si:latest
-ACME_EMAIL=${ACME_EMAIL}
-ADMIN_PASSWORD=${ADMIN_PASSWORD}
-ENV
+# Rewrite IMAGE and ACME_EMAIL; keep generated passwords from an earlier run
+# (MySQL only accepts the ones it was first set up with) and create missing ones.
+touch "$SERVER_DIR/.env"
+KEPT="$(grep -E '^(ADMIN_PASSWORD|MYSQL_PASSWORD|MYSQL_ROOT_PASSWORD)=' "$SERVER_DIR/.env" || true)"
+{
+  echo "IMAGE=ghcr.io/${GITHUB_OWNER,,}/shiqi.si:latest"
+  echo "ACME_EMAIL=${ACME_EMAIL}"
+  [ -n "$KEPT" ] && echo "$KEPT"
+} >"$SERVER_DIR/.env.new"
+mv "$SERVER_DIR/.env.new" "$SERVER_DIR/.env"
+(cd "$SERVER_DIR" && source ./ensure-env.sh)
 
 log "Start the site"
 cd "$SERVER_DIR"

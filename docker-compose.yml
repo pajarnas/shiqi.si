@@ -7,6 +7,16 @@ services:
     ports: ['6379:6379']
     volumes: [redis:/data]
 
+  mysql:
+    image: mysql:8.4
+    ports: ['3306:3306']
+    environment:
+      MYSQL_DATABASE: shiqi
+      MYSQL_USER: shiqi
+      MYSQL_PASSWORD: shiqi
+      MYSQL_ROOT_PASSWORD: shiqi
+    volumes: [mysql:/var/lib/mysql]
+
   kafka:
     image: apache/kafka:4.3.1
     ports: ['9092:9092']
@@ -32,8 +42,10 @@ services:
     ports: ['3000:3000']
     environment:
       REDIS_URL: redis://redis:6379
-    depends_on: [redis]
+      MYSQL_URL: mysql://shiqi:shiqi@mysql:3306/shiqi
+    depends_on: [redis, mysql]
 
 volumes:
   redis:
+  mysql:
   kafka:

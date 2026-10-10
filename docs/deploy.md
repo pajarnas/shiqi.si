@@ -75,22 +75,29 @@ DNS 生效后，第一次访问时 Caddy 就会去拿证书。拿不到时查日
 
 之后每次推到 `main`：检查 → 构建镜像 → 自动滚动更新。
 
-## 访客记录
+## 访客记录（MySQL）
 
-每次打开页面（包括站内跳转），网站会把 IP、页面、浏览器和来源记进 Redis：最近 2 万条，加上每个页面的累计人数。IP 取自 Caddy 加的 `X-Forwarded-For`，Caddy 会丢掉客户端自己伪造的那份。
+每次打开页面（包括站内跳转），网站会在 MySQL 的 `visits` 表里记一行：时间、IP、国家、页面、浏览器、来源、是不是爬虫。IP 取自 Caddy 加的 `X-Forwarded-For`，Caddy 会丢掉客户端自己伪造的那份；国家用 IP 查询服务查出来，结果在 Redis 里缓存 7 天。
 
-后台：<https://shiqi.si/admin/visits>，用户名随便填，密码是服务器上 `infra/server/.env` 里的 `ADMIN_PASSWORD`（没设密码时这个页面是 404）。
+MySQL 跑在同一台机器的 Docker Compose 里（`mysql` 服务，数据在 `mysql` 卷里），内存限制 320 MB，平时用不到 200 MB。密码由 `infra/server/ensure-env.sh` 第一次部署时生成，写进 `.env` 的 `MYSQL_PASSWORD` / `MYSQL_ROOT_PASSWORD`，之后不会再改。表结构的变更写在 `apps/web/app/lib/db.server.ts` 的 `MIGRATIONS` 里，网站启动时自动执行。
 
-在 2026-10-09 之前跑过 bootstrap 的服务器，要手动加一次密码（在服务器 `saige@shiqi-1` 上）：
+以前存在 Redis 里的访问记录，第一次连上 MySQL 时会自动导入（Redis 里的旧列表改名成 `visits:log:imported` 留作备份）。
+
+- 后台：<https://shiqi.si/admin/visits>，用户名随便填，密码是 `.env` 里的 `ADMIN_PASSWORD`（没设密码时这个页面是 404）。
+- 后台 JSON：`curl -u admin:<密码> 'https://shiqi.si/api/admin/visits?country=CN&page=2'`
+- 公开接口：<https://shiqi.si/api/visitors/countries>，只有各国人数，没有 IP；主页的世界地图用它。
+
+在服务器上看数据（`saige@shiqi-1`）：
 
 ```bash
 cd ~/shiqi.si/infra/server
-echo "ADMIN_PASSWORD=$(openssl rand -hex 16)" >> .env
-docker compose up -d web
-grep ADMIN_PASSWORD .env      # 这就是密码
+docker compose exec mysql sh -c 'mysql -ushiqi -p"$MYSQL_PASSWORD" shiqi'
+# 然后比如：SELECT country, COUNT(DISTINCT ip) FROM visits WHERE bot = 0 GROUP BY country;
 ```
 
 时间默认按美东时间显示，想换就在 `.env` 里加 `ADMIN_TIME_ZONE=Asia/Shanghai`，再 `docker compose up -d web`。
+
+以后想换成 Azure 的托管 MySQL（Azure Database for MySQL 灵活服务器），只要把 `compose.yml` 里 web 的 `MYSQL_URL` 指过去、去掉 `mysql` 服务，代码不用动。
 
 ## 5. 打开翻译服务（可选）
 
