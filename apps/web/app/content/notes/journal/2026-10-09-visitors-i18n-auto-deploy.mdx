@@ -1,0 +1,122 @@
+export const frontmatter = {
+  title: 'Afternoon on the live site: visitor log, two languages, auto-deploy',
+  date: '2026-10-09',
+  summary:
+    'A Redis-backed visitor log behind Basic auth, English and Chinese with free machine translation, secrets that deploy themselves, a 35-minute image build cut to 40 seconds, and a CSRF check that broke behind HTTPS.',
+  topics: ['redis', 'i18n', 'github-actions', 'ci-cd', 'secrets', 'https', 'docker', 'deployment'],
+};
+
+All times are UTC. This picks up where [the go-live journal](/notes/journal/2026-10-09-shiqi-si-goes-live) ends: the site had just come up at 16:03. Three pieces of work ran in parallel from one request: a foldered notes system (with these daily notes), a visitor log, and English plus Chinese.
+
+## Notes in folders (16:03 to 16:12)
+
+Notes moved from one flat folder into three: **Journal** (学习流水, this log), **Commonplace** (杂学, evergreen notes on one topic each) and **Essays** (随想). Every note carries topic tags; `/notes?topic=docker` lists one topic. URLs became `/notes/<folder>/<slug>`, and the old `/notes/<slug>` links answer with a **301** to the new address so nothing that was shared breaks. Notes are written in English from now on.
+
+## The visitor log (16:03 to 16:28)
+
+Goal: see who read which article.
+
+- Every page view, including client-side navigation, is pushed onto a Redis list (`LPUSH` then `LTRIM`, so the list keeps only the newest entries) with IP, path, user agent and referrer. A hash counts views per page (`HINCRBY`). Both run in one `MULTI` transaction.
+- Recording **never throws and never makes a page wait**: if Redis is down or slow (2 s timeout), the view just isn't logged.
+- Bots are detected with `isbot` and logged but not counted.
+- The client IP comes from the **last** entry of `X-Forwarded-For`, which is the one Caddy appends. Earlier entries are whatever the client sent and can be forged. See [Running behind a reverse proxy](/notes/commonplace/behind-a-reverse-proxy).
+- Referrers are cut to origin + path, because query strings can carry tokens.
+- `/admin/visits` is protected with **HTTP Basic auth** against `ADMIN_PASSWORD`, compared with `timingSafeEqual` on SHA-256 digests. Without a password set, the page answers 404, so it doesn't advertise that it exists.
+- The footer used to say "no tracking". It now says "no third-party tracking", because that is what is true.
+
+Setting the password on the server ran into two snags:
+
+```
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock
+```
+
+`bootstrap.sh` had added the user to the `docker` group, but group membership is read at login, and this SSH session was older. `sudo docker compose ...` works for now; logging out and back in fixes it for good.
+
+The other: `echo "ADMIN_PASSWORD=..." >> .env` writes to the `.env` **in the current directory**, which was not necessarily `~/shiqi.si/infra/server`. Check with `cat ~/shiqi.si/infra/server/.env`.
+
+## Why the new version wasn't live (16:25)
+
+"Why can't I see the deployed version?" Two reasons: the image was still building, and the CI deploy job had been **skipped on every run**, because `DEPLOY_ENABLED` and the SSH secrets were never set. The server was still running the image pulled at bootstrap. Manual update in the meantime:
+
+```bash
+cd ~/shiqi.si && git pull --ff-only
+cd infra/server && sudo docker compose pull web && sudo docker compose up -d web
+```
+
+## Turning on auto-deploy (16:28 to 16:40)
+
+Two options were offered: a timer on the server that pulls new versions, or GitHub pushing over SSH. I picked **GitHub SSH push**:
+
+1. On the server, a key used only by CI: `ssh-keygen -t ed25519 -N '' -C 'github-actions-deploy' -f ~/.ssh/deploy`, public half appended to `~/.ssh/authorized_keys`.
+2. On the Mac, `ssh-keyscan 52.162.142.136` for the server's host keys.
+3. A GitHub **environment** named `production` holding `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, plus the repository variable `DEPLOY_ENABLED=true`.
+4. Delete the private key file from the server.
+
+Two GitHub prompts came up. "Review deployments" means the environment has required reviewers (turn it off under Settings → Environments). "Approve workflows to run" appears on pull requests pushed by an app or outside contributor. And email on every finished run is a personal setting: Settings → Notifications → Actions.
+
+## English and Chinese (16:03 to 16:40)
+
+- **No hard-coded text.** Every string lives in `app/i18n/strings/en.ts` (the source) and `zh.ts`. The UI and pixel packages carry no Chinese any more: the app hands them their words.
+- **Choosing the language per request**, first match wins: `?lang=` in the URL, then the `lang` cookie set by the menu-bar switch, then the visitor's country (a CDN header, or a `country.is` lookup cached per IP for 7 days), then `Accept-Language`, then English. See [Picking a language and translating a site](/notes/commonplace/i18n-and-translation).
+- **Notes are translated at render time**: title, summary and the rendered HTML body go to a translation service, and each result is cached in Redis under a hash of the English text, so an edit re-translates only what changed.
+
+The first version used Claude for translation. I said **no AI, and it should be free**, so it moved to **Azure AI Translator, free tier F0** (2 million characters a month), with self-hosted LibreTranslate as the alternative.
+
+Creating the Translator resource in Cloud Shell failed first:
+
+```
+(MissingSubscriptionRegistration) The subscription is not registered to use namespace 'Microsoft.CognitiveServices'.
+```
+
+New subscriptions must register each resource provider once:
+
+```bash
+az provider register --namespace Microsoft.CognitiveServices --wait
+az cognitiveservices account create -n shiqi-translator -g shiqi --kind TextTranslation --sku F0 -l global --yes
+```
+
+`keys list` printed the key into the terminal, and it got pasted into the chat. Lesson: a key that has been shown somewhere shared should be regenerated (`az cognitiveservices account keys regenerate ... --key-name key1`) or at least judged. Here it was a free-tier key in a private project, so the worst case is someone using up the month's free quota, and I kept it.
+
+## Secrets that deploy themselves (16:34 to 16:40)
+
+"Why can't the key go in GitHub and from there to the server?" It can, as a **GitHub Secret** (encrypted, never in the code; the repository is public). The first version wired up that one key by name, and I pushed back: **code must be reusable**. The final version is generic: CI takes every secret whose name starts with `APP_`, strips the prefix, and sends them over SSH **stdin** (never on a command line, where `ps` or logs could show them). `infra/deploy.sh` upserts each `NAME=value` line into `infra/server/secrets.env`, which Compose loads. A new key is now just a new secret. See [Managing secrets for a small deployment](/notes/commonplace/secrets).
+
+## The 35-minute image build (16:54 to 17:05)
+
+The deploy didn't start. The previous run was still in **Build and push image** after 35 minutes, and runs queue behind each other. Cause: the image is built for `linux/amd64` and `linux/arm64`, and on GitHub's x86 runners the arm64 half runs under **QEMU emulation**, where `pnpm install` and the bundler crawl, and a dependency change invalidates the cache.
+
+Fix in the Dockerfile: install and build stages use `FROM --platform=$BUILDPLATFORM`, so they run once on the runner's own CPU. The output is plain JavaScript with no native addons, so it is identical for both platforms; only the small runtime stage is per-platform. The build went from over half an hour to **40 seconds**. The stuck run was cancelled and the new one deployed visitor log, translation and key together.
+
+## Error pages and the bio (19:37 to 19:58)
+
+Clicking something in the header gave an error. Meanwhile: errors should come in kinds, in the site's style. Now every error uses one window where today's critter holds the status code in a speech bubble, with its own words for 400, 401, 403, 404, 500 and 503 and a fallback for the rest. The admin page throws its 401 so it gets the same page, while keeping the `WWW-Authenticate` header that makes the browser show its password box. See [HTTP status codes for error pages](/notes/commonplace/http-status-codes).
+
+The home page bio was wrong too: I am a software engineer in Fremont, CA, studying Georgia Tech's online master's with an AI focus, not living in Atlanta.
+
+## The language switch returned 500 (20:00 to 20:09)
+
+The header error turned out to be `https://shiqi.si/api/locale`, the endpoint behind the language switch. It never failed locally. The cause only exists in production:
+
+- Caddy terminates HTTPS and talks plain HTTP to the app, so React Router builds request URLs as `http://shiqi.si/...`.
+- The browser posts the form with `Origin: https://shiqi.si`.
+- React Router's CSRF protection compares the two, sees a different origin, and rejects the post.
+
+Fix: list the site's own hosts in `allowedActionOrigins` in `react-router.config.ts`. Posts from any other site are still refused. Until it deployed, `?lang=zh` worked as a direct link to the Chinese site.
+
+## What I learned
+
+- **Build for production's shape.** TLS termination, forwarded headers and real origins only exist behind the proxy; test with the same headers (`curl -H 'Origin: https://...'`) before trusting "works locally".
+- **Skipped is not passed.** A green CI run with a skipped deploy job means nothing was deployed.
+- **Generic beats specific.** One `APP_*` rule replaced a line of workflow per secret.
+- **Never print a secret where others can read it.** If it happens, rotate or consciously accept the risk.
+- **Emulation is slow.** Do platform-independent work once, natively, and keep only the truly per-platform part per platform.
+- **Logging must never break the page.** Time out, swallow and warn.
+- **Group membership changes need a new login.**
+
+## General notes from today
+
+- [Running behind a reverse proxy](/notes/commonplace/behind-a-reverse-proxy)
+- [Picking a language and translating a site](/notes/commonplace/i18n-and-translation)
+- [Managing secrets for a small deployment](/notes/commonplace/secrets)
+- [HTTP status codes for error pages](/notes/commonplace/http-status-codes)
+- Updated: [CI/CD with GitHub Actions and GHCR](/notes/commonplace/github-actions-ghcr), [Docker Compose on a small VM](/notes/commonplace/docker-compose-small-vm)

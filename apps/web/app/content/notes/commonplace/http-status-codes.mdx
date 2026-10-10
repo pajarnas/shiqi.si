@@ -1,0 +1,40 @@
+export const frontmatter = {
+  title: 'HTTP status codes for error pages',
+  date: '2026-10-09',
+  summary:
+    'The handful of status codes a site actually shows, the 401 vs 403 difference, Basic auth, and making error pages part of the design.',
+  topics: ['http', 'web', 'security'],
+};
+
+The first digit says who is at fault:
+
+- **2xx** success, **3xx** go elsewhere, **4xx** the request was wrong, **5xx** the server failed.
+
+## The ones worth a page
+
+- **400 Bad Request**: the request itself is malformed (bad form data, a failed origin check).
+- **401 Unauthorized**: really "unauthenticated": you haven't proven who you are. Must come with a `WWW-Authenticate` header saying how to log in.
+- **403 Forbidden**: we know who you are, and the answer is still no. Logging in again won't help.
+- **404 Not Found**: nothing here. Also the polite answer for things you don't want to reveal exist, such as an admin page that is switched off.
+- **500 Internal Server Error**: a bug or crash on the server. The visitor can only retry.
+- **503 Service Unavailable**: temporarily down (overloaded, maintenance). Can carry `Retry-After`.
+
+Redirects worth knowing: **301** (moved for good: browsers and search engines update their links; use it when URLs change) and **302/307** (temporary).
+
+## HTTP Basic auth in one minute
+
+The simplest login there is, fine for a one-person admin page over HTTPS:
+
+1. Server answers `401` with `WWW-Authenticate: Basic realm="admin"`; the browser shows its own login box.
+2. The browser retries with `Authorization: Basic base64(user:password)`, and repeats it on every request.
+3. The server compares the password in **constant time** (hash both sides, then `timingSafeEqual`), so response timing doesn't leak how many characters were right.
+
+Base64 is encoding, not encryption: only use Basic auth over HTTPS.
+
+## Error pages are pages
+
+- Return the right status code, not a 200 with an error message: browsers, crawlers and monitoring rely on it.
+- Keep the site's navigation and style, say what happened in plain words, and offer a next step (home, back, try again for 5xx).
+- In React Router, throwing `data(null, { status: 404 })` or a `Response` from a loader lands in the nearest `ErrorBoundary`, which can render one shared error screen for every status.
+
+Related: [Afternoon on the live site](/notes/journal/2026-10-09-visitors-i18n-auto-deploy).

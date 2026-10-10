@@ -71,6 +71,14 @@ docker image prune -f             # reclaim disk from old images
 
 Deploying a new version is just changing `IMAGE` in `.env` and running `up -d` again; rolling back is the same with the old tag. That is all `infra/deploy.sh` does.
 
+## Permission denied on docker.sock
+
+```
+permission denied while trying to connect to the Docker daemon socket at unix:///var/run/docker.sock
+```
+
+Your user isn't in the `docker` group, or was added after this login session started: group membership is read at login. `sudo usermod -aG docker $USER`, then log out and back in (or use `sudo docker ...` meanwhile). Being in the `docker` group is effectively root on that machine.
+
 ## When to move to Kubernetes
 
 When there is more than one machine, or you need rolling updates without downtime, autoscaling, or lots of services. Until then Compose is simpler and lighter. See [Kubernetes on a small node](/notes/commonplace/k3s-on-small-nodes).

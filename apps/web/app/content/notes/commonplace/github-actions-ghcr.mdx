@@ -25,6 +25,27 @@ A pipeline in three jobs, each depending on the previous one:
 - Gate the job on a variable (`if: vars.DEPLOY_ENABLED == 'true'`) so the pipeline stays green before the server exists.
 - The remote command should be a script in the repository (`git pull && bash infra/deploy.sh <image>`), not logic hidden in the workflow.
 
+## Multi-arch images without the wait
+
+On GitHub's x86 runners, the arm64 half of a multi-platform build runs under QEMU emulation, which is many times slower: an uncached `pnpm install` plus bundling took over half an hour. If the build output is platform-independent (plain JavaScript, no native addons), do that work once on the runner's own CPU:
+
+```dockerfile
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build   # runs natively
+# ... install and build ...
+FROM node:22-alpine AS runtime                           # per target platform
+COPY --from=build /out ./
+```
+
+Only the small runtime stage is built per platform. The same build went to about 40 seconds.
+
+## Things that look like CI problems but aren't
+
+- A **skipped** deploy job leaves the run green. Green does not mean deployed; check the job.
+- Runs in the same concurrency group **queue**: one stuck build delays every deploy behind it. Cancel it.
+- "Review deployments": the environment has required reviewers.
+- "Approve workflows to run": GitHub asks before running workflows from outside contributors or apps on a pull request.
+- Email on every finished run (success too) is a personal setting: Settings → Notifications → Actions.
+
 ## Secrets vs variables
 
-Secrets are encrypted and masked in logs (keys, hosts, tokens). Variables are plain configuration (feature flags such as `DEPLOY_ENABLED`). Both live under the repository's Settings, or per environment such as `production`.
+Secrets are encrypted and masked in logs (keys, hosts, tokens). Variables are plain configuration (feature flags such as `DEPLOY_ENABLED`). Both live under the repository's Settings, or per environment such as `production`. For getting app secrets to the server, see [Managing secrets](/notes/commonplace/secrets).
