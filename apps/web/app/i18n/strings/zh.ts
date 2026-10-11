@@ -549,6 +549,20 @@ export const zh: DeepPartial<Strings> = {
         leave: '离开',
         crash: '崩溃',
         rate: '{rate}/秒',
+        hints: {
+          name: '消费者组的名字（group.id）。group.id 相同的消费者一起分担工作：每个分区只由其中一个读。',
+          state:
+            '稳定：每个成员都分到了分区，正在读。重平衡中或同步中：组暂停一下，重新分配分区。空：没有成员。',
+          assignor:
+            '决定哪个成员拿哪些分区的策略（partition.assignment.strategy）。range 把每个 topic 相邻的分区成段分给成员。',
+          generation: '这个组重平衡过几次。每重平衡一次加 1，旧成员靠它知道自己过时了。',
+          totalLag: '这个组的分区里已经写入、但它还没读的记录总数。0 表示已经追上。',
+          member:
+            '组里的一个消费者。这个名字是它的 client.id。往同一个组再加一个消费者，分区就会在它们之间重新分配。',
+          rate: '这个消费者每秒处理多少条记录。',
+          partition:
+            '这个消费者现在负责的分区：topic {topic} 的 {partition} 号分区。组里只有它读这个分区。',
+        },
       },
       panels: {
         label: '面板',

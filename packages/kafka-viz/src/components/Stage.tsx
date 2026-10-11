@@ -7,7 +7,7 @@ import {
   type Partition,
   type Producer,
 } from '@shiqi/kafka';
-import { Button, cx, PixelIcon } from '@shiqi/ui';
+import { Button, cx, PixelIcon, Term } from '@shiqi/ui';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { anchorId, anchorRef, type AnchorRegistry } from '../anchors';
 import { bytes, meterScale } from '../format';
@@ -464,6 +464,7 @@ function GroupCard({
   anchors: AnchorRegistry;
 }) {
   const t = useKafkaStrings();
+  const h = t.group.hints;
   const members = [...g.members.values()];
   const total = members.reduce(
     (s, m) =>
@@ -477,12 +478,17 @@ function GroupCard({
       className={cx('kv-group', `kv-group--${g.state}`)}
     >
       <header className="kv-group__head">
-        <h3>{g.id}</h3>
-        <span className="kv-tag">{t.group.state[g.state]}</span>
+        <h3>
+          <Term definition={h.name}>{g.id}</Term>
+        </h3>
+        <span className="kv-tag">
+          <Term definition={h.state}>{t.group.state[g.state]}</Term>
+        </span>
       </header>
       <p className="kv-muted kv-group__meta">
-        {g.assignor} · {format(t.group.generation, { n: g.generation })} ·{' '}
-        {format(t.group.totalLag, { n: total })}
+        <Term definition={h.assignor}>{g.assignor}</Term> ·{' '}
+        <Term definition={h.generation}>{format(t.group.generation, { n: g.generation })}</Term> ·{' '}
+        <Term definition={h.totalLag}>{format(t.group.totalLag, { n: total })}</Term>
       </p>
       {g.redelivered > 0 && (
         <p className="kv-error kv-group__meta">
@@ -499,10 +505,12 @@ function GroupCard({
           >
             <div className="kv-member__head">
               <PixelIcon name={m.alive ? 'face' : 'blob'} size={16} />
-              <span className="kv-member__name" title={m.id}>
-                {m.clientId}
+              <span className="kv-member__name">
+                <Term definition={h.member}>{m.clientId}</Term>
               </span>
-              <span className="kv-muted">{format(t.group.rate, { rate: m.rate })}</span>
+              <span className="kv-muted">
+                <Term definition={h.rate}>{format(t.group.rate, { rate: m.rate })}</Term>
+              </span>
             </div>
             {!m.alive && <p className="kv-error kv-member__note">{t.group.crashed}</p>}
             {cluster.authorizer && <p className="kv-muted kv-member__note">{m.principal}</p>}
@@ -522,7 +530,14 @@ function GroupCard({
                       key={`${tp.topic}-${tp.partition}`}
                       className={cx('kv-chip', (lag ?? 0) > 20 && 'kv-chip--hot')}
                     >
-                      {tp.topic}-{tp.partition}
+                      <Term
+                        definition={format(h.partition, {
+                          topic: tp.topic,
+                          partition: tp.partition,
+                        })}
+                      >
+                        {tp.topic}-{tp.partition}
+                      </Term>
                       {lag !== undefined && <span>{format(t.group.lag, { n: lag })}</span>}
                     </li>
                   );
