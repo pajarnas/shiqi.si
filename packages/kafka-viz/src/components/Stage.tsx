@@ -10,7 +10,7 @@ import {
 import { Button, cx, PixelIcon } from '@shiqi/ui';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { anchorId, anchorRef, type AnchorRegistry } from '../anchors';
-import { bytes } from '../format';
+import { bytes, meterScale } from '../format';
 import { keyColor } from '../keys';
 import { format, useKafkaStrings } from '../strings';
 import { LogStrip } from './LogStrip';
@@ -26,6 +26,8 @@ const STRIP_CELLS = 14;
 const NET_SCALE = 2048;
 /** Full scale of the page-cache meter: dirty bytes waiting for writeback. */
 const CACHE_SCALE = 2048;
+/** Smallest visible fill of a meter that isn't empty. */
+const MIN_FILL = 0.02;
 const FOCUS_CLASS = 'kv-focus';
 
 interface StageProps {
@@ -57,6 +59,11 @@ export function Stage({ cluster, speed, selected, onSelect, focus = [] }: StageP
     };
   });
 
+  const diskScale = meterScale(
+    Math.max(0, ...[...cluster.brokers.keys()].map((id) => diskBytes(cluster, id))),
+    CACHE_SCALE,
+  );
+
   return (
     <div className="kv-stage" ref={stageRef}>
       <section className="kv-lane kv-lane--producers" aria-label={t.lanes.producers}>
@@ -75,6 +82,7 @@ export function Stage({ cluster, speed, selected, onSelect, focus = [] }: StageP
               key={b.id}
               cluster={cluster}
               broker={b}
+              diskScale={diskScale}
               anchors={anchors}
               selected={selected}
               onSelect={onSelect}
@@ -111,7 +119,8 @@ function Meter({
   hint?: string;
   tone?: 'dirty';
 }) {
-  const fill = Math.max(0, Math.min(1, value / max));
+  // Anything above zero shows at least a sliver, so a small amount never reads as empty.
+  const fill = value > 0 ? Math.max(MIN_FILL, Math.min(1, value / max)) : 0;
   return (
     <div className={cx('kv-meter', tone && `kv-meter--${tone}`)} title={hint}>
       <span className="kv-meter__label">{label}</span>
@@ -125,22 +134,29 @@ function Meter({
   );
 }
 
+/** Bytes of log this broker keeps on disk, over all its replicas. */
+const diskBytes = (c: Cluster, id: number) =>
+  c.allPartitions().reduce((s, p) => s + (p.logs.get(id)?.sizeBytes ?? 0), 0);
+
 function BrokerCard({
   cluster,
   broker,
+  diskScale,
   anchors,
   selected,
   onSelect,
 }: {
   cluster: Cluster;
   broker: Broker;
+  /** Shared by every broker card, so their disk bars compare. */
+  diskScale: number;
   anchors: AnchorRegistry;
   selected: Selection | null;
   onSelect: (s: Selection) => void;
 }) {
   const t = useKafkaStrings();
   const replicas = cluster.allPartitions().filter((p) => p.replicas.includes(broker.id));
-  const disk = replicas.reduce((s, p) => s + (p.logs.get(broker.id)?.sizeBytes ?? 0), 0);
+  const disk = diskBytes(cluster, broker.id);
   const dirty = cluster.dirtyBytes(broker.id);
   const isController = cluster.controller === broker.id;
   const busy = broker.up && broker.inRate + broker.outRate > 1;
@@ -185,7 +201,7 @@ function BrokerCard({
           max={NET_SCALE}
           text={`${bytes(broker.outRate)}/s`}
         />
-        <Meter label={t.broker.disk} value={disk} max={64 * 1024} text={bytes(disk)} />
+        <Meter label={t.broker.disk} value={disk} max={diskScale} text={bytes(disk)} />
         <Meter
           label={t.broker.pageCache}
           value={dirty}
