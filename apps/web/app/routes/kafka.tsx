@@ -1,7 +1,8 @@
 import '@shiqi/kafka-viz/styles.css';
 
 import { isScenarioId, KafkaLab, KafkaStringsProvider, type ScenarioId } from '@shiqi/kafka-viz';
-import { Callout, Section, Segmented } from '@shiqi/ui';
+import { Button, Callout, Section, Segmented } from '@shiqi/ui';
+import { useState } from 'react';
 import { Link, useSearchParams, type ShouldRevalidateFunction } from 'react-router';
 import { NoteList } from '~/components/NoteList';
 import { RealCluster } from '~/features/kafka-real/RealCluster';
@@ -14,6 +15,9 @@ import type { Route } from './+types/kafka';
 
 /** Notes with this topic show up here as well as under /notes. */
 const TOPIC = 'kafka';
+
+/** The happy path every newcomer should see first. */
+const FIRST_SCENARIO: ScenarioId = 'first-record';
 
 /** ?mode=real shows the real cluster instead of the simulation. */
 type Mode = 'sim' | 'real';
@@ -39,6 +43,13 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
     setParams(id ? { scenario: id } : {}, { replace: true, preventScrollReset: true });
   const onModeChange = (next: Mode) =>
     setParams(next === 'real' ? { mode: 'real' } : {}, { replace: true, preventScrollReset: true });
+  // The lab only reads ?scenario= when it mounts, so starting from here remounts it.
+  const [labKey, setLabKey] = useState(0);
+  const startHere = () => {
+    onScenarioChange(FIRST_SCENARIO);
+    setLabKey((n) => n + 1);
+  };
+  const current = isScenarioId(scenario) ? scenario : null;
   const modes = [
     { value: 'sim' as const, label: t.kafka.mode.sim },
     { value: 'real' as const, label: t.kafka.mode.real },
@@ -46,6 +57,12 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
   return (
     <div className="desk-wide">
       <PageWindow page="kafka" title={t.kafka.title} lede={t.kafka.lede}>
+        {mode === 'sim' && !current && (
+          <Callout>
+            <p>{t.kafka.start.text}</p>
+            <Button onClick={startHere}>{t.kafka.start.button}</Button>
+          </Callout>
+        )}
         <Callout>
           {t.kafka.course} <Link to="/kafka/build">{t.kafka.courseLink}</Link>
         </Callout>
@@ -65,7 +82,8 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
           <>
             <KafkaStringsProvider strings={t.kafka.lab}>
               <KafkaLab
-                scenario={isScenarioId(scenario) ? scenario : null}
+                key={labKey}
+                scenario={labKey > 0 ? FIRST_SCENARIO : current}
                 onScenarioChange={onScenarioChange}
               />
             </KafkaStringsProvider>
