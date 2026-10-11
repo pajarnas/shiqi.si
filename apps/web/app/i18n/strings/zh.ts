@@ -562,7 +562,7 @@ export const zh: DeepPartial<Strings> = {
           generation: '这个组重平衡过几次。每重平衡一次加 1，旧成员靠它知道自己过时了。',
           totalLag: '这个组的分区里已经写入、但它还没读的记录总数。0 表示已经追上。',
           member:
-            '消费者实例 pod{n}：你的程序跑起来的一份，相当于一个 pod。它在 Kafka 里真正的名字是 client.id：{clientId}。往同一个组再加一个实例，分区就会在它们之间重新分配。',
+            '消费者实例 pod{n}：你的程序跑起来的一份，相当于一个 pod。程序用 client.id 这个配置告诉 Kafka 自己叫什么，这里是 {clientId}，Kafka 日志和 kafka-consumer-groups 里显示的就是这个名字。往同一个组再加一个实例，分区就会在它们之间重新分配。',
           rate: '这个消费者每秒处理多少条记录。',
           partition:
             'P{partition} 就是 topic {topic} 的 {partition} 号分区（Kafka 里写作 {topic}-{partition}）。组里只有这个实例读它；从它连出去的线指向它从哪台 broker 读。',
@@ -1666,8 +1666,8 @@ export const zh: DeepPartial<Strings> = {
                 result: '',
               },
               leave: {
-                title: 'worker-3 正常关闭',
-                body: 'worker-3 提交自己的位置，并发送 LeaveGroup。',
+                title: 'workers-pod2 正常关闭',
+                body: 'workers-pod2 提交自己的位置，并发送 LeaveGroup。',
                 question: '它的分区多久之后有人接手？',
                 options: [
                   '马上：协调者一收到 LeaveGroup 就重平衡',
@@ -1677,8 +1677,8 @@ export const zh: DeepPartial<Strings> = {
                 result: '组立刻重平衡，没有任何记录被读两次。',
               },
               crash: {
-                title: 'worker-2 崩溃',
-                body: 'worker-2 死了：没有 LeaveGroup，没有最后一次提交，只是不再发心跳。',
+                title: 'workers-pod1 崩溃',
+                body: 'workers-pod1 死了：没有 LeaveGroup，没有最后一次提交，只是不再发心跳。',
                 question: '它的分区会怎样？',
                 options: [
                   '马上被接手',
@@ -1686,13 +1686,13 @@ export const zh: DeepPartial<Strings> = {
                   '里面的记录丢了',
                 ],
                 result:
-                  '协调者分不清是崩溃还是卡顿，只好等满<session>会话超时</session>。这期间落后量一直在涨。然后它移除 worker-2，开始重平衡。',
+                  '协调者分不清是崩溃还是卡顿，只好等满<session>会话超时</session>。这期间落后量一直在涨。然后它移除 workers-pod1，开始重平衡。',
               },
               dupes: {
-                title: '谁来读 worker-2 的记录？',
-                body: 'worker-1 现在拥有全部四个分区，每个都从组的已提交偏移开始读。',
-                question: 'worker-2 已经处理、但还没提交的那些记录呢？',
-                options: ['跳过', '被 worker-1 再处理一遍', '丢了'],
+                title: '谁来读 workers-pod1 的记录？',
+                body: 'workers-pod0 现在拥有全部四个分区，每个都从组的已提交偏移开始读。',
+                question: 'workers-pod1 已经处理、但还没提交的那些记录呢？',
+                options: ['跳过', '被 workers-pod0 再处理一遍', '丢了'],
                 result:
                   '{n} 条记录被处理了两次。这就是“至少一次”投递：要么让处理幂等，要么用事务把输出和偏移一起提交。',
               },
@@ -1768,36 +1768,36 @@ export const zh: DeepPartial<Strings> = {
             steps: {
               open: {
                 title: '一个不设防的集群',
-                body: '<b>checkout</b> 往 <b>orders</b> 写，<b>billing-1</b> 在 <b>billing</b> 组里读。没人检查它们是谁：授权器是关着的。',
+                body: '<b>checkout</b> 往 <b>orders</b> 写，<b>billing-pod0</b> 在 <b>billing</b> 组里读。没人检查它们是谁：授权器是关着的。',
                 result: '',
               },
               on: {
                 title: '打开授权器',
                 body: '相当于在每个 broker 上设置 <b>authorizer.class.name</b>。现在还没有任何 ACL。',
-                question: 'checkout 和 billing-1 会怎样？',
+                question: 'checkout 和 billing-pod0 会怎样？',
                 options: [
                   '没影响：规则只管新连上的客户端',
                   '两个都被拒绝：没有匹配的 ACL，答案就是不行',
                   '只检查写入',
                 ],
                 result:
-                  'checkout 每次发送都收到 TOPIC_AUTHORIZATION_FAILED，billing-1 收到 GROUP_AUTHORIZATION_FAILED：它进不了自己的组，手里一个分区都没有。Kafka 默认拒绝（allow.everyone.if.no.acl.found=false）。',
+                  'checkout 每次发送都收到 TOPIC_AUTHORIZATION_FAILED，billing-pod0 收到 GROUP_AUTHORIZATION_FAILED：它进不了自己的组，手里一个分区都没有。Kafka 默认拒绝（allow.everyone.if.no.acl.found=false）。',
               },
               group: {
-                title: '让 billing-1 进组',
-                body: '<b>kafka-acls --add --allow-principal User:billing-1 --operation Read --group billing</b>',
-                question: '现在 billing-1 能读到记录吗？',
+                title: '让 billing-pod0 进组',
+                body: '<b>kafka-acls --add --allow-principal User:billing-pod0 --operation Read --group billing</b>',
+                question: '现在 billing-pod0 能读到记录吗？',
                 options: [
                   '能，消费者只需要组的 Read',
                   '不能，它还是进不了组',
                   '能进组、能分到分区，但每次拉取都被拒绝',
                 ],
                 result:
-                  '加入组和从 topic 拉取是分开检查的。billing-1 回到组里，也分到了分区，但每次拉取都以 TOPIC_AUTHORIZATION_FAILED 失败。',
+                  '加入组和从 topic 拉取是分开检查的。billing-pod0 回到组里，也分到了分区，但每次拉取都以 TOPIC_AUTHORIZATION_FAILED 失败。',
               },
               topic: {
                 title: '授权 topic',
-                body: '给 billing-1 加 orders 的 Read，给 checkout 加 orders 的 Write。一切又流动起来。',
+                body: '给 billing-pod0 加 orders 的 Read，给 checkout 加 orders 的 Write。一切又流动起来。',
                 result:
                   '消费者需要组和 topic 的 Read；生产者需要 topic 的 Write。Read 和 Write 都隐含 Describe，客户端靠它拿元数据。',
               },

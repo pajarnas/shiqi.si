@@ -21,7 +21,7 @@ function secured() {
   const c = new Cluster({ brokers: 3, seed: 11 });
   c.createTopic('orders', { partitions: 2, replicationFactor: 3 });
   c.addProducer({ id: 'checkout', topic: 'orders', rate: 10, acks: 1, keys: 'fixed' });
-  c.addConsumer({ group: 'billing', topics: ['orders'], clientId: 'billing-1', rate: 50 });
+  c.addConsumer({ group: 'billing', topics: ['orders'], clientId: 'billing-pod0', rate: 50 });
   c.tick(3000);
   return c;
 }
@@ -56,12 +56,18 @@ describe('authorizer', () => {
     expect(member(c).assignment).toEqual([]);
     expect(c.events.some((e) => e.type === 'auth-denied' && e.resource === 'group')).toBe(true);
 
-    runCli(c, 'kafka-acls --add --allow-principal User:billing-1 --operation Read --group billing');
+    runCli(
+      c,
+      'kafka-acls --add --allow-principal User:billing-pod0 --operation Read --group billing',
+    );
     run(c, 4000);
     expect(member(c).assignment.length).toBe(2);
     expect(member(c).error).toBe('TOPIC_AUTHORIZATION_FAILED');
 
-    runCli(c, 'kafka-acls --add --allow-principal User:billing-1 --operation Read --topic orders');
+    runCli(
+      c,
+      'kafka-acls --add --allow-principal User:billing-pod0 --operation Read --topic orders',
+    );
     runCli(c, 'kafka-acls --add --allow-principal User:checkout --operation Write --topic orders');
     const acked = pr.acked;
     const consumed = member(c).consumed;
