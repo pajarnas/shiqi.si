@@ -787,8 +787,10 @@ export class Cluster {
       const tr = this.traces.get(r);
       if (tr && tr.committedAt === undefined) tr.committedAt = this.now;
     }
+    const from = p.highWatermark;
     p.highWatermark = hw;
     leader.highWatermark = hw;
+    this.emit({ type: 'hw', at: this.now, topic: p.topic, partition: p.id, from, to: hw });
   }
 
   // ── Producing ────────────────────────────────────────────────────────────

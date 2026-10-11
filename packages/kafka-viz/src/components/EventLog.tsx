@@ -2,6 +2,7 @@ import type { Cluster, ClusterEvent } from '@shiqi/kafka';
 import { Checkbox, cx } from '@shiqi/ui';
 import { useState } from 'react';
 import { clock } from '../format';
+import { eventVars } from '../story';
 import { format, useKafkaStrings, type KafkaStrings } from '../strings';
 
 const SHOWN = 80;
@@ -11,21 +12,13 @@ const DATA_EVENTS = new Set<ClusterEvent['type']>([
   'replicate',
   'consume',
   'commit',
+  'hw',
   'flush',
 ]);
 
-/** Event fields as template values: numbers stay, lists join, the rest become text. */
-const vars = (e: object): Record<string, string | number> =>
-  Object.fromEntries(
-    Object.entries(e).map(([k, v]) => [
-      k,
-      typeof v === 'number' ? v : Array.isArray(v) ? v.join(', ') : String(v ?? ''),
-    ]),
-  );
-
 /** One event as a sentence. */
 export function describeEvent(e: ClusterEvent, t: KafkaStrings['events']): string {
-  const v = vars(e);
+  const v = eventVars(e);
   switch (e.type) {
     case 'produce':
       return format(t.produce, v);
@@ -37,6 +30,8 @@ export function describeEvent(e: ClusterEvent, t: KafkaStrings['events']): strin
       return format(t.consume, v);
     case 'commit':
       return format(t.commit, v);
+    case 'hw':
+      return format(t.hw, v);
     case 'isr-shrink':
       return format(t.isrShrink, v);
     case 'isr-expand':
@@ -80,10 +75,7 @@ export function describeEvent(e: ClusterEvent, t: KafkaStrings['events']): strin
     case 'acl':
       if (e.change === 'on') return t.authorizerOn;
       if (e.change === 'off') return t.authorizerOff;
-      return format(
-        e.change === 'add' ? t.aclAdd : t.aclRemove,
-        vars({ ...e, ...e.acl } as ClusterEvent),
-      );
+      return format(e.change === 'add' ? t.aclAdd : t.aclRemove, v);
   }
 }
 

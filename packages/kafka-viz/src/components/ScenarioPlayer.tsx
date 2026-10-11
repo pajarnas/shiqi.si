@@ -1,6 +1,7 @@
 import { KafkaError, type Cluster, type Timeline } from '@shiqi/kafka';
-import { Button, cx, Question } from '@shiqi/ui';
+import { Button, cx, Question, useLocalStorage } from '@shiqi/ui';
 import { useEffect, useRef, useState } from 'react';
+import { useStory } from '../hooks/useStory';
 import {
   SCENARIO_GROUPS,
   SCENARIO_SOURCES,
@@ -11,8 +12,10 @@ import {
 } from '../scenarios';
 import { format, useKafkaStrings } from '../strings';
 import { Explain } from './Explain';
+import { Story } from './Story';
 
-type Phase = 'ready' | 'playing' | 'done';
+/** How long a beat stays up when the story goes on by itself. */
+const AUTO_MS = 7000;
 
 export interface ScenarioPlayerProps {
   scenario: Scenario;
@@ -22,6 +25,8 @@ export interface ScenarioPlayerProps {
   onRun: (until: (c: Cluster) => boolean, done: () => void) => void;
   /** The step on screen changed (for highlights and the inspector). */
   onStep: (step: ScenarioStep) => void;
+  /** What the story is pointing at right now; null to go back to the step's own focus. */
+  onFocus: (ids: string[] | null) => void;
   onOpen: (id: ScenarioId) => void;
   onExit: () => void;
 }
@@ -38,6 +43,7 @@ export function ScenarioPlayer({
   timeline,
   onRun,
   onStep,
+  onFocus,
   onOpen,
   onExit,
 }: ScenarioPlayerProps) {
@@ -45,7 +51,9 @@ export function ScenarioPlayer({
   const s = t.scenarios;
   const text = s.list[scenario.id];
   const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>('ready');
+  const story = useStory(cluster, onRun);
+  const phase = story.phase;
+  const [auto, setAuto] = useLocalStorage('kafka:story-auto', false);
   const [attempt, setAttempt] = useState(0);
   /** Simulated time each step started at, for Back and Replay. */
   const starts = useRef<number[]>([]);
@@ -59,31 +67,37 @@ export function ScenarioPlayer({
     onStep(step);
   }, [step, onStep]);
 
+  const current = story.current;
+  useEffect(() => {
+    onFocus(current ? current.focus : null);
+  }, [current, onFocus]);
+
+  const { next } = story;
+  useEffect(() => {
+    if (!auto || phase !== 'paused') return;
+    const timer = setTimeout(next, AUTO_MS);
+    return () => clearTimeout(timer);
+  }, [auto, phase, current, next]);
+
   const play = () => {
     starts.current[index] = timeline.now;
-    try {
-      step.act?.(cluster);
-    } catch (e) {
-      if (!(e instanceof KafkaError)) throw e;
-    }
-    const limit = stepRunLimit(step);
-    if (limit === 0) {
-      setPhase('done');
-      return;
-    }
-    const end = cluster.now + limit;
-    setPhase('playing');
-    onRun(
-      (c) => c.now >= end || !!step.until?.(c),
-      () => setPhase('done'),
+    story.start(
+      () => {
+        try {
+          step.act?.(cluster);
+        } catch (e) {
+          if (!(e instanceof KafkaError)) throw e;
+        }
+      },
+      { end: cluster.now + stepRunLimit(step), until: step.until },
     );
   };
 
   const go = (to: number, rewind: boolean) => {
+    story.reset();
     const at = starts.current[to];
     if (rewind && at !== undefined) timeline.seek(at);
     setIndex(to);
-    setPhase('ready');
     setAttempt((n) => n + 1);
   };
 
@@ -117,6 +131,18 @@ export function ScenarioPlayer({
       <Explain text={words.result} vars={vars} />
     </p>
   ) : null;
+
+  const told = (
+    <Story
+      phase={phase}
+      beats={story.beats}
+      quiet={story.quiet}
+      auto={auto}
+      onAuto={setAuto}
+      onNext={story.next}
+      onSkip={story.skip}
+    />
+  );
 
   return (
     <section className="kv-scenario" aria-label={text.title}>
@@ -152,20 +178,23 @@ export function ScenarioPlayer({
         <div className="kv-scenario__question ui-quiz">
           <Question
             key={`${scenario.id}-${index}-${attempt}`}
-            question={{ q: words.question, options: words.options, answer: step.answer ?? 0 }}
+            question={{
+              q: format(words.question, vars ?? {}),
+              options: words.options.map((o) => format(o, vars ?? {})),
+              answer: step.answer ?? 0,
+            }}
             revealed={phase === 'done'}
             checkLabel={s.lockIn}
             onCheck={play}
-          >
-            {result}
-            {nav}
-          </Question>
-          {phase === 'playing' && <p className="kv-muted">{s.playing}</p>}
+          />
+          {told}
+          {phase === 'done' && result}
+          {phase === 'done' && nav}
         </div>
       ) : (
         <>
           {phase === 'ready' && !isNarrative(step) && <Button onClick={play}>{s.play}</Button>}
-          {phase === 'playing' && <p className="kv-muted">{s.playing}</p>}
+          {told}
           {done && result}
           {done && last && !scenario.next && <p className="kv-muted">{s.finished}</p>}
           {done && nav}

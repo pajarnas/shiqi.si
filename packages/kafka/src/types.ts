@@ -113,6 +113,15 @@ export type ClusterEvent =
     }
   | { type: 'commit'; at: number; group: string; topic: string; partition: number; offset: number }
   | {
+      /** The high watermark moved: every in-sync replica now has the records below `to`. */
+      type: 'hw';
+      at: number;
+      topic: string;
+      partition: number;
+      from: number;
+      to: number;
+    }
+  | {
       /** The authorizer turned a client away. Sent once per client and reason, not per request. */
       type: 'auth-denied';
       at: number;

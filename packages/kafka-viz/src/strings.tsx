@@ -388,6 +388,7 @@ export const KAFKA_STRINGS = {
     replicate: 'Broker {to} copied {count} records of {topic}-{partition} from leader {from}',
     consume: '{member} read {count} records from {topic}-{partition}',
     commit: '{group} committed {topic}-{partition} at offset {offset}',
+    hw: '{topic}-{partition}: high watermark {from} → {to}',
     isrShrink: 'Broker {broker} fell out of the ISR of {topic}-{partition}: ISR is now [{isr}]',
     isrExpand: 'Broker {broker} caught up and rejoined the ISR of {topic}-{partition}',
     leader: '{topic}-{partition}: broker {leader} is the new leader (epoch {epoch})',
@@ -432,6 +433,159 @@ export const KAFKA_STRINGS = {
       timeout: 'a member timed out',
       metadata: 'topic metadata changed',
       acl: 'ACLs changed',
+    },
+  },
+  story: {
+    title: 'What just happened',
+    continue: 'Continue',
+    auto: 'Keep going on its own',
+    skip: 'Skip to the result',
+    waiting: 'Running until the next thing happens…',
+    quiet:
+      'After that, {n} more events of the same kinds went by without stopping: the same things repeating.',
+    none: 'Nothing new happened in this step.',
+    beats: {
+      produce: {
+        title: '{producer} hands the record to the leader',
+        body: "Only the <leader>leader</leader> of a partition accepts writes, so {producer} sends to broker {broker}, which leads {topic}-{partition}. The broker appends it to the end of that partition's log file at <offset>offset</offset> {offset}. Right now only the leader has it, and only in memory (the operating system's <pageCache>page cache</pageCache>), not yet on disk.",
+      },
+      ackOk: {
+        title: '{producer} gets its answer',
+        body: 'The write to {topic}-{partition} at offset {offset} is confirmed. What "confirmed" means depends on <acks>acks</acks>: with acks=all it means every in-sync replica has the record; with acks=1 only the leader does.',
+      },
+      ackError: {
+        title: '{producer} gets an error: {error}',
+        body: '{reason}',
+      },
+      replicate: {
+        title: 'Broker {to} copies the new records',
+        body: 'Nobody pushes data to a <follower>follower</follower>. Broker {to} keeps asking leader {from} "anything after offset {fromOffset}?", and this time it got {count} record(s) and appended them to its own copy of {topic}-{partition}.',
+      },
+      hw: {
+        title: 'The high watermark moves from {from} to {to}',
+        body: 'Every in-sync replica now has the records below offset {to}, so the leader moves the <hw>high watermark</hw> there. Records below it are "committed": consumers may read them, and acks=all producers get their answer. The leader learns a follower has a record only from that follower\'s next fetch, which is why this comes a moment after the copy.',
+      },
+      consume: {
+        title: '{member} reads {count} record(s)',
+        body: 'A consumer also fetches from the leader (broker {broker}), starting at offset {fromOffset} of {topic}-{partition}. It only gets records below the high watermark, so it never sees a write that could still be lost. Fresh data is usually still in the page cache, so the broker sends it straight from memory without reading the disk.',
+      },
+      consumeAgain: {
+        title: '{member} reads {redelivered} record(s) a second time',
+        body: 'This group had already processed these records but had not committed that progress, so it starts again from the last committed offset. That is "at least once" delivery: nothing is skipped, some things repeat.',
+      },
+      commit: {
+        title: '{group} saves its place: offset {offset}',
+        body: 'Reading a record does not tell Kafka anything. The group sends the offset of the next record to read in {topic}-{partition}, and Kafka stores it as the <commit>committed offset</commit>. If the consumer restarts, it carries on from here.',
+      },
+      isrShrink: {
+        title: 'Broker {broker} drops out of the ISR',
+        body: 'It has not caught up with the leader for too long (replica.lag.time.max.ms), so the leader stops waiting for it. The <isr>ISR</isr> of {topic}-{partition} is now [{isr}]. The high watermark can move again, but there is one fewer copy to fall back on.',
+      },
+      isrExpand: {
+        title: 'Broker {broker} is back in the ISR',
+        body: 'It has caught up to the leader, so it counts as in sync again. The ISR of {topic}-{partition} is now [{isr}].',
+      },
+      leader: {
+        title: 'Broker {leader} becomes the leader of {topic}-{partition}',
+        body: 'The <controller>controller</controller> picked a replica that was in the ISR, so it has every committed record. The leader <epoch>epoch</epoch> goes up to {epoch}, which tells everyone this is a new reign.',
+      },
+      leaderUnclean: {
+        title: 'Broker {leader} becomes leader without being in sync',
+        body: 'No in-sync replica is alive, and <unclean>unclean election</unclean> is allowed, so the controller takes an out-of-date replica. The partition is writable again, but anything only the old leader had is gone.',
+      },
+      leaderNone: {
+        title: '{topic}-{partition} has no leader',
+        body: 'Every in-sync replica is down, so nobody can take writes or serve reads for this partition. Producers wait and consumers get nothing until one comes back.',
+      },
+      truncate: {
+        title: 'Broker {broker} cuts its log back to offset {to}',
+        body: 'Its copy of {topic}-{partition} had {lost} record(s) the leader does not have. A follower must match its leader exactly, so it <truncate>truncates</truncate> them and fetches again from {to}. No data is lost: those records were never committed.',
+      },
+      truncateLoss: {
+        title: 'Broker {broker} throws away {lost} record(s), {gone} of them for good',
+        body: 'It cut its copy of {topic}-{partition} back to offset {to}. {gone} of those records existed nowhere else, and {goneAcked} had already been confirmed to a producer: that is acknowledged data lost.',
+      },
+      brokerDown: {
+        title: 'Broker {broker} stops',
+        body: 'It shut down cleanly: everything it wrote is on disk. Partitions it led need a new leader, and its replicas stop copying.',
+      },
+      brokerPowerLoss: {
+        title: 'Broker {broker} loses power',
+        body: 'A crash, not a shutdown: records still in its <pageCache>page cache</pageCache> that were never <fsync>flushed</fsync> to disk are gone when it comes back.',
+      },
+      brokerUp: {
+        title: 'Broker {broker} starts again',
+        body: 'Its replicas start fetching from their leaders to catch up. Until they have, they are not in the ISR.',
+      },
+      controller: {
+        title: 'Broker {broker} is now the controller',
+        body: 'The <controller>controller</controller> is the broker that notices failures and picks new leaders. There is always exactly one.',
+      },
+      brokerSlow: {
+        title: 'Broker {broker} gets slow',
+        body: 'Its disk now takes far longer, so its replicas fetch much less often and fall behind their leaders.',
+      },
+      brokerFast: {
+        title: 'Broker {broker} is fast again',
+        body: 'Its replicas fetch at the normal pace and can catch up.',
+      },
+      flush: {
+        title: 'Broker {broker} flushes to disk',
+        body: "Writes land in memory first, in the operating system's <pageCache>page cache</pageCache>, and the operating system writes them to disk a little later. Now {bytes} bytes of them are safely on disk, so a power cut can no longer take them. Kafka does not fsync on every write by default: it relies on copies on other brokers, not on the disk, to keep data safe.",
+      },
+      rebalanceStart: {
+        title: 'Group {group} pauses to rebalance',
+        body: 'Why: {reason}. The <coordinator>coordinator</coordinator> asks every member to rejoin so it can share the partitions out again. Members stop reading until it is done.',
+      },
+      rebalanceEnd: {
+        title: 'Group {group} has a new plan',
+        body: 'Each of the {members} member(s) now owns some partitions, and nobody shares one. They resume reading from the committed offsets.',
+      },
+      segmentDeleted: {
+        title: 'Retention deletes {count} old record(s)',
+        body: 'A whole <segment>segment</segment> of {topic}-{partition} is older or bigger than <retention>retention</retention> allows, so broker {broker} deletes it. Offsets are never reused: the log just starts later now.',
+      },
+      compacted: {
+        title: 'Compaction removes {removed} old record(s)',
+        body: '<compaction>Compaction</compaction> keeps only the latest record for each key in {topic}-{partition}, so older values of the same key go.',
+      },
+      offsetReset: {
+        title: '{group} starts {topic}-{partition} at offset {to}',
+        body: 'The group had no committed offset there, or it pointed at data that is gone, so the consumer used auto.offset.reset to choose where to start.',
+      },
+      authDenied: {
+        title: '{client} is turned away: {error}',
+        body: 'The authorizer found no ACL that lets {principal} {operation} the {resource} {name}. Kafka denies anything that is not explicitly allowed.',
+      },
+      aclAdd: {
+        title: 'A new rule: {permission} {principal} to {operation} {resource} {name}',
+        body: 'From the next request on, the authorizer checks against this rule too. A Deny always beats an Allow.',
+      },
+      aclRemove: {
+        title: 'A rule is removed',
+        body: '{principal} no longer has {permission} for {operation} on {resource} {name}.',
+      },
+      authorizerOn: {
+        title: 'The authorizer is switched on',
+        body: 'Every request is now checked against the ACLs. Anything not explicitly allowed is refused.',
+      },
+      authorizerOff: {
+        title: 'The authorizer is switched off',
+        body: 'Every client may do anything again.',
+      },
+    },
+    errors: {
+      NOT_ENOUGH_REPLICAS:
+        'Fewer replicas are in sync than <minIsr>min.insync.replicas</minIsr> requires, so the leader refuses acks=all writes rather than accept them with too few copies. The producer will retry.',
+      LEADER_NOT_AVAILABLE:
+        'The partition has no leader right now, so there is nobody to write to. The producer keeps the record and retries.',
+      NOT_LEADER_OR_FOLLOWER:
+        'The broker it asked is no longer the leader. The producer refreshes its metadata and sends to the new one.',
+      REQUEST_TIMED_OUT:
+        'No answer arrived within delivery.timeout.ms, so the producer gives up on this record.',
+      TOPIC_AUTHORIZATION_FAILED:
+        'There is no ACL allowing this client to write to the topic. Kafka denies anything not explicitly allowed.',
+      other: 'The request failed.',
     },
   },
   legend: {
@@ -604,7 +758,6 @@ export const KAFKA_STRINGS = {
     exit: 'Leave the scenario',
     progress: 'Step {n} of {total}',
     play: 'Play this step',
-    playing: 'Playing…',
     lockIn: 'Lock in my guess and play',
     next: 'Next step',
     back: 'Previous step',
@@ -624,13 +777,42 @@ export const KAFKA_STRINGS = {
         summary: 'Follow one record from the producer to three brokers to a consumer.',
         steps: {
           cluster: {
-            title: 'Three brokers, one topic',
-            body: 'Each box is a broker: a server with a disk. The topic <b>orders</b> has 3 <partition>partitions</partition>, and each partition has 3 <replica>replicas</replica>, one per broker. In every row, <b>L</b> marks the <leader>leader</leader> and <b>F</b> the <follower>followers</follower>. Leaders are spread so each broker leads one partition.',
+            title: 'What you are looking at',
+            body: 'Each big box is a <b>broker</b>: one Kafka server, with its own memory and disk. Here there are 3. The topic <b>orders</b> is split into 3 <partition>partitions</partition> (the rows), and every partition is kept on all 3 brokers as 3 <replica>replicas</replica>. In each row one copy is the <leader>leader</leader> (<b>L</b>), the only one that takes writes; the other two are <follower>followers</follower> (<b>F</b>) that copy it.',
+            result: '',
+          },
+          producer: {
+            title: 'Inside the producer, before anything is sent',
+            body: 'The program <b>app</b> wants to send the record key <b>alice</b>, value "order #1". First its serializers turn key and value into bytes. Then the <murmur2>partitioner</murmur2> hashes the key "alice": the same key always lands in the same partition, here partition {partition}. The record then waits a moment in a batch in the producer\'s memory (linger.ms), so several records can travel in one request. Finally the producer looks up which broker leads partition {partition} and sends the batch there over TCP.',
             result: '',
           },
           send: {
-            title: 'Send a record',
-            body: 'The producer <b>app</b> sends key <b>alice</b>, value "order #1", with <acks>acks=all</acks>. The <murmur2>partitioner</murmur2> hashes "alice" and picks partition {partition}.',
+            title: 'The broker receives it',
+            body: 'Press the button and watch the square fly from app to one broker.',
+            question: 'Which broker receives the record?',
+            options: [
+              'Only the leader of partition {partition}, broker {leader}',
+              'All three brokers at once',
+              'Whichever broker is least busy',
+            ],
+            result:
+              "Only broker {leader} got it. Inside the broker a network thread reads the request and an I/O thread appends the record to the end of the partition's log file. The write goes to the operating system, which keeps it in memory for now (the <pageCache>page cache</pageCache>). The other two brokers do not have it yet, and app has no answer yet.",
+          },
+          replicate: {
+            title: 'The copies',
+            body: 'The record now sits on the leader only. One broker failing would lose it.',
+            question: 'How do the two followers get it?',
+            options: [
+              'The leader pushes it to them',
+              'Each follower keeps asking the leader for anything new, and pulls it',
+              'The producer sends it to them too',
+            ],
+            result:
+              'Followers pull. Each one sends the leader a fetch request every moment saying "I have everything before offset N, what comes after?", and appends what comes back to its own log. Now all three brokers have the record.',
+          },
+          ack: {
+            title: 'The answer',
+            body: 'app sent with <acks>acks=all</acks>: it wants to hear back only once the record is safe.',
             question: 'When does app get its answer?',
             options: [
               'As soon as the leader has written it',
@@ -638,15 +820,21 @@ export const KAFKA_STRINGS = {
               'When a consumer has read it',
             ],
             result:
-              'The record lands on the leader first. The followers fetch it, and only when their next fetch shows the leader they have it does the <hw>high watermark</hw> move past it. That is when acks=all is answered.',
+              'The leader only learns that a follower has the record from that follower\'s next fetch. Once every in-sync replica has it, the leader moves the <hw>high watermark</hw> past it, and only then does acks=all answer app. That is what "committed" means in Kafka.',
           },
-          hw: {
-            title: 'Why the high watermark lags',
-            body: 'Followers pull: every 250 ms each one asks the leader for records from its own <leo>log end offset</leo>. That fetch offset is how the leader learns how far the follower got, so the HW moves one fetch after the copy arrives, and the follower hears the new HW one fetch later still. Look at the small "own HW" mark on each follower row in the inspector.',
-            result: '',
+          disk: {
+            title: 'Memory and disk',
+            body: 'The record is confirmed and on three brokers.',
+            question: 'Is it on a disk yet?',
+            options: [
+              'Not necessarily: it is in the page cache until the operating system writes it out',
+              'Yes: Kafka waits for the disk (fsync) before it confirms',
+            ],
+            result:
+              'Kafka hands writes to the operating system and lets it decide when to write them to disk: here every few seconds (the broker box shows how much is still only in memory). Kafka does not wait for the disk before confirming. It counts on three copies on three machines: a single crash cannot take the record, because the others still have it.',
           },
           read: {
-            title: 'A consumer joins',
+            title: 'A consumer reads it',
             body: 'A consumer group <b>billing</b> starts with one member and auto.offset.reset=earliest.',
             question: 'Where does it start reading?',
             options: [
@@ -655,13 +843,13 @@ export const KAFKA_STRINGS = {
               'Wherever another group stopped',
             ],
             result:
-              'It joined the group, the <coordinator>coordinator</coordinator> gave it all three partitions after a short <rebalance>rebalance</rebalance>, and it fetched from offset 0. It can only read below the high watermark.',
+              'It joined the group, the <coordinator>coordinator</coordinator> gave it all three partitions after a short <rebalance>rebalance</rebalance>, and it fetched from offset 0. A consumer also reads from the leader, and only up to the high watermark. The data was still in the page cache, so the broker sent it straight from memory.',
           },
           commit: {
             title: 'Saving progress',
-            body: "Reading does not tell Kafka anything. Every auto.commit.interval.ms (5 s by default) the consumer sends its position as the group's <commit>committed offset</commit>.",
+            body: "Reading does not tell Kafka anything. Every auto.commit.interval.ms (5 s by default) the consumer sends its position, which Kafka stores as the group's <commit>committed offset</commit>.",
             result:
-              "The pin in the inspector is billing's committed offset: 1, the next record to read. If billing restarts, it resumes there. Anything read but not yet committed would be read again: that is at-least-once delivery.",
+              "The pin in the inspector is billing's committed offset: 1, the next record to read. If billing restarts, it carries on from there. Anything read but not yet committed is read again: that is at-least-once delivery.",
           },
         },
       },
