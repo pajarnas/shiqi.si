@@ -417,6 +417,10 @@ export const en = {
     notesLede: 'The concepts behind what you see above. They also live under Notes, tagged #kafka.',
     noNotes: 'No Kafka notes yet.',
     lab: KAFKA_STRINGS,
+    start: {
+      text: 'New here? Start with the happy path: follow one record from the producer, into Kafka, onto disk and out to a consumer, one event at a time.',
+      button: 'Start: the life of one record',
+    },
     course: 'New: build Kafka yourself, one function at a time.',
     courseLink: 'Start the course',
     mode: { label: 'What to show', sim: 'Simulation', real: 'Real cluster' },

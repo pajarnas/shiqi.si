@@ -1952,6 +1952,10 @@ export const zh: DeepPartial<Strings> = {
         },
       },
     },
+    start: {
+      text: '第一次来？先看正常流程：跟着一条记录，从生产者发出，进到 Kafka，写到磁盘，再被消费者读走，一件事一件事地讲。',
+      button: '开始：一条记录的一生',
+    },
     course: '新内容：自己动手写一个 Kafka，一次一个函数。',
     courseLink: '开始这门课',
   },
