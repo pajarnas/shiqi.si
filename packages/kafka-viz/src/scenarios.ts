@@ -167,7 +167,6 @@ const firstRecord: Scenario = {
         void c.addConsumer({
           group: 'billing',
           topics: ['orders'],
-          clientId: 'billing-1',
           offsetReset: 'earliest',
           rate: 4,
         }),
@@ -494,8 +493,8 @@ const rebalance: Scenario = {
       ['eager-app', 'range'],
       ['coop-app', 'cooperative-sticky'],
     ] as const) {
-      for (const n of [1, 2]) {
-        c.addConsumer({ group, topics: ['orders'], clientId: `${group}-${n}`, rate: 8, assignor });
+      for (let i = 0; i < 2; i++) {
+        c.addConsumer({ group, topics: ['orders'], rate: 8, assignor });
       }
     }
     return c;
@@ -511,7 +510,7 @@ const rebalance: Scenario = {
       answer: 1,
       act: (c) => {
         for (const group of ['eager-app', 'coop-app'])
-          c.addConsumer({ group, topics: ['orders'], clientId: `${group}-3`, rate: 8 });
+          c.addConsumer({ group, topics: ['orders'], rate: 8 });
       },
       runMs: 3000,
       focus: () => [anchorId.group('eager-app'), anchorId.group('coop-app')],
@@ -528,8 +527,7 @@ const crashVsLeave: Scenario = {
     const c = new Cluster({ brokers: 3, seed: 707 });
     c.createTopic('jobs', { partitions: 4, replicationFactor: 2 });
     c.addProducer({ id: 'scheduler', topic: 'jobs', rate: 16, acks: 1, keys: 'unique' });
-    for (const n of [1, 2, 3])
-      c.addConsumer({ group: 'workers', topics: ['jobs'], clientId: `worker-${n}`, rate: 10 });
+    for (let i = 0; i < 3; i++) c.addConsumer({ group: 'workers', topics: ['jobs'], rate: 10 });
     return c;
   },
   steps: [
@@ -542,7 +540,7 @@ const crashVsLeave: Scenario = {
       id: 'leave',
       answer: 0,
       act: (c) => {
-        const m = memberByClient(c, 'workers', 'worker-3');
+        const m = memberByClient(c, 'workers', 'workers-pod2');
         if (m) c.removeConsumer('workers', m.id);
       },
       runMs: 2500,
@@ -553,7 +551,7 @@ const crashVsLeave: Scenario = {
       id: 'crash',
       answer: 1,
       act: (c) => {
-        const m = memberByClient(c, 'workers', 'worker-2');
+        const m = memberByClient(c, 'workers', 'workers-pod1');
         if (m) c.crashConsumer('workers', m.id);
       },
       until: (c) => c.group('workers').members.size === 1 && stable(c, 'workers'),
@@ -587,7 +585,7 @@ const keys: Scenario = {
       keys: 'fixed',
       keySet: BANK_KEYS,
     });
-    c.addConsumer({ group: 'auditors', topics: ['accounts'], clientId: 'auditor-1', rate: 10 });
+    c.addConsumer({ group: 'auditors', topics: ['accounts'], rate: 10 });
     return c;
   },
   steps: [
@@ -616,11 +614,10 @@ const keys: Scenario = {
       id: 'idle',
       answer: 1,
       act: (c) => {
-        for (const n of [2, 3, 4, 5])
+        for (let i = 0; i < 4; i++)
           c.addConsumer({
             group: 'auditors',
             topics: ['accounts'],
-            clientId: `auditor-${n}`,
             rate: 10,
           });
       },
@@ -660,7 +657,6 @@ const retention: Scenario = {
     c.addConsumer({
       group: 'archiver',
       topics: ['app-logs'],
-      clientId: 'archiver',
       rate: 0.5,
       offsetReset: 'earliest',
     });
@@ -700,7 +696,7 @@ const allow = (
   operation,
   permission: 'Allow',
 });
-const billing = (c: Cluster) => memberByClient(c, 'billing', 'billing-1');
+const billing = (c: Cluster) => memberByClient(c, 'billing', 'billing-pod0');
 
 const acls: Scenario = {
   id: 'acls',
@@ -709,7 +705,7 @@ const acls: Scenario = {
     const c = new Cluster({ brokers: 3, seed: 909 });
     c.createTopic('orders', { partitions: 2, replicationFactor: 3 });
     c.addProducer({ id: 'checkout', topic: 'orders', rate: 6, acks: 'all', keys: 'fixed' });
-    c.addConsumer({ group: 'billing', topics: ['orders'], clientId: 'billing-1', rate: 10 });
+    c.addConsumer({ group: 'billing', topics: ['orders'], rate: 10 });
     return c;
   },
   steps: [
@@ -731,7 +727,7 @@ const acls: Scenario = {
     {
       id: 'group',
       answer: 2,
-      act: (c) => c.addAcl(allow('User:billing-1', 'group', 'billing', 'Read')),
+      act: (c) => c.addAcl(allow('User:billing-pod0', 'group', 'billing', 'Read')),
       until: (c) => stable(c, 'billing') && billing(c)?.error === 'TOPIC_AUTHORIZATION_FAILED',
       focus: () => [anchorId.group('billing')],
       expect: (c) => billing(c)?.error === 'TOPIC_AUTHORIZATION_FAILED',
@@ -739,7 +735,7 @@ const acls: Scenario = {
     {
       id: 'topic',
       act: (c) => {
-        c.addAcl(allow('User:billing-1', 'topic', 'orders', 'Read'));
+        c.addAcl(allow('User:billing-pod0', 'topic', 'orders', 'Read'));
         c.addAcl(allow('User:checkout', 'topic', 'orders', 'Write'));
       },
       runMs: 4000,

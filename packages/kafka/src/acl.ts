@@ -68,7 +68,7 @@ export const sameAcl = (a: Acl, b: Acl) =>
   a.operation === b.operation &&
   a.permission === b.permission;
 
-/** `User:billing-1 has Allow permission for operations: Read from hosts: *` and its resource line. */
+/** `User:billing-pod0 has Allow permission for operations: Read from hosts: *` and its resource line. */
 export function describeAcl(a: Acl): string {
   return `(principal=${a.principal}, host=*, operation=${a.operation.toUpperCase()}, permissionType=${a.permission.toUpperCase()})`;
 }

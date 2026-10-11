@@ -90,7 +90,7 @@ describe('CLI', () => {
     expect(desc[1]).toMatch(
       /^GROUP\s+TOPIC\s+PARTITION\s+CURRENT-OFFSET\s+LOG-END-OFFSET\s+LAG\s+CONSUMER-ID/,
     );
-    expect(desc.slice(2).every((l) => /\s0\s+consumer-g-1-/.test(l))).toBe(true);
+    expect(desc.slice(2).every((l) => /\s0\s+g-pod0-/.test(l))).toBe(true);
     expect(
       sh(c, 'kafka-consumer-groups --reset-offsets --group g --topic t --to-earliest --execute')[0],
     ).toMatch(/inactive/);

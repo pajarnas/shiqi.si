@@ -258,7 +258,7 @@ export class Cluster {
   private traces = new WeakMap<KRecord, RecordTrace>();
   private pending: PendingAck[] = [];
   private nextCleanAt = 0;
-  private counters = { producer: 0, client: 0 };
+  private counters = { producer: 0 };
   private eventListeners = new Set<(e: ClusterEvent) => void>();
   private changeListeners = new Set<() => void>();
 
@@ -1098,7 +1098,8 @@ export class Cluster {
       options.assignor ?? 'range',
       options.offsetReset ?? 'latest',
     );
-    const clientId = options.clientId ?? `consumer-${options.group}-${++this.counters.client}`;
+    // Named after its instance, so pod0 of group billing is billing-pod0.
+    const clientId = options.clientId ?? `${options.group}-pod${g.joined}`;
     const suffix = Math.floor(this.random() * 0xffffffff)
       .toString(16)
       .padStart(8, '0');

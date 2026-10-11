@@ -111,7 +111,7 @@ export const KAFKA_STRINGS = {
       totalLag:
         "Records written to this group's partitions that it has not read yet, added up. 0 means it is caught up.",
       member:
-        'Consumer instance pod{n}: one running copy of your app, like one pod. Its real name in Kafka is its client.id, {clientId}. Add another instance to the same group and the partitions are split between them.',
+        "Consumer instance pod{n}: one running copy of your app, like one pod. The app tells Kafka its name in the client.id setting, here {clientId}; that is the name you see in Kafka's logs and in kafka-consumer-groups. Add another instance to the same group and the partitions are split between them.",
       rate: 'How many records this consumer processes per second.',
       partition:
         'P{partition} is partition {partition} of topic {topic} (Kafka writes it {topic}-{partition}). Only this instance in the group reads it; the line from it shows which broker it reads from.',
@@ -1250,8 +1250,8 @@ export const KAFKA_STRINGS = {
             result: '',
           },
           leave: {
-            title: 'worker-3 shuts down cleanly',
-            body: 'worker-3 commits its position and sends LeaveGroup.',
+            title: 'workers-pod2 shuts down cleanly',
+            body: 'workers-pod2 commits its position and sends LeaveGroup.',
             question: 'How long until its partition is picked up?',
             options: [
               'Right away: the coordinator rebalances as soon as it hears LeaveGroup',
@@ -1261,8 +1261,8 @@ export const KAFKA_STRINGS = {
             result: 'The group rebalanced immediately and nothing was read twice.',
           },
           crash: {
-            title: 'worker-2 crashes',
-            body: 'worker-2 dies: no LeaveGroup, no final commit, it just stops heartbeating.',
+            title: 'workers-pod1 crashes',
+            body: 'workers-pod1 dies: no LeaveGroup, no final commit, it just stops heartbeating.',
             question: 'What happens to its partitions?',
             options: [
               'Taken over at once',
@@ -1270,13 +1270,13 @@ export const KAFKA_STRINGS = {
               'Their records are lost',
             ],
             result:
-              'The coordinator could not tell a crash from a pause, so it waited out the <session>session timeout</session>. Lag built up meanwhile. Then it removed worker-2 and rebalanced.',
+              'The coordinator could not tell a crash from a pause, so it waited out the <session>session timeout</session>. Lag built up meanwhile. Then it removed workers-pod1 and rebalanced.',
           },
           dupes: {
-            title: "Who reads worker-2's records?",
-            body: "worker-1 now owns all four partitions and starts each from the group's committed offset.",
-            question: 'What about records worker-2 had processed but not yet committed?',
-            options: ['Skipped', 'Processed again by worker-1', 'Lost'],
+            title: "Who reads workers-pod1's records?",
+            body: "workers-pod0 now owns all four partitions and starts each from the group's committed offset.",
+            question: 'What about records workers-pod1 had processed but not yet committed?',
+            options: ['Skipped', 'Processed again by workers-pod0', 'Lost'],
             result:
               '{n} records were processed twice. That is at-least-once delivery: make processing idempotent, or use transactions to commit output and offsets together.',
           },
@@ -1367,36 +1367,36 @@ export const KAFKA_STRINGS = {
         steps: {
           open: {
             title: 'An open cluster',
-            body: '<b>checkout</b> writes to <b>orders</b> and <b>billing-1</b> reads it in group <b>billing</b>. Nobody checks who they are: the authorizer is off.',
+            body: '<b>checkout</b> writes to <b>orders</b> and <b>billing-pod0</b> reads it in group <b>billing</b>. Nobody checks who they are: the authorizer is off.',
             result: '',
           },
           on: {
             title: 'Turn on the authorizer',
             body: 'Like setting <b>authorizer.class.name</b> on every broker. There are no ACLs yet.',
-            question: 'What happens to checkout and billing-1?',
+            question: 'What happens to checkout and billing-pod0?',
             options: [
               'Nothing: rules only apply to new clients',
               'Both are refused: with no ACL that matches, the answer is no',
               'Only writes are checked',
             ],
             result:
-              'checkout gets TOPIC_AUTHORIZATION_FAILED on every send, and billing-1 GROUP_AUTHORIZATION_FAILED: it can no longer join its group, so it owns no partitions. Kafka denies by default (allow.everyone.if.no.acl.found=false).',
+              'checkout gets TOPIC_AUTHORIZATION_FAILED on every send, and billing-pod0 GROUP_AUTHORIZATION_FAILED: it can no longer join its group, so it owns no partitions. Kafka denies by default (allow.everyone.if.no.acl.found=false).',
           },
           group: {
-            title: 'Let billing-1 into its group',
-            body: '<b>kafka-acls --add --allow-principal User:billing-1 --operation Read --group billing</b>',
-            question: 'Can billing-1 read records now?',
+            title: 'Let billing-pod0 into its group',
+            body: '<b>kafka-acls --add --allow-principal User:billing-pod0 --operation Read --group billing</b>',
+            question: 'Can billing-pod0 read records now?',
             options: [
               'Yes, Read on the group is all a consumer needs',
               'No, it still cannot join',
               'It joins and gets partitions, but every fetch is refused',
             ],
             result:
-              'Joining a group and fetching from a topic are checked separately. billing-1 is back in the group with its partitions, but each fetch fails with TOPIC_AUTHORIZATION_FAILED.',
+              'Joining a group and fetching from a topic are checked separately. billing-pod0 is back in the group with its partitions, but each fetch fails with TOPIC_AUTHORIZATION_FAILED.',
           },
           topic: {
             title: 'Grant the topic',
-            body: 'Read on topic orders for billing-1, and Write on it for checkout. Everything flows again.',
+            body: 'Read on topic orders for billing-pod0, and Write on it for checkout. Everything flows again.',
             result:
               'A consumer needs Read on its group and on its topics; a producer needs Write on its topics. Read and Write also allow Describe, which clients use to fetch metadata.',
           },

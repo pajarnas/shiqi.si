@@ -18,12 +18,11 @@ export function demoCluster(seed = 1984): Cluster {
   c.addProducer({ id: 'checkout', topic: 'orders', rate: 3, acks: 'all', keys: 'fixed' });
   c.addProducer({ id: 'clicks', topic: 'orders', rate: 2, acks: 1, keys: 'none' });
   c.addProducer({ id: 'profile-svc', topic: 'profiles', rate: 1.5, acks: 'all', keys: 'fixed' });
-  c.addConsumer({ group: 'billing', topics: ['orders'], clientId: 'billing-1', rate: 3 });
-  c.addConsumer({ group: 'billing', topics: ['orders'], clientId: 'billing-2', rate: 3 });
+  c.addConsumer({ group: 'billing', topics: ['orders'], rate: 3 });
+  c.addConsumer({ group: 'billing', topics: ['orders'], rate: 3 });
   c.addConsumer({
     group: 'search-index',
     topics: ['orders', 'profiles'],
-    clientId: 'indexer',
     rate: 8,
     assignor: 'cooperative-sticky',
     offsetReset: 'earliest',
