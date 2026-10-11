@@ -60,6 +60,13 @@ export const KAFKA_STRINGS = {
       fixed: 'A few keys',
       unique: 'Unique keys',
     },
+    keyMap: {
+      none: 'No key: the producer fills a batch for one partition, then moves to the next.',
+      fixed:
+        'Each record gets one of these keys. Partition = hash(key) mod {n}, so a key always lands in the same partition:',
+      unique: 'Every record gets a new key, so the hash spreads them over all {n} partitions.',
+      chip: 'Records with key {key} go to {topic}-{partition}',
+    },
     stats: 'sent {sent} · acked {acked} · failed {failed}',
     lastError: 'Last error: {error}',
     buffered:

@@ -146,6 +146,9 @@ export interface BufferedRecord {
   at: number;
 }
 
+/** The keys a "fixed keys" producer picks from unless told otherwise. */
+export const DEFAULT_KEYS = ['alice', 'bob', 'carol', 'dave', 'erin', 'frank'] as const;
+
 /** Most records a producer holds before send() blocks (buffer.memory, at toy scale). */
 export const PRODUCER_BUFFER_MAX = 200;
 
@@ -902,7 +905,7 @@ export class Cluster {
       rate: options.rate ?? 4,
       acks: options.acks ?? 'all',
       keys: options.keys ?? 'none',
-      keySet: options.keySet ?? ['alice', 'bob', 'carol', 'dave', 'erin', 'frank'],
+      keySet: options.keySet ?? [...DEFAULT_KEYS],
       batchSize: options.batchSize ?? 8,
       paused: false,
       sent: 0,

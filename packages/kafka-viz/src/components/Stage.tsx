@@ -1,8 +1,17 @@
-import type { Broker, Cluster, Group, Member, Partition, Producer } from '@shiqi/kafka';
+import {
+  partitionForKey,
+  type Broker,
+  type Cluster,
+  type Group,
+  type Member,
+  type Partition,
+  type Producer,
+} from '@shiqi/kafka';
 import { Button, cx, PixelIcon } from '@shiqi/ui';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { anchorId, anchorRef, type AnchorRegistry } from '../anchors';
 import { bytes } from '../format';
+import { keyColor } from '../keys';
 import { format, useKafkaStrings } from '../strings';
 import { LogStrip } from './LogStrip';
 import { PacketLayer } from './PacketLayer';
@@ -341,6 +350,34 @@ function BufferMeter({ cluster, producer: p }: { cluster: Cluster; producer: Pro
   );
 }
 
+/** Which key goes to which partition, in the key's own colour, so a record can be followed. */
+function KeyMap({ cluster, producer: p }: { cluster: Cluster; producer: Producer }) {
+  const t = useKafkaStrings().producer.keyMap;
+  const n = cluster.topics.get(p.topic)?.partitions.length ?? 0;
+  if (p.keys !== 'fixed' || n === 0)
+    return <p className="kv-client__line kv-muted">{format(t[p.keys], { n })}</p>;
+  return (
+    <div className="kv-keymap">
+      <p className="kv-client__line kv-muted">{format(t.fixed, { n })}</p>
+      <ul className="kv-keymap__list">
+        {p.keySet.map((key) => {
+          const partition = partitionForKey(key, n);
+          return (
+            <li
+              key={key}
+              className="kv-keymap__key"
+              title={format(t.chip, { key, topic: p.topic, partition })}
+            >
+              <span className="kv-swatch" style={{ background: keyColor(key) }} />
+              {key} → {partition}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function ProducerCard({
   cluster,
   producer: p,
@@ -368,7 +405,7 @@ function ProducerCard({
         → <b>{p.topic}</b> · {format(t.producer.rate, { rate: p.rate })} ·{' '}
         <span className="kv-tag">{format(t.producer.acks, { acks: String(p.acks) })}</span>
       </p>
-      <p className="kv-client__line kv-muted">{t.producer.keys[p.keys]}</p>
+      <KeyMap cluster={cluster} producer={p} />
       {cluster.authorizer && <p className="kv-client__line kv-muted">{p.principal}</p>}
       <p className="kv-client__line kv-muted">
         {format(t.producer.stats, { sent: p.sent, acked: p.acked, failed: p.failed })}

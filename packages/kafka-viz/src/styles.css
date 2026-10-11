@@ -1795,3 +1795,21 @@ button.kv-cell:focus-visible,
 .kv-legend__num {
   font-variant-numeric: tabular-nums;
 }
+
+/* Producer card: which key goes to which partition. */
+.kv-keymap__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-keymap__key {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-sm);
+}
