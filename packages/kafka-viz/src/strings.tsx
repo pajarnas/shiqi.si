@@ -63,7 +63,9 @@ export const KAFKA_STRINGS = {
     stats: 'sent {sent} · acked {acked} · failed {failed}',
     lastError: 'Last error: {error}',
     buffered:
-      '{n} records waiting in the producer: no leader to send to. Nothing goes on the wire; they fail with a timeout after {timeout} s.',
+      '{n} records are waiting for {partitions}, which has no leader right now. Its other partitions still get records. A record with a key must go to the partition its key hashes to, so the producer cannot send it elsewhere: it holds it, and fails it with a timeout after {timeout} s.',
+    bufferedAll:
+      '{n} records are waiting in the producer: no partition of {topic} has a leader right now, so there is nowhere to send them. They fail with a timeout after {timeout} s.',
     bufferAge: 'Oldest has waited {age} of {timeout} s',
     pause: 'Pause',
     resume: 'Resume',

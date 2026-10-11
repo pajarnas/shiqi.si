@@ -313,10 +313,21 @@ function BufferMeter({ cluster, producer: p }: { cluster: Cluster; producer: Pro
   const timeout = cluster.settings.deliveryTimeoutMs;
   const age = cluster.now - (p.buffered[0]?.at ?? cluster.now);
   const sec = (ms: number) => Math.round(ms / 1000);
+  const noLeaderAnywhere = !!cluster.topics
+    .get(p.topic)
+    ?.partitions.every((x) => x.leader === null);
   return (
     <div className="kv-client__buffer">
       <p className="kv-client__line">
-        {format(t.producer.buffered, { n: p.buffered.length, timeout: sec(timeout) })}
+        {format(noLeaderAnywhere ? t.producer.bufferedAll : t.producer.buffered, {
+          n: p.buffered.length,
+          topic: p.topic,
+          partitions: [...new Set(p.buffered.map((r) => r.partition))]
+            .sort((a, b) => a - b)
+            .map((n) => `${p.topic}-${n}`)
+            .join(', '),
+          timeout: sec(timeout),
+        })}
       </p>
       <Meter
         label="⏱"
