@@ -309,9 +309,11 @@ function ReplicaRow({
           hw: p.highWatermark,
         })}
       >
-        <span className="kv-replica__name">
-          {p.topic}
-          <b>-{p.id}</b>
+        <span
+          className="kv-replica__name"
+          title={format(t.broker.partitionFull, { topic: p.topic, partition: p.id })}
+        >
+          {p.topic} <b>{format(t.broker.partitionShort, { partition: p.id })}</b>
         </span>
         <span className="kv-replica__role" title={roleText}>
           {role === 'leader' ? 'L' : role === 'follower' ? 'F' : '×'}
@@ -506,7 +508,9 @@ function GroupCard({
             <div className="kv-member__head">
               <PixelIcon name={m.alive ? 'face' : 'blob'} size={16} />
               <span className="kv-member__name">
-                <Term definition={h.member}>{m.clientId}</Term>
+                <Term definition={format(h.member, { n: m.instance, clientId: m.clientId })}>
+                  {format(t.group.instance, { n: m.instance })}
+                </Term>
               </span>
               <span className="kv-muted">
                 <Term definition={h.rate}>{format(t.group.rate, { rate: m.rate })}</Term>
@@ -528,6 +532,7 @@ function GroupCard({
                   return (
                     <li
                       key={`${tp.topic}-${tp.partition}`}
+                      ref={anchorRef(anchors, anchorId.owned(g.id, m.id, tp.topic, tp.partition))}
                       className={cx('kv-chip', (lag ?? 0) > 20 && 'kv-chip--hot')}
                     >
                       <Term
@@ -536,7 +541,7 @@ function GroupCard({
                           partition: tp.partition,
                         })}
                       >
-                        {tp.topic}-{tp.partition}
+                        {tp.topic} {format(t.broker.partitionShort, { partition: tp.partition })}
                       </Term>
                       {lag !== undefined && <span>{format(t.group.lag, { n: lag })}</span>}
                     </li>

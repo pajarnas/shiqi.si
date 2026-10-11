@@ -117,6 +117,67 @@ function drawPacket(
   }
 }
 
+type Point = ReturnType<typeof centre>;
+
+/** The two facing edges of boxes a and b, so a line between them doesn't cross either. */
+function facingEdges(a: Point, b: Point) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    const s = Math.sign(dx) || 1;
+    return [a.x + (s * a.w) / 2, a.y, b.x - (s * b.w) / 2, b.y] as const;
+  }
+  const s = Math.sign(dy) || 1;
+  return [a.x, a.y + (s * a.h) / 2, b.x, b.y - (s * b.h) / 2] as const;
+}
+
+/**
+ * Who reads what: a dashed line from each partition's leader to the consumer
+ * instance that owns it. Hovering an instance or a partition brings its lines
+ * forward and fades the rest.
+ */
+function drawOwnership(
+  ctx: CanvasRenderingContext2D,
+  c: Cluster,
+  anchors: AnchorRegistry,
+  where: (id: string) => Point | null,
+  color: string,
+) {
+  const links: { from: string; to: string; member: string }[] = [];
+  for (const g of c.groups.values())
+    for (const m of g.members.values()) {
+      if (!m.alive) continue;
+      for (const tp of m.assignment) {
+        const leader = c.topics.get(tp.topic)?.partitions[tp.partition]?.leader;
+        if (leader === null || leader === undefined) continue;
+        links.push({
+          from: anchorId.replica(tp.topic, tp.partition, leader),
+          to: anchorId.owned(g.id, m.id, tp.topic, tp.partition),
+          member: anchorId.member(g.id, m.id),
+        });
+      }
+    }
+  const hovered = (id: string) => anchors.get(id)?.matches(':hover') ?? false;
+  const hot = links.map((l) => hovered(l.from) || hovered(l.member));
+  const anyHot = hot.some(Boolean);
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.setLineDash([5, 4]);
+  links.forEach((l, i) => {
+    const a = where(l.from);
+    const b = where(l.to);
+    if (!a || !b) return;
+    const [x1, y1, x2, y2] = facingEdges(a, b);
+    ctx.globalAlpha = hot[i] ? 1 : anyHot ? 0.08 : 0.35;
+    ctx.lineWidth = hot[i] ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
 
 /**
@@ -137,9 +198,11 @@ export function PacketLayer({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const packets = useRef<Packet[]>([]);
   const speedRef = useRef(speed);
+  const clusterRef = useRef(cluster);
   useEffect(() => {
     speedRef.current = speed;
-  }, [speed]);
+    clusterRef.current = cluster;
+  }, [speed, cluster]);
 
   useEffect(
     () =>
@@ -200,6 +263,8 @@ export function PacketLayer({
         }
         return cache.get(id) ?? null;
       };
+
+      drawOwnership(ctx, clusterRef.current, anchors, where, colors.consume ?? '#36c');
 
       const alive: Packet[] = [];
       for (const p of packets.current) {

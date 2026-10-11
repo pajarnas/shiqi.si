@@ -49,6 +49,9 @@ export const KAFKA_STRINGS = {
     outOfSync: 'Out of sync',
     offline: 'Offline',
     replica: '{topic} partition {partition}: {role}, log end offset {leo}, high watermark {hw}',
+    partitionShort: 'P{partition}',
+    partitionFull:
+      'P{partition} = partition {partition} of topic {topic} (Kafka writes it {topic}-{partition})',
     empty: 'No replicas on this broker.',
   },
   producer: {
@@ -96,6 +99,7 @@ export const KAFKA_STRINGS = {
     leave: 'Leave',
     crash: 'Crash',
     rate: '{rate}/s',
+    instance: 'pod{n}',
     hints: {
       name: "The consumer group's name (group.id). Consumers with the same group.id share the work: each partition is read by exactly one of them.",
       state:
@@ -107,10 +111,10 @@ export const KAFKA_STRINGS = {
       totalLag:
         "Records written to this group's partitions that it has not read yet, added up. 0 means it is caught up.",
       member:
-        'One consumer in the group. This name is its client.id. Add another consumer to the same group and the partitions get split between them.',
+        'Consumer instance pod{n}: one running copy of your app, like one pod. Its real name in Kafka is its client.id, {clientId}. Add another instance to the same group and the partitions are split between them.',
       rate: 'How many records this consumer processes per second.',
       partition:
-        'A partition this consumer owns right now: topic {topic}, partition {partition}. Only this member of the group reads it.',
+        'P{partition} is partition {partition} of topic {topic} (Kafka writes it {topic}-{partition}). Only this instance in the group reads it; the line from it shows which broker it reads from.',
     },
   },
   panels: {
@@ -655,6 +659,8 @@ export const KAFKA_STRINGS = {
     packetRecord: 'Solid square: a record on its way from a producer to the leader (colour = key)',
     packetReplica: 'Hollow square: a follower copying records from the leader',
     packetConsume: 'Round dot: records fetched by a consumer',
+    ownership:
+      "Dashed line: which consumer instance (pod) reads which partition (P), drawn from the partition's leader. Hover an instance to see only its lines.",
     packetError: 'Crossed square: a request that failed',
   },
   glossary: {

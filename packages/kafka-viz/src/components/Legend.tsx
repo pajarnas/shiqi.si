@@ -124,6 +124,7 @@ export function Legend() {
             </Item>
             <Item sample={packet('replica', 'var(--kv-replica)')}>{t.packetReplica}</Item>
             <Item sample={packet('consume', 'var(--kv-consume)')}>{t.packetConsume}</Item>
+            <Item sample={<span className="kv-legend__own" />}>{t.ownership}</Item>
             <Item sample={packet('error', 'var(--danger)')}>{t.packetError}</Item>
           </ul>
         </section>

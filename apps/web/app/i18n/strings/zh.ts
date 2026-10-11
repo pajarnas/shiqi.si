@@ -502,6 +502,9 @@ export const zh: DeepPartial<Strings> = {
         outOfSync: '已掉出 ISR',
         offline: '离线',
         replica: '{topic} 分区 {partition}：{role}，日志末端 {leo}，高水位 {hw}',
+        partitionShort: 'P{partition}',
+        partitionFull:
+          'P{partition} = topic {topic} 的 {partition} 号分区（Kafka 里写作 {topic}-{partition}）',
         empty: '这个 broker 上没有副本。',
       },
       producer: {
@@ -549,6 +552,7 @@ export const zh: DeepPartial<Strings> = {
         leave: '离开',
         crash: '崩溃',
         rate: '{rate}/秒',
+        instance: 'pod{n}',
         hints: {
           name: '消费者组的名字（group.id）。group.id 相同的消费者一起分担工作：每个分区只由其中一个读。',
           state:
@@ -558,10 +562,10 @@ export const zh: DeepPartial<Strings> = {
           generation: '这个组重平衡过几次。每重平衡一次加 1，旧成员靠它知道自己过时了。',
           totalLag: '这个组的分区里已经写入、但它还没读的记录总数。0 表示已经追上。',
           member:
-            '组里的一个消费者。这个名字是它的 client.id。往同一个组再加一个消费者，分区就会在它们之间重新分配。',
+            '消费者实例 pod{n}：你的程序跑起来的一份，相当于一个 pod。它在 Kafka 里真正的名字是 client.id：{clientId}。往同一个组再加一个实例，分区就会在它们之间重新分配。',
           rate: '这个消费者每秒处理多少条记录。',
           partition:
-            '这个消费者现在负责的分区：topic {topic} 的 {partition} 号分区。组里只有它读这个分区。',
+            'P{partition} 就是 topic {topic} 的 {partition} 号分区（Kafka 里写作 {topic}-{partition}）。组里只有这个实例读它；从它连出去的线指向它从哪台 broker 读。',
         },
       },
       panels: {
@@ -1082,6 +1086,8 @@ export const zh: DeepPartial<Strings> = {
         packetRecord: '实心方块：从生产者飞向 leader 的记录（颜色 = key）',
         packetReplica: '空心方块：follower 从 leader 复制记录',
         packetConsume: '圆点：消费者拉取到的记录',
+        ownership:
+          '虚线：哪个消费者实例（pod）读哪个分区（P），从分区的 leader 连出来。鼠标停在实例上就只看它的线。',
         packetError: '打叉的方块：失败的请求',
       },
       glossary: {
