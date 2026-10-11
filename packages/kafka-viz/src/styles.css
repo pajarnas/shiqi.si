@@ -184,6 +184,79 @@
   background: var(--surface-sunken);
 }
 
+/* Story mode: one event at a time, with the earlier ones folded above. */
+.kv-story {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.kv-story__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.kv-story__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kv-story__list > li {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.kv-story__list details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.kv-story__list p {
+  margin: var(--space-1) 0 0;
+}
+
+.kv-story__n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.kv-story__now {
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-left: 6px solid var(--accent);
+  background: var(--surface);
+}
+
+.kv-story__now .kv-story__n {
+  background: var(--accent);
+}
+
+.kv-story__beat-title {
+  display: block;
+}
+
+.kv-story__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
 .kv-scenario__nav {
   display: flex;
   flex-wrap: wrap;

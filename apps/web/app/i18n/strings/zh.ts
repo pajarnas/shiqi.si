@@ -826,6 +826,7 @@ export const zh: DeepPartial<Strings> = {
         replicate: 'Broker {to} 从 leader {from} 复制了 {topic}-{partition} 的 {count} 条记录',
         consume: '{member} 从 {topic}-{partition} 读了 {count} 条',
         commit: '{group} 把 {topic}-{partition} 提交到偏移 {offset}',
+        hw: '{topic}-{partition}：高水位 {from} → {to}',
         isrShrink: 'Broker {broker} 掉出了 {topic}-{partition} 的 ISR：现在 ISR 是 [{isr}]',
         isrExpand: 'Broker {broker} 追上了，重新加入 {topic}-{partition} 的 ISR',
         leader: '{topic}-{partition}：broker {leader} 成为新 leader（纪元 {epoch}）',
@@ -868,6 +869,157 @@ export const zh: DeepPartial<Strings> = {
           timeout: '有成员超时',
           metadata: 'topic 元数据变了',
           acl: 'ACL 变了',
+        },
+      },
+      story: {
+        title: '刚才发生了什么',
+        continue: '继续',
+        auto: '自动往下讲',
+        skip: '直接看结果',
+        waiting: '正在运行，等下一件事发生……',
+        quiet: '之后又有 {n} 个同类事件没有停下来讲：都是上面讲过的事在重复。',
+        none: '这一步没有发生新的事。',
+        beats: {
+          produce: {
+            title: '{producer} 把记录交给 leader',
+            body: '一个分区只有 <leader>leader</leader> 收写入，所以 {producer} 通过网络把记录发给 broker {broker}，它是 {topic}-{partition} 的 leader。broker 收到请求后，把记录追加到这个分区日志文件的末尾，编号为<offset>偏移</offset> {offset}。这一刻只有 leader 有这条记录，而且它还只在内存（操作系统的<pageCache>页缓存</pageCache>）里，没写到磁盘上。',
+          },
+          ackOk: {
+            title: '{producer} 收到确认',
+            body: '写到 {topic}-{partition} 偏移 {offset} 的记录被确认了。确认代表什么取决于 <acks>acks</acks>：acks=all 表示所有同步副本都有了；acks=1 只表示 leader 有了。',
+          },
+          ackError: {
+            title: '{producer} 收到错误：{error}',
+            body: '{reason}',
+          },
+          replicate: {
+            title: 'broker {to} 把新记录复制过来',
+            body: '没有人会把数据推给 <follower>follower</follower>。broker {to} 一直在问 leader {from}：“偏移 {fromOffset} 之后还有新的吗？”这次拿到了 {count} 条，追加到自己那份 {topic}-{partition} 里。',
+          },
+          hw: {
+            title: '高水位从 {from} 前进到 {to}',
+            body: '所有同步副本都有了偏移 {to} 之前的记录，leader 就把<hw>高水位</hw>移到这里。高水位以下的记录算“已提交”：消费者可以读，acks=all 的生产者也在这时收到确认。leader 要等 follower 下一次来拉取时才知道它已经有了，所以这一步总比复制晚一点。',
+          },
+          consume: {
+            title: '{member} 读到 {count} 条记录',
+            body: '消费者也是向 leader（broker {broker}）拉取，从 {topic}-{partition} 的偏移 {fromOffset} 开始。它只能拿到高水位以下的记录，所以永远看不到可能还会丢的写入。刚写入的数据通常还在页缓存里，broker 直接从内存发出去，不用读磁盘。',
+          },
+          consumeAgain: {
+            title: '{member} 又读了一遍 {redelivered} 条',
+            body: '这个组之前处理过这些记录，但还没提交进度，所以只能从上次提交的偏移重新开始。这就是“至少一次”投递：不会漏，但可能重复。',
+          },
+          commit: {
+            title: '{group} 保存进度：偏移 {offset}',
+            body: '读了记录，Kafka 并不知道。消费者组要把 {topic}-{partition} 下一条要读的偏移发给 Kafka，存为<commit>已提交偏移</commit>。消费者重启后就从这里接着读。',
+          },
+          isrShrink: {
+            title: 'broker {broker} 被移出 ISR',
+            body: '它太久没追上 leader（超过 replica.lag.time.max.ms），leader 不再等它。{topic}-{partition} 的 <isr>ISR</isr> 现在是 [{isr}]。高水位又能前进了，但能兜底的副本少了一份。',
+          },
+          isrExpand: {
+            title: 'broker {broker} 回到 ISR',
+            body: '它追上了 leader，重新算作同步副本。{topic}-{partition} 的 ISR 现在是 [{isr}]。',
+          },
+          leader: {
+            title: 'broker {leader} 成为 {topic}-{partition} 的 leader',
+            body: '<controller>控制器</controller>选了一个在 ISR 里的副本，所以它有每一条已提交的记录。leader <epoch>纪元</epoch>加到 {epoch}，告诉所有人换届了。',
+          },
+          leaderUnclean: {
+            title: 'broker {leader} 在不同步的情况下当了 leader',
+            body: '同步副本全挂了，又允许<unclean>不干净选举</unclean>，控制器只好选一个落后的副本。分区又能写了，但只有旧 leader 才有的数据没了。',
+          },
+          leaderNone: {
+            title: '{topic}-{partition} 没有 leader',
+            body: '所有同步副本都停了，没人能接收写入或提供读取。生产者只能等，消费者读不到，直到有一个回来。',
+          },
+          truncate: {
+            title: 'broker {broker} 把日志截到偏移 {to}',
+            body: '它那份 {topic}-{partition} 多了 {lost} 条 leader 没有的记录。follower 必须和 leader 一模一样，所以把这些<truncate>截掉</truncate>，再从 {to} 开始重新拉。没有数据丢失：这些记录从来没被提交过。',
+          },
+          truncateLoss: {
+            title: 'broker {broker} 扔掉了 {lost} 条记录，其中 {gone} 条永远没了',
+            body: '它把 {topic}-{partition} 截回偏移 {to}。其中 {gone} 条别的地方都没有，{goneAcked} 条已经向生产者确认过：这就是已确认的数据丢了。',
+          },
+          brokerDown: {
+            title: 'broker {broker} 停了',
+            body: '正常关机：它写过的东西都在磁盘上。它当 leader 的分区需要新 leader，它上面的副本也停止复制。',
+          },
+          brokerPowerLoss: {
+            title: 'broker {broker} 断电',
+            body: '是崩溃，不是关机：还在<pageCache>页缓存</pageCache>里、没<fsync>刷到磁盘</fsync>的记录，重启后就没了。',
+          },
+          brokerUp: {
+            title: 'broker {broker} 重新启动',
+            body: '它的副本开始向各自的 leader 拉取、追数据。追上之前，它们不在 ISR 里。',
+          },
+          controller: {
+            title: 'broker {broker} 成为控制器',
+            body: '<controller>控制器</controller>是负责发现故障、选新 leader 的那个 broker，任何时候只有一个。',
+          },
+          brokerSlow: {
+            title: 'broker {broker} 变慢了',
+            body: '它的磁盘现在慢得多，上面的副本拉取次数大大减少，开始落后于 leader。',
+          },
+          brokerFast: {
+            title: 'broker {broker} 恢复正常速度',
+            body: '它的副本按正常节奏拉取，可以追上了。',
+          },
+          flush: {
+            title: 'broker {broker} 把数据刷到磁盘',
+            body: '写入先进入内存，也就是操作系统的<pageCache>页缓存</pageCache>，由操作系统过一会儿再写到磁盘。现在其中 {bytes} 字节已经安全落在磁盘上，断电也不会丢了。Kafka 默认不主动 fsync，它靠多个副本而不是靠磁盘来保证不丢。',
+          },
+          rebalanceStart: {
+            title: '组 {group} 暂停，开始重平衡',
+            body: '原因：{reason}。<coordinator>协调者</coordinator>让所有成员重新加入，好重新分配分区。分配完之前，成员都停止读取。',
+          },
+          rebalanceEnd: {
+            title: '组 {group} 有了新的分配',
+            body: '{members} 个成员各自拿到一些分区，同一个分区只归一个成员。它们从已提交的偏移接着读。',
+          },
+          segmentDeleted: {
+            title: '保留策略删掉了 {count} 条旧记录',
+            body: '{topic}-{partition} 的一整个<segment>段文件</segment>超过了<retention>保留</retention>的时间或大小，broker {broker} 把它删了。偏移不会重用：日志只是从更后面开始了。',
+          },
+          compacted: {
+            title: '压缩删掉了 {removed} 条旧记录',
+            body: '<compaction>压缩</compaction>只给 {topic}-{partition} 里每个 key 留最新的一条，同一个 key 的旧值被删掉。',
+          },
+          offsetReset: {
+            title: '{group} 从偏移 {to} 开始读 {topic}-{partition}',
+            body: '这个组在这里还没有已提交偏移（或者指向的数据已经没了），所以消费者按 auto.offset.reset 决定从哪里开始。',
+          },
+          authDenied: {
+            title: '{client} 被拒绝：{error}',
+            body: '授权器没找到允许 {principal} 对 {resource} {name} 做 {operation} 的 ACL。没有明确允许的，Kafka 一律拒绝。',
+          },
+          aclAdd: {
+            title: '新规则：{permission} {principal} 对 {resource} {name} 做 {operation}',
+            body: '从下一个请求开始，授权器也按这条规则检查。拒绝永远优先于允许。',
+          },
+          aclRemove: {
+            title: '删掉了一条规则',
+            body: '{principal} 不再有对 {resource} {name} 做 {operation} 的 {permission}。',
+          },
+          authorizerOn: {
+            title: '打开了授权器',
+            body: '现在每个请求都要对照 ACL 检查。没有明确允许的一律拒绝。',
+          },
+          authorizerOff: {
+            title: '关掉了授权器',
+            body: '所有客户端又可以做任何事了。',
+          },
+        },
+        errors: {
+          NOT_ENOUGH_REPLICAS:
+            '同步副本比 <minIsr>min.insync.replicas</minIsr> 要求的少，leader 宁可拒绝 acks=all 的写入，也不在副本不够时接受。生产者会重试。',
+          LEADER_NOT_AVAILABLE:
+            '这个分区现在没有 leader，没人可以写。生产者先留着这条记录，稍后重试。',
+          NOT_LEADER_OR_FOLLOWER:
+            '它找的 broker 已经不是 leader 了。生产者刷新元数据，改发给新的 leader。',
+          REQUEST_TIMED_OUT: '在 delivery.timeout.ms 之内没等到回复，生产者放弃了这条记录。',
+          TOPIC_AUTHORIZATION_FAILED:
+            '没有 ACL 允许这个客户端写这个 topic。没有明确允许的，Kafka 一律拒绝。',
+          other: '请求失败了。',
         },
       },
       legend: {
@@ -1035,7 +1187,6 @@ export const zh: DeepPartial<Strings> = {
         exit: '离开情景',
         progress: '第 {n} 步，共 {total} 步',
         play: '播放这一步',
-        playing: '播放中……',
         lockIn: '锁定我的猜测并播放',
         next: '下一步',
         back: '上一步',
@@ -1055,25 +1206,60 @@ export const zh: DeepPartial<Strings> = {
             summary: '跟着一条记录，从生产者到三个 broker，再到消费者。',
             steps: {
               cluster: {
-                title: '三个 broker，一个 topic',
-                body: '每个方框是一个 broker：一台带磁盘的服务器。topic <b>orders</b> 有 3 个<partition>分区</partition>，每个分区有 3 个<replica>副本</replica>，每个 broker 上一个。每一行里，<b>L</b> 是 <leader>leader</leader>，<b>F</b> 是 <follower>follower</follower>。leader 是错开的，每个 broker 各领一个分区。',
+                title: '你看到的是什么',
+                body: '每个大方框是一个 <b>broker</b>：一台 Kafka 服务器，有自己的内存和磁盘。这里有 3 台。topic <b>orders</b> 被分成 3 个<partition>分区</partition>（就是那几行），每个分区在 3 台 broker 上各存一份，共 3 个<replica>副本</replica>。每一行里有一份是 <leader>leader</leader>（<b>L</b>），只有它接收写入；另外两份是 <follower>follower</follower>（<b>F</b>），负责从 leader 复制。',
+                result: '',
+              },
+              producer: {
+                title: '发送之前，生产者里发生了什么',
+                body: '程序 <b>app</b> 要发送一条记录：key 是 <b>alice</b>，值是 "order #1"。首先序列化器把 key 和值变成字节。然后<murmur2>分区器</murmur2>对 key "alice" 做哈希：同一个 key 永远落在同一个分区，这里是分区 {partition}。接着记录在生产者内存里的一个批次中稍等片刻（linger.ms），好让多条记录一起发。最后生产者查到分区 {partition} 的 leader 是哪台 broker，通过 TCP 把这批记录发过去。',
                 result: '',
               },
               send: {
-                title: '发一条记录',
-                body: '生产者 <b>app</b> 发送 key <b>alice</b>，值 "order #1"，用 <acks>acks=all</acks>。<murmur2>分区器</murmur2>对 "alice" 做哈希，选中分区 {partition}。',
+                title: 'broker 收到记录',
+                body: '按下按钮，看那个小方块从 app 飞到一台 broker。',
+                question: '哪台 broker 收到这条记录？',
+                options: [
+                  '只有分区 {partition} 的 leader，也就是 broker {leader}',
+                  '三台 broker 同时收到',
+                  '哪台最闲就给哪台',
+                ],
+                result:
+                  '只有 broker {leader} 收到了。broker 里由网络线程读出请求，再由 I/O 线程把记录追加到这个分区日志文件的末尾。这次写入交给了操作系统，操作系统先把它放在内存里（<pageCache>页缓存</pageCache>）。另外两台 broker 还没有这条记录，app 也还没收到回复。',
+              },
+              replicate: {
+                title: '复制',
+                body: '现在这条记录只在 leader 上。这台 broker 一坏，记录就没了。',
+                question: '两个 follower 怎么拿到它？',
+                options: [
+                  'leader 主动推给它们',
+                  '每个 follower 不停地问 leader 有没有新的，自己拉过来',
+                  '生产者也给它们各发一份',
+                ],
+                result:
+                  'follower 是自己拉的。每个 follower 时不时向 leader 发一个拉取请求：“偏移 N 之前的我都有了，后面还有什么？”拿到后追加到自己的日志里。现在三台 broker 都有这条记录了。',
+              },
+              ack: {
+                title: '回复',
+                body: 'app 用的是 <acks>acks=all</acks>：它要等记录安全了才收到回复。',
                 question: 'app 什么时候收到回复？',
                 options: ['leader 一写完就回', '所有同步副本都有了才回', '消费者读到之后才回'],
                 result:
-                  '记录先落在 leader 上。follower 拉走它，等它们下一次拉取让 leader 知道它们已经有了，<hw>高水位</hw>才越过这条记录。这时 acks=all 才得到回复。',
+                  'leader 要等 follower 下一次来拉取，才知道它已经有了这条记录。等所有同步副本都有了，leader 把<hw>高水位</hw>移过这条记录，acks=all 这时才回复 app。这就是 Kafka 里“已提交”的意思。',
               },
-              hw: {
-                title: '为什么高水位总慢半拍',
-                body: 'Follower 是主动拉的：每 250 毫秒，各自从自己的<leo>日志末端</leo>开始向 leader 要新记录。这个拉取偏移就是 leader 知道 follower 进度的唯一途径，所以拷贝到了之后还要再拉一次，高水位才前进；而 follower 要再下一次才听说新的高水位。看看分区详情里每个 follower 那一行上小小的“自己的高水位”标记。',
-                result: '',
+              disk: {
+                title: '内存和磁盘',
+                body: '记录已经确认，三台 broker 上都有。',
+                question: '它现在写到磁盘上了吗？',
+                options: [
+                  '不一定：它在页缓存里，要等操作系统写出去',
+                  '写了：Kafka 等磁盘写完（fsync）才确认',
+                ],
+                result:
+                  'Kafka 把写入交给操作系统，由操作系统决定什么时候写到磁盘：这里是每隔几秒一次（broker 方框里能看到还有多少只在内存里）。Kafka 确认之前并不等磁盘。它靠的是三台机器上的三份副本：一台崩了也带不走这条记录，因为另外两台还有。',
               },
               read: {
-                title: '来了一个消费者',
+                title: '消费者读到它',
                 body: '消费者组 <b>billing</b> 只有一个成员，auto.offset.reset=earliest。',
                 question: '它从哪里开始读？',
                 options: [
@@ -1082,7 +1268,7 @@ export const zh: DeepPartial<Strings> = {
                   '从别的组停下的地方',
                 ],
                 result:
-                  '它加入了组，经过一次短暂的<rebalance>重平衡</rebalance>，<coordinator>协调者</coordinator>把三个分区都给了它，它从偏移 0 开始拉。它只能读到高水位之前的记录。',
+                  '它加入了组，经过一次短暂的<rebalance>重平衡</rebalance>，<coordinator>协调者</coordinator>把三个分区都给了它，它从偏移 0 开始拉。消费者也是从 leader 读，而且只能读到高水位为止。数据还在页缓存里，所以 broker 直接从内存发了出去。',
               },
               commit: {
                 title: '保存进度',

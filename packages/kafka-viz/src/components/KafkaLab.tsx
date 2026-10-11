@@ -69,6 +69,7 @@ export function KafkaLab({
   const [selected, setSelected] = useState<Selection | null>(() => firstPartition(cluster));
   const [goal, setGoal] = useState<Goal | null>(null);
   const [step, setStep] = useState<ScenarioStep | null>(null);
+  const [storyFocus, setStoryFocus] = useState<string[] | null>(null);
   const [opened, setOpened] = useState(0);
 
   useSimulation(cluster, running, Number(speed), {
@@ -86,6 +87,7 @@ export function KafkaLab({
     setScenarioId(id);
     setGoal(null);
     setStep(null);
+    setStoryFocus(null);
     setOpened((n) => n + 1);
     setRunning(id === null);
     setSelected(firstPartition(timeline.cluster));
@@ -123,9 +125,9 @@ export function KafkaLab({
     timeline.seek(time);
   };
 
-  let focus: string[] = [];
+  let focus: string[] = storyFocus ?? [];
   try {
-    focus = step?.focus?.(cluster) ?? [];
+    if (!storyFocus) focus = step?.focus?.(cluster) ?? [];
   } catch {
     // The scenario's subject is gone (deleted by hand): nothing to point at.
   }
@@ -187,6 +189,7 @@ export function KafkaLab({
           timeline={timeline}
           onRun={run}
           onStep={onStep}
+          onFocus={setStoryFocus}
           onOpen={open}
           onExit={exit}
         />
@@ -194,7 +197,8 @@ export function KafkaLab({
         <ScenarioMenu onOpen={open} />
       )}
 
-      <Legend />
+      {/* In a scenario the stage comes first, so the story and what it describes sit side by side. */}
+      {!scenario && <Legend />}
 
       <Stage
         cluster={cluster}
@@ -203,6 +207,8 @@ export function KafkaLab({
         onSelect={select}
         focus={focus}
       />
+
+      {scenario && <Legend />}
 
       <div className="kv-panels">
         <Segmented

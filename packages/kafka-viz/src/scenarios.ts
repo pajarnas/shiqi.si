@@ -111,20 +111,54 @@ const firstRecord: Scenario = {
       focus: (c) => [...c.brokers.keys()].map(anchorId.broker),
     },
     {
+      id: 'producer',
+      focus: () => [anchorId.producer('app')],
+      vars: () => ({ partition: firstPartition() }),
+    },
+    {
       id: 'send',
-      answer: 1,
+      answer: 0,
       act: (c) =>
         void c.produce({ topic: 'orders', key: FIRST_KEY, value: 'order #1', producer: 'app' }),
+      until: (c) => (firstLeaderLog(c)?.logEndOffset ?? 0) >= 1,
+      focus: (c) => [anchorId.producer('app'), ...replicaAnchors(c, 'orders', firstPartition())],
+      inspect: () => ({ topic: 'orders', partition: firstPartition() }),
+      vars: (c) => ({
+        partition: firstPartition(),
+        leader: leaderId(c, 'orders', firstPartition()),
+      }),
+      expect: (c) => (firstLeaderLog(c)?.logEndOffset ?? 0) === 1 && acked(c, 'app') === 0,
+    },
+    {
+      id: 'replicate',
+      answer: 1,
+      until: (c) =>
+        followerIds(c, 'orders', firstPartition()).every(
+          (b) => (part(c, 'orders', firstPartition()).logs.get(b)?.logEndOffset ?? 0) >= 1,
+        ),
+      focus: (c) => replicaAnchors(c, 'orders', firstPartition()),
+      inspect: () => ({ topic: 'orders', partition: firstPartition() }),
+      expect: (c) =>
+        part(c, 'orders', firstPartition()).replicas.every(
+          (b) => part(c, 'orders', firstPartition()).logs.get(b)?.logEndOffset === 1,
+        ),
+    },
+    {
+      id: 'ack',
+      answer: 1,
       until: (c) => acked(c, 'app') >= 1,
       focus: (c) => [anchorId.producer('app'), ...replicaAnchors(c, 'orders', firstPartition())],
       inspect: () => ({ topic: 'orders', partition: firstPartition() }),
-      vars: () => ({ partition: firstPartition() }),
-      expect: (c) => acked(c, 'app') === 1,
+      expect: (c) =>
+        acked(c, 'app') === 1 && part(c, 'orders', firstPartition()).highWatermark === 1,
     },
     {
-      id: 'hw',
-      focus: (c) => replicaAnchors(c, 'orders', firstPartition()),
-      inspect: () => ({ topic: 'orders', partition: firstPartition() }),
+      id: 'disk',
+      answer: 0,
+      until: (c) => firstFlushed(c) > 0,
+      runMs: 8000,
+      focus: (c) => [...c.brokers.keys()].map(anchorId.broker),
+      expect: (c) => firstFlushed(c) > 0,
     },
     {
       id: 'read',
@@ -150,6 +184,11 @@ const firstRecord: Scenario = {
     },
   ],
 };
+
+const firstLeaderLog = (c: Cluster) => c.leaderLog(part(c, 'orders', firstPartition()));
+/** How many replicas of the first record's partition have it on disk. */
+const firstFlushed = (c: Cluster) =>
+  [...part(c, 'orders', firstPartition()).logs.values()].filter((l) => l.flushedOffset >= 1).length;
 
 function firstPartition() {
   return partitionForKey(FIRST_KEY, 3);
