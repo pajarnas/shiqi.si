@@ -1,0 +1,87 @@
+import { Quiz } from '@shiqi/ui';
+
+export const frontmatter = {
+  title: 'Inside the Kafka producer: batching, buffering and timeouts',
+  date: '2026-10-10',
+  summary:
+    'What happens between send() and the broker: serializing, choosing a partition, batching in the record accumulator, waiting when there is no leader, and the timeouts that decide when a record fails.',
+  topics: ['kafka', 'distributed-systems'],
+};
+
+`producer.send(record)` returns at once. The record has not gone anywhere yet; it has only joined a queue inside the client. Knowing that queue explains most surprising producer behaviour.
+
+## The path of one record
+
+1. **Serialize** the key and value to bytes.
+2. **Pick a partition.** A key decides it: `murmur2(key) % partitions` (see [topics, partitions and offsets](/notes/commonplace/kafka/kafka-log-partitions-offsets)). Without a key, the built-in partitioner sticks to one partition until a batch fills, and only picks among partitions that currently have a leader.
+3. **Append to a batch** in the **record accumulator**, one open batch per partition.
+4. A background **sender thread** drains ready batches, groups them by the broker that leads each partition, and sends one produce request per broker.
+5. The leader appends, followers fetch, and the response comes back according to `acks` (see [replication and the ISR](/notes/commonplace/kafka/kafka-replication-isr)). The future or callback completes only now.
+
+A batch is **ready** when it is full (`batch.size`, 16 KB) or has waited `linger.ms` (5 ms by default since Kafka 4.0, 0 before). A little lingering means fewer, fuller requests.
+
+## When there is no leader
+
+The sender can only send a batch to the partition's current leader. If the partition has none (its replicas are all down, or an election is in progress), or no broker answers at all, **nothing goes on the wire**:
+
+- The batches simply stay in the accumulator. The client keeps refreshing metadata and sends them as soon as a leader appears.
+- A keyed record can't be rerouted: its key fixes the partition, and sending it elsewhere would break per-key ordering. Records without a key go to partitions that do have a leader.
+- If the producer has never seen the topic's metadata, `send()` itself blocks for up to `max.block.ms` (60 s) and then throws.
+- The accumulator has a size limit, `buffer.memory` (32 MB). When it is full, `send()` blocks for up to `max.block.ms`, then throws. That is how a dead cluster pushes back on the application.
+
+## The timeouts
+
+| Setting               | Default       | What it bounds                                                                                                      |
+| --------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `linger.ms`           | 5 ms          | How long a batch waits for more records before it is ready                                                          |
+| `request.timeout.ms`  | 30 s          | How long one produce request waits for a response before it is retried                                              |
+| `delivery.timeout.ms` | 120 s         | The whole life of a record after `send()`: waiting, sending and every retry. Then the callback gets a timeout error |
+| `max.block.ms`        | 60 s          | How long `send()` itself may block, for metadata or for buffer space                                                |
+| `retries`             | effectively ∞ | Retries are bounded by `delivery.timeout.ms`, not by a count                                                        |
+
+`delivery.timeout.ms` must be at least `linger.ms + request.timeout.ms`. The site's simulator uses 30 s so the failure is visible without a long wait.
+
+Retries don't create duplicates or reorder records because the producer is **idempotent** by default (since 3.0): each batch carries a producer id and sequence number, and the leader drops a batch it has already written.
+
+## What this means for an application
+
+- A successful `send()` call means "queued", not "stored". Check the callback or the future.
+- During an outage, records pile up in memory and the application slows down (blocked `send()`) before anything fails. Size `buffer.memory` and `delivery.timeout.ms` for the outage you want to ride out.
+- If a record must not be lost, use `acks=all` with `min.insync.replicas` ≥ 2, and treat a timeout as "unknown, maybe written" rather than "not written".
+
+## Try it
+
+- [The life of one record](/kafka?scenario=first-record): the happy path from serializer to commit
+- In the [lab](/kafka), power off brokers until a partition has no leader and watch the producer card count buffered records and time left
+
+Related: the day it came up, [Kafka day](/notes/journal/2026-10-10-kafka-lab).
+
+<Quiz
+  title="Check yourself"
+  questions={[
+    {
+      q: 'Every broker is down. What does a producer put on the network?',
+      options: [
+        'A request per record, each failing',
+        'Nothing; records wait in its buffer',
+        'Records to the last known leader',
+      ],
+      answer: 1,
+      explain:
+        'Without a leader there is nowhere to send. Batches stay in the record accumulator until a leader returns or delivery.timeout.ms expires.',
+    },
+    {
+      q: 'Partition 0 of a topic has no leader, partition 1 does. A record with a key that hashes to 0…',
+      options: ['Goes to partition 1 instead', 'Waits for partition 0', 'Is dropped at once'],
+      answer: 1,
+      explain:
+        'The key fixes the partition so that records for one key stay in order. Only keyless records move.',
+    },
+    {
+      q: 'Which setting bounds the total time a record may spend retrying?',
+      options: ['retries', 'request.timeout.ms', 'delivery.timeout.ms'],
+      answer: 2,
+      explain: 'retries is effectively infinite; delivery.timeout.ms is the real limit.',
+    },
+  ]}
+/>

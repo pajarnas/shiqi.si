@@ -1,0 +1,103 @@
+import { Quiz } from '@shiqi/ui';
+
+export const frontmatter = {
+  title: 'Kafka ACLs and authorization errors',
+  date: '2026-10-10',
+  summary:
+    'How Kafka decides who may do what: principals, resources, operations, deny-by-default, prefixed patterns, the permissions producers and consumers need, and what TOPIC_ and GROUP_AUTHORIZATION_FAILED mean.',
+  topics: ['kafka', 'security'],
+};
+
+Authentication answers "who are you"; authorization answers "may you do this". In Kafka, authentication comes from the listener (TLS client certificate, SASL), and authorization from an **authorizer** checking **ACLs**.
+
+## Turning it on
+
+With KRaft the built-in authorizer is
+
+```properties
+authorizer.class.name=org.apache.kafka.metadata.authorizer.StandardAuthorizer
+super.users=User:admin
+allow.everyone.if.no.acl.found=false
+```
+
+Without an authorizer, everyone may do everything. With one, every request is checked and **anything not allowed is denied**. `super.users` skip the checks, which is how admins create the first ACLs.
+
+## What an ACL says
+
+An ACL is: _principal_ is _allowed or denied_ to do _operation_ on _resource_ (from _host_).
+
+- **Principal**: `User:alice`. With TLS client certificates it is built from the certificate's subject, by default `User:CN=alice,...`; `ssl.principal.mapping.rules` can shorten that to `User:alice`. `User:*` matches everyone.
+- **Resource**: a `Topic`, `Group`, `Cluster`, `TransactionalId` or `DelegationToken`, named either **literally** (`orders`) or by **prefix** (`orders-` matches `orders-eu`, `orders-us`).
+- **Operation**: `Read`, `Write`, `Create`, `Delete`, `Alter`, `Describe`, `ClusterAction`, `DescribeConfigs`, `AlterConfigs`, `IdempotentWrite`, `All`.
+
+Rules for combining them:
+
+- **Deny beats allow.** One matching Deny wins over any number of Allows.
+- **Some operations imply others.** `Read`, `Write`, `Delete` and `Alter` each imply `Describe`.
+- No matching ACL means deny (with `allow.everyone.if.no.acl.found=false`, the default).
+
+## What clients need
+
+| Client                 | Needs                                                                    |
+| ---------------------- | ------------------------------------------------------------------------ |
+| Producer               | `Write` on the topic (idempotent producing is covered by that since 2.8) |
+| Transactional producer | also `Write` on its `TransactionalId`                                    |
+| Consumer in a group    | `Read` on the group **and** `Read` on each topic                         |
+| Admin creating topics  | `Create` on the topic or on the cluster                                  |
+
+## The errors
+
+- `TOPIC_AUTHORIZATION_FAILED`: a producer without `Write`, or a consumer without `Read`, on that topic.
+- `GROUP_AUTHORIZATION_FAILED`: a consumer without `Read` on its group. It can't join, so it never gets partitions; it looks idle rather than broken.
+- `CLUSTER_AUTHORIZATION_FAILED`: a cluster-level operation without rights on the `Cluster` resource.
+
+Listing topics only returns the ones you may `Describe`, so a client without rights doesn't learn the other names.
+
+## The command
+
+```bash
+# alice may produce to orders
+kafka-acls --bootstrap-server localhost:9092 --command-config admin.properties \
+  --add --allow-principal User:alice --operation Write --topic orders
+
+# the billing service may consume every topic starting with orders-, in its own group
+kafka-acls --bootstrap-server localhost:9092 --command-config admin.properties \
+  --add --allow-principal User:billing --operation Read \
+  --topic orders- --resource-pattern-type prefixed --group billing
+
+# list, then remove
+kafka-acls --bootstrap-server localhost:9092 --command-config admin.properties --list --topic orders
+kafka-acls --bootstrap-server localhost:9092 --command-config admin.properties \
+  --remove --allow-principal User:alice --operation Write --topic orders
+```
+
+`--producer --topic T` and `--consumer --topic T --group G` are shortcuts that add the usual set for each role.
+
+## Try it
+
+- [Who has permission?](/kafka?scenario=acls): turn the authorizer on and watch a consumer fail to join, then fix it with one ACL
+- In the [lab](/kafka) terminal: `authorizer on`, then `kafka-acls`; or the Security tab of the command builder
+
+Related: the day it was added, [Kafka day](/notes/journal/2026-10-10-kafka-lab); logging in with a certificate, [client certificates](/notes/commonplace/kafka/kafka-mysql-client-certificates).
+
+<Quiz
+  title="Check yourself"
+  questions={[
+    {
+      q: 'User:bob has Allow Read on topic orders and a Deny Read for User:* on topics starting with ord. Can bob read orders?',
+      options: ['Yes, the specific Allow wins', 'No, Deny beats Allow', 'Only from his own host'],
+      answer: 1,
+      explain: 'Any matching Deny wins, however specific the Allow is.',
+    },
+    {
+      q: 'A consumer has Read on the topic but nothing on its group. What happens?',
+      options: [
+        'It reads without committing',
+        'GROUP_AUTHORIZATION_FAILED; it never gets partitions',
+        'TOPIC_AUTHORIZATION_FAILED',
+      ],
+      answer: 1,
+      explain: 'Joining a group needs Read on the group, before any fetch is attempted.',
+    },
+  ]}
+/>
