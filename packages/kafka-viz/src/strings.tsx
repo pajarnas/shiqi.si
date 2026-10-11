@@ -96,6 +96,22 @@ export const KAFKA_STRINGS = {
     leave: 'Leave',
     crash: 'Crash',
     rate: '{rate}/s',
+    hints: {
+      name: "The consumer group's name (group.id). Consumers with the same group.id share the work: each partition is read by exactly one of them.",
+      state:
+        'Stable: everyone has partitions and is reading. Rebalancing or Syncing: the group is pausing to share partitions out again. Empty: no members.',
+      assignor:
+        'The strategy that decides which member gets which partitions (partition.assignment.strategy). range hands out neighbouring partitions of each topic.',
+      generation:
+        'How many times the group has rebalanced. It goes up by one on every rebalance, so old members can tell they are out of date.',
+      totalLag:
+        "Records written to this group's partitions that it has not read yet, added up. 0 means it is caught up.",
+      member:
+        'One consumer in the group. This name is its client.id. Add another consumer to the same group and the partitions get split between them.',
+      rate: 'How many records this consumer processes per second.',
+      partition:
+        'A partition this consumer owns right now: topic {topic}, partition {partition}. Only this member of the group reads it.',
+    },
   },
   panels: {
     label: 'Panels',
