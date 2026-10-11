@@ -513,6 +513,13 @@ export const zh: DeepPartial<Strings> = {
           fixed: '几个固定 key',
           unique: '每条都不同的 key',
         },
+        keyMap: {
+          none: '没有 key：生产者先给一个分区攒满一批，再换下一个分区。',
+          fixed:
+            '每条记录随机用下面其中一个 key。分区 = 哈希(key) 除以 {n} 的余数，所以同一个 key 永远进同一个分区：',
+          unique: '每条记录都用一个新 key，哈希会把它们分散到全部 {n} 个分区。',
+          chip: 'key 为 {key} 的记录都进 {topic}-{partition}',
+        },
         stats: '已发 {sent} · 已确认 {acked} · 失败 {failed}',
         lastError: '最近的错误：{error}',
         buffered:
