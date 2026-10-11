@@ -1769,6 +1769,12 @@ button.kv-cell:focus-visible,
   border-bottom: 7px solid var(--kv-consume);
 }
 
+.kv-legend__own {
+  display: inline-block;
+  width: 24px;
+  border-top: 2px dashed var(--kv-consume);
+}
+
 .kv-legend__pkt {
   display: inline-block;
   width: 10px;

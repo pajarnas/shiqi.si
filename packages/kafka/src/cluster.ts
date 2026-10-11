@@ -178,6 +178,8 @@ export interface Member {
   credit: number;
   consumed: number;
   joinedAt: number;
+  /** This member's number in its group, from 0, in joining order: like a pod's ordinal. Never reused. */
+  instance: number;
   principal: string;
   /** Why the brokers turn it away (an authorization error), if they do. */
   error?: KafkaErrorCode;
@@ -199,6 +201,8 @@ export interface Group {
   rebalanceAt: number | null;
   autoCommitIntervalMs: number;
   nextCommitAt: number;
+  /** Members that have ever joined: the next one is instance number `joined`. */
+  joined: number;
 }
 
 interface PendingAck {
@@ -1075,6 +1079,7 @@ export class Cluster {
         committed: new Map(),
         processed: new Map(),
         redelivered: 0,
+        joined: 0,
         rebalanceAt: null,
         // auto.commit.interval.ms: Kafka's default.
         autoCommitIntervalMs: 5000,
@@ -1109,6 +1114,7 @@ export class Cluster {
       credit: 0,
       consumed: 0,
       joinedAt: this.now,
+      instance: g.joined++,
       principal: options.principal ?? `User:${clientId}`,
     };
     g.members.set(member.id, member);

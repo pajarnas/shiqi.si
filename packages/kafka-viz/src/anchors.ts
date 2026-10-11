@@ -7,6 +7,9 @@ export const anchorId = {
     `replica:${topic}:${partition}:${broker}`,
   broker: (id: number) => `broker:${id}`,
   member: (group: string, member: string) => `member:${group}:${member}`,
+  /** One partition chip inside a member's card. */
+  owned: (group: string, member: string, topic: string, partition: number) =>
+    `owned:${group}:${member}:${topic}:${partition}`,
   group: (group: string) => `group:${group}`,
 };
 
