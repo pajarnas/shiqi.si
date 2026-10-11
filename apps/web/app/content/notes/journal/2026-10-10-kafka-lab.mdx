@@ -1,0 +1,122 @@
+export const frontmatter = {
+  title: 'Kafka day: a simulated lab, a real cluster, and certificates',
+  date: '2026-10-10',
+  summary:
+    'The Kafka sub-project in one day: a deterministic simulator at /kafka, a real three-node KRaft cluster on a resized VM, client-certificate logins from the laptop, a build-your-own-Kafka course, and a run of fixes after actually using it.',
+  topics: ['kafka', 'docker-compose', 'deployment', 'security', 'tls', 'mdx'],
+};
+
+All times are UTC. The work started at 06:42, which was still 23:42 on 2026-10-09 in Fremont, and ran across PRs #13 to #32. The concepts are written up as their own notes under [Commonplace › Kafka](/notes/commonplace); this entry is the story of the day.
+
+## The ask (06:42)
+
+I wanted a Kafka sub-project inside shiqi.si for understanding every Kafka concept visually: animated data flow, hardware-level detail, the hard concepts, notes that show up both in /notes and in /kafka, every Kafka CLI command, dummy producers and consumers, one-click topics, certificates and groups. I left the shape to Claude: a separate project or one thread, `kafka.shiqi.si` or `/kafka`.
+
+The defaults it picked:
+
+- **One thread, one site.** The engine is its own framework-free package, `@shiqi/kafka`, so it can later move to its own repository. The page lives at `/kafka` in the same container, sharing translation and notes. A `kafka.shiqi.si` subdomain only needs a DNS A record later.
+- **Simulate first.** The 1 GB VM could not run a broker (k3s had already choked on it), so the first version is a deterministic simulator in the browser that follows Kafka's real algorithms: murmur2 partitioning, replica placement, follower fetching, ISR and high watermark, `acks` with `min.insync.replicas`, leader election with epoch truncation, retention and compaction, consumer groups with three assignors, and an emulator for the stock `kafka-*` scripts.
+- **A GitHub organization** for splitting the libraries out can only be created by me on github.com. Until then the libraries are workspace packages laid out the way they would split.
+
+The reference point was Aiven's Kafka visualization, which has sliders but no failures and no CLI.
+
+## First version and a bigger server (07:10 to 07:34)
+
+PR #13 put the lab live: brokers drawn as server chassis with every replica's log, records flying between producers, replicas and consumers, a partition inspector, a terminal and an event log, plus three Kafka notes.
+
+To run **real** Kafka, the VM needed more memory. The recommendation was Azure **B2als v2** (2 vCPU, 4 GB, about $27/month from the $100 student credit) instead of the free-tier B2ats v2, with three KRaft nodes rather than one, because a single node can't show ISR changes or leader moves. Two checks before resizing, both in Cloud Shell:
+
+```bash
+az vm list-vm-resize-options -g shiqi -n shiqi-1 --query "[?name=='Standard_B2als_v2'].name" -o tsv
+az network public-ip list -g shiqi --query "[].{name:name, ip:ipAddress, method:publicIPAllocationMethod}" -o table
+az vm resize -g shiqi -n shiqi-1 --size Standard_B2als_v2
+```
+
+The second matters: a **Dynamic** public IP can change when the VM is resized, which would break DNS. Ours was Static, so the address stayed the same.
+
+A parallel thread added the real cluster (PR #19): three combined broker+controller KRaft nodes with a 256 MB heap and a 512 MB limit each, on the internal Docker network only, under the Compose profile `kafka`. `deploy.sh` turns that profile on **only when the machine has at least 3.5 GB of RAM**, so merging before the resize could not have sunk the old 1 GB box. The site reads the cluster through a pure-JavaScript client: `/api/kafka/snapshot` and `/api/kafka/records` are public and read-only; creating `lab-*` topics and producing need the admin password and are rate-limited per IP. Without a cluster every route answers `503 { available: false }`.
+
+## Guided scenarios and rewind (07:20 to 07:57)
+
+Milestone 2 (PR #21) was about learning, not just watching. Reading for it: the original Kafka paper, KIP-101 (the replica divergence bugs), KIP-848 (the new rebalance protocol), Jack Vanlightly's data-loss tests, and Bret Victor's Explorable Explanations.
+
+- A fixed-step deterministic clock, so a run can be **recorded and replayed**: the timeline rewinds to any moment by rebuilding and replaying, and you can branch from there.
+- Follower high watermarks that lag one fetch, leader-epoch versus high-watermark truncation, a page cache with flush interval and power loss.
+- Twelve scenarios in a **predict, play, explain** loop: `acks=1` losing writes, `min.insync.replicas`, unclean election, the KIP-101 bugs, rebalances, keys, retention.
+- Shared pieces went into `@shiqi/ui`: `Question`, `Term` (glossary popovers) and `Rich`.
+
+I said the goal is to finish feeling that I could have written Kafka myself. That became milestone 3: a fifteen-chapter **build-your-own-Kafka** course (plan in PR #22).
+
+## Logging in from the laptop (07:36 to 08:27)
+
+"How did you make the CSR?" It hadn't: the new cluster spoke plaintext on the internal network only. What I actually wanted was to log in to Kafka **and** MySQL from my own computer with a certificate made from scratch. PR #20:
+
+- A private CA on the server signs the server certificate and client CSRs, and adds a certificate-only MySQL user with the same name.
+- Kafka gets an SSL listener that **requires** a client certificate; MySQL turns on TLS. Both are published on the server's `127.0.0.1` only and reached through an **SSH tunnel**. Opening them to the internet behind certificates was proposed first and blocked as weakening security, so the tunnel is the default.
+- `infra/local/connect.sh setup saige` makes the private key and CSR on the laptop (the key never leaves it), has the server sign over SSH, and writes the client configs into `~/.shiqi`.
+
+The PR's CI stopped at "waiting for approval" because the branch had also edited the workflow file; reverting that one line let it run.
+
+The first real login took a few small detours: a new terminal window opens in the home directory (`No such file or directory` for the script), `mysql: not found` until `brew install mysql-client` plus a PATH line, then:
+
+```
++-------------------+
+| Tables_in_shiqi   |
++-------------------+
+| schema_migrations |
+| visits            |
++-------------------+
+```
+
+DataGrip took two more lessons. Its SSH tunnel looked for `~/.ssh/id_rsa` while my key is `id_ed25519`. And Kafka can't go through a one-port tunnel at all: after the first connection the cluster hands back **every** broker's advertised address (`localhost:19094`, `29094`, `39094`), and the client connects to each. A named SSH config entry that forwards all of them, started once with `ssh -fN shiqi-tunnel`, solved both. Everything, including the key stores DataGrip's Kafka plugin wanted, is in [Logging in to Kafka and MySQL with a client certificate](/notes/commonplace/kafka/kafka-mysql-client-certificates).
+
+On the way I also moved my checkout to `~/projects/shiqi-si/shiqi.si`: one parent folder for the future organization, one subfolder per repository. The old `~/projects/shiqi.si` turned out not to be a git repository at all.
+
+## Build your own Kafka, chapters 0 to 4 (07:58 to 08:27)
+
+PR #23 put the first five chapters at `/kafka/build`, all about storage: why a log instead of a queue, every byte of a record batch (v2 format, zigzag varints, CRC-32C, the 61-byte batch header), the sparse offset index, segments and retention, and the page cache with torn writes and recovery. Each chapter has me write one real function in the page (TypeScript compiled in the browser, with every loop guarded so a mistake can't freeze the tab); once its tests pass, the live demo runs **my** code, and a button breaks it on purpose.
+
+## Tables that weren't tables (08:54)
+
+A screenshot of raw `| a | b |` text: "avoid this next time". MDX only implements CommonMark, and pipe tables are a **GitHub-flavoured Markdown** extension. Fix (PR #25): add `remark-gfm`, share the MDX settings between the build and the tests, style tables, and render **every note** in a test that fails if table pipes, `**`, code fences or `#` markers leak through as text. The test is the "next time" part.
+
+## Is any of this real? (08:56 to 09:05)
+
+"Is this simulated or real?" Honest answer at that moment: everything on the page was simulated; the real cluster existed but nothing drew it yet. PR #26 added a **Simulation / Real cluster** switch (`?mode=real`) that polls the snapshot every 2 seconds: brokers with their replicas, topics with offset bars, committed offsets, group lag and the latest records.
+
+Then: where are common things like **seek**? Only in the terminal, as `kafka-consumer-groups --reset-offsets ... --execute`. I asked for every command to have a UI that builds the command line. PR #27 describes each command **once** (its fields and how they become tokens), and the terminal panel renders forms from those descriptions. A seek on a group with live members offers to stop them first, because Kafka refuses the reset otherwise.
+
+## Four complaints, one batch (09:06 to 09:38)
+
+"Everything is powered off, why is it still sending? I can't read these icons. Is there a GROUP_AUTHORIZATION_FAILED simulation? Why doesn't Kafka have a place on the home page?" All four were fair (PR #28):
+
+1. **Sending into dead brokers.** The simulator fired each record, failed it with `LEADER_NOT_AVAILABLE`, and animated a red packet into a powered-off broker. A real producer can't even fetch metadata then, so nothing goes on the wire: records wait in its buffer and fail after `delivery.timeout.ms`. See [Inside the Kafka producer](/notes/commonplace/kafka/kafka-producer-internals).
+2. **Icons.** A complete legend above the stage, and packets told apart by **shape**, not only colour: replication and consumer fetches had both been green.
+3. **Authorization.** The simulator got an authorizer, ACLs, `kafka-acls`, a Security tab in the command builder and a scenario. See [Kafka ACLs and authorization errors](/notes/commonplace/kafka/kafka-acls-authorization).
+4. **Home page.** A Kafka window under the hello window.
+
+And Kafka notes moved into their own subfolder, **Commonplace › Kafka**. Notes can now live one level deep (`/notes/commonplace/kafka/<name>`), the folder page lists subfolders as sections, and old links redirect.
+
+## Making it understandable (01:12 to 02:00 the next UTC day)
+
+- Glossary tooltips were clipped by cards and the screen edge. `Term` now renders into `<body>` with fixed coordinates, flips below the word when there is no room above, and slides sideways to stay on screen (PR #29).
+- "The scenarios make no sense, I can't follow them. Explain the happy path first: how an event is sent, received, stored, the OS…" Scenarios now **stop at every event worth explaining**, say in plain words what happened and why, and wait for Continue. "The life of one record" became the full happy path in eight steps: inside the producer, the leader appending into the page cache, followers pulling, the high watermark and the ack, the OS flushing to disk, a consumer reading, the commit (PR #30).
+- A producer card said "no leader to send to" while other partitions of the same topic had leaders. Only `profiles-0` was leaderless: with replication factor 2, both its copies sat on the two powered-off brokers. A keyed record can't go to another partition, so it waits; the card now says which partition and why (PR #31).
+- "A few keys" told me nothing. The card now lists each key in its own colour with the partition `hash(key) mod partitions` sends it to (PR #32).
+
+## What I learned
+
+- **Gate heavy services on the machine, not on memory of the machine.** "Start Kafka only with ≥ 3.5 GB" made merge order irrelevant.
+- **Check that a public IP is Static before resizing a VM.**
+- **Advertised listeners decide where clients connect next.** A tunnel or proxy must carry every broker's address, not only the bootstrap one.
+- **Keep databases off the internet and tunnel in; still require certificates inside the tunnel.**
+- **Editing a CI workflow on a branch can park its CI behind manual approval.**
+- **MDX is CommonMark.** Tables, strikethrough and task lists need `remark-gfm`; a test that renders every note catches the next leak.
+- **A simulation must be wrong in the same places reality is quiet.** No metadata means no packets, not red packets.
+- **Colour alone isn't a legend.** Shapes plus a full key.
+- **Explain one event at a time.** A fast animation teaches nothing; a pause with a sentence does.
+
+## General notes from today
+
+- New: [Inside the Kafka producer](/notes/commonplace/kafka/kafka-producer-internals), [Kafka ACLs and authorization errors](/notes/commonplace/kafka/kafka-acls-authorization)
+- Written during the day: [Logging in to Kafka and MySQL with a client certificate](/notes/commonplace/kafka/kafka-mysql-client-certificates), [topics, partitions and offsets](/notes/commonplace/kafka/kafka-log-partitions-offsets), [replication and the ISR](/notes/commonplace/kafka/kafka-replication-isr), [consumer groups](/notes/commonplace/kafka/kafka-consumer-groups), and [Build your own Kafka, 0](/notes/commonplace/kafka/build-kafka-0-why-a-log) to [4](/notes/commonplace/kafka/build-kafka-4-page-cache-and-recovery)
