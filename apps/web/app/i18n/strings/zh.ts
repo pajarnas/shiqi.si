@@ -516,7 +516,9 @@ export const zh: DeepPartial<Strings> = {
         stats: '已发 {sent} · 已确认 {acked} · 失败 {failed}',
         lastError: '最近的错误：{error}',
         buffered:
-          '{n} 条记录在生产者自己的缓冲区里等着：没有 leader 可发。网络上什么都不发；等满 {timeout} 秒还没有 leader，就以超时失败。',
+          '{n} 条记录在等 {partitions}：这个分区现在没有 leader（同一个 topic 的其他分区照常在发）。带 key 的记录只能进 key 算出来的那个分区，不能改投别的分区，所以生产者先把它们留在自己的缓冲区里；等满 {timeout} 秒还没有 leader，就以超时失败。',
+        bufferedAll:
+          '{n} 条记录在生产者自己的缓冲区里等着：{topic} 的所有分区现在都没有 leader，没有地方可发。等满 {timeout} 秒还没有 leader，就以超时失败。',
         bufferAge: '最早的一条已经等了 {age} 秒（上限 {timeout} 秒）',
         pause: '暂停',
         resume: '继续',
