@@ -1,0 +1,61 @@
+export const frontmatter = {
+  title: 'Kafka lab: making the cards say what they mean',
+  date: '2026-10-11',
+  summary:
+    'A short night of small fixes to the Kafka lab: the happy path moved to the top, a disk meter that stayed empty, hover explanations on the consumer-group card, P0/pod0 labels with lines between them, and consumer names that match their pods.',
+  topics: ['kafka', 'design', 'kubernetes'],
+};
+
+All times are UTC (about 01:30 to 02:15 in Fremont). Five small PRs, #34 to #38, all from using [the lab](/kafka) and getting stuck. It continues [yesterday's Kafka day](/notes/journal/2026-10-10-kafka-lab).
+
+## Where is the happy path? (08:31 to 08:39)
+
+The rewritten "life of one record" scenario existed, but it lived under Guided scenarios → Basics → a collapsed box below the timeline. Nobody finds a thing four clicks deep. PR #34 put a "First time here? Start with the normal flow" box right under the page title, with one button that opens it.
+
+## The disk meter with no colour (08:43 to 08:49)
+
+"Bug: the disk has no colour. If it's the shared component, fixing it once should fix it everywhere."
+
+It was the shared `Meter`. The disk meter treated a fixed **64 KB** as full, and the simulated logs held a few dozen bytes, so the filled part rounded to nothing. PR #35:
+
+- The scale follows the data: the full mark grows with the largest broker's log.
+- Any non-zero value draws at least a sliver, so "used" never looks like "empty".
+
+Because the fix went into the shared component, every meter on the site got it at once.
+
+## Reading the consumer-group card (08:46 to 08:55)
+
+I asked what everything on the card means. My reading was right:
+
+- **BILLING**: the group's `group.id`
+- **billing-1**: one member of the group, named by its `client.id`
+- **orders-0 / 1 / 2**: partitions 0, 1 and 2 of topic `orders`, all assigned to the only member
+- **4/s**: records processed per second
+- **Stable**: the group's state; no rebalance in progress
+- **range**: the assignment strategy
+- **generation 1**: how many rebalances have happened, plus one
+- **total lag 0**: nothing left to read
+
+Instead of answering the same question again later, every one of those labels became a hover (or tap) explanation using the shared `Term` component (PR #36).
+
+## Letters instead of numbers, and lines between them (08:52 to 09:04)
+
+"Hover is for the full name. Use what I said instead of bare numbers; it's more direct." So the card now says **P0, P1, P2** for partitions and **pod0, pod1** for members (numbered in join order, never reused), with `orders-0` and the real `client.id` on hover. A dashed blue line runs from each partition's leader to the P label inside the member that reads it; hovering a pod dims every other line, and on a rebalance the lines move to the new owners (PR #37).
+
+On the way, a question about names: are two consumers called billing-0 and billing-1? Kafka does not number consumers. The name you see is the `client.id` each process sets in its own config; on Kubernetes it is usually the pod name, which a StatefulSet makes `billing-0`, `billing-1`.
+
+## "What is a real name?" (09:07 to 09:15)
+
+A hover text said pod0's "real name" was `billing-1`. That was confusing twice over: "real name" meant `client.id`, and pod0 against billing-1 doesn't line up. I suggested `billing-pod1` style names; PR #38 made the default `client.id` **billing-pod0, billing-pod1**, matching the card, in every scenario and both languages, and the hover now says plainly that pod0 is the lab's own number and `client.id` is what the consumer tells Kafka.
+
+## What I learned
+
+- **`group.id`, `client.id` and member id are three different names.** The group shares work and offsets; `client.id` is a label you choose; the member id is assigned by the coordinator and changes on every restart. See [the naming section](/notes/commonplace/kafka/kafka-consumer-groups).
+- **Name consumers after where they run.** Pod names as `client.id` (and as `group.instance.id` with a StatefulSet) make logs, metrics and assignments readable.
+- **A meter needs a scale that fits the data and a floor above zero.** A fixed maximum hides small values completely.
+- **Fix the shared component, not the instance.** One change repaired every meter.
+- **If a question gets asked once, answer it in the UI.** Hover explanations stop the same question from coming back.
+- **Show relations, not just labels.** A line from partition to pod says "who reads what" faster than a list.
+- **Put the starting point first.** A great tutorial four clicks deep is unused.
+
+Updated: [Kafka: consumer groups, rebalances and lag](/notes/commonplace/kafka/kafka-consumer-groups), with a section on group, client, member and instance names.
