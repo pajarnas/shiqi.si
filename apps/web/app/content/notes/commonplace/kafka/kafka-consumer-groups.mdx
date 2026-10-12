@@ -15,6 +15,19 @@ Consumers with the same `group.id` share the work: every partition of the subscr
 - More members than partitions means some members sit idle.
 - Each partition is read in order by one member, so per-key ordering survives.
 
+## Names: group, client, member, instance
+
+A consumer carries several names, and they mean different things:
+
+| Name                | Who sets it                                              | What it is for                                                                                                                                 |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `group.id`          | you, the same for every copy of the service              | which group the consumer joins; offsets are committed per group                                                                                |
+| `client.id`         | you (the Java client defaults to `consumer-<group>-<n>`) | a label in broker logs, metrics, quotas and `--describe` output; Kafka doesn't need it to be unique                                            |
+| member id           | the group coordinator, at join                           | `<client.id>-<uuid>`, the identity inside one generation; it changes after every restart                                                       |
+| `group.instance.id` | you, optional                                            | **static membership**: a member that restarts with the same instance id within `session.timeout.ms` gets its partitions back with no rebalance |
+
+On Kubernetes the natural choice is the pod name, so logs line up with pods: `client.id=billing-pod0`, and with a StatefulSet also `group.instance.id=billing-pod0`, so a rolling restart doesn't reshuffle the whole group. `kafka-consumer-groups --describe --group billing --members` lists each member's id, host, client id and how many partitions it owns.
+
 ## Assignment strategies
 
 | Strategy             | How it splits                                                                                      |
@@ -42,6 +55,7 @@ With no committed offset, `auto.offset.reset` decides: `latest` (default) starts
 
 ## Try it
 
+- The consumer-group card on [the lab](/kafka) labels partitions P0, P1, P2 and members pod0, pod1, and draws a dashed line from each partition's leader to the member that reads it
 - [Eager vs cooperative rebalancing](/kafka?scenario=rebalance)
 - [A crash is not a goodbye](/kafka?scenario=crash-vs-leave): why at-least-once means some records are processed twice
 - [Keys, order and partitions](/kafka?scenario=keys): five consumers on four partitions leave one idle
@@ -56,3 +70,5 @@ kafka-consumer-groups --bootstrap-server localhost:9092 --describe --group billi
 # Only while the group has no active members:
 kafka-consumer-groups --bootstrap-server localhost:9092 --reset-offsets --group billing --topic orders --to-earliest --execute
 ```
+
+Related: why the names were changed, [Kafka lab: making the cards say what they mean](/notes/journal/2026-10-11-kafka-lab-legibility).
