@@ -28,7 +28,7 @@ const NET_SCALE = 2048;
 const CACHE_SCALE = 2048;
 /** Smallest visible fill of a meter that isn't empty. */
 const MIN_FILL = 0.02;
-const FOCUS_CLASS = 'kv-focus';
+const FOCUS_CLASS = 'lab-focus';
 
 interface StageProps {
   cluster: Cluster;

@@ -2,6 +2,7 @@
 // explaining, so a reader sees one thing happen at a time with words for it.
 // Repeats of the same kind of traffic on the same partition only stop once.
 import type { Cluster, ClusterEvent } from '@shiqi/kafka';
+import { BeatFilter as SimBeatFilter, camel, eventVars, type Beat as SimBeat } from '@shiqi/sim';
 import { anchorId } from './anchors';
 
 /** Key of a beat's text in KAFKA_STRINGS.story.beats. */
@@ -39,12 +40,7 @@ export type BeatKind =
   | 'authorizerOn'
   | 'authorizerOff';
 
-export interface Beat {
-  kind: BeatKind;
-  event: ClusterEvent;
-  /** On-screen things this beat is about (anchor ids). */
-  focus: string[];
-}
+export type Beat = SimBeat<ClusterEvent, BeatKind>;
 
 /** Which text explains this event; null for events a scenario never needs to stop for. */
 export function beatKind(e: ClusterEvent): BeatKind | null {
@@ -91,9 +87,6 @@ export function beatKind(e: ClusterEvent): BeatKind | null {
   }
 }
 
-const camel = <T extends string>(s: string) =>
-  s.replace(/-(\w)/g, (_, c: string) => c.toUpperCase()) as T;
-
 /** Steady traffic: explained the first time per partition, then let through. */
 const REPEATING = new Set<BeatKind>([
   'produce',
@@ -127,28 +120,16 @@ function repeatKey(kind: BeatKind, e: ClusterEvent): string {
  * Picks the events to stop at during one scenario step. Feed it every event in
  * order; it returns a beat for the ones worth a pause and counts the rest.
  */
-export class BeatFilter {
-  private seen = new Set<string>();
-  /** Events that went by without a stop, because the same thing was explained already. */
-  quiet = 0;
-
-  take(e: ClusterEvent, c: Cluster): Beat | null {
-    const kind = beatKind(e);
-    if (!kind) return null;
-    // Committing offset 0 means "nothing read here yet": nothing to explain.
-    if (e.type === 'commit' && e.offset === 0) {
-      this.quiet++;
-      return null;
-    }
-    if (REPEATING.has(kind)) {
-      const key = repeatKey(kind, e);
-      if (this.seen.has(key)) {
-        this.quiet++;
-        return null;
-      }
-      this.seen.add(key);
-    }
-    return { kind, event: e, focus: focusOf(e, c) };
+export class BeatFilter extends SimBeatFilter<ClusterEvent, Cluster, BeatKind> {
+  constructor() {
+    super({
+      kind: beatKind,
+      repeating: REPEATING,
+      repeatKey,
+      focus: focusOf,
+      // Committing offset 0 means "nothing read here yet": nothing to explain.
+      boring: (e) => e.type === 'commit' && e.offset === 0,
+    });
   }
 }
 
@@ -200,12 +181,4 @@ export function focusOf(e: ClusterEvent, c: Cluster): string[] {
   }
 }
 
-/** Event fields as template values: numbers stay, lists join, the rest become text. */
-export const eventVars = (e: object): Record<string, string | number> =>
-  Object.fromEntries(
-    Object.entries(e).flatMap(([k, v]) =>
-      v !== null && typeof v === 'object' && !Array.isArray(v)
-        ? Object.entries(v as object).map(([k2, v2]) => [k2, String(v2 ?? '')])
-        : [[k, typeof v === 'number' ? v : Array.isArray(v) ? v.join(', ') : String(v ?? '')]],
-    ),
-  );
+export { eventVars };

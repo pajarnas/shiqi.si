@@ -1,0 +1,473 @@
+/* @shiqi/rabbitmq-viz. Class names are `rv-<block>[__element][--modifier]`.
+   Only @shiqi/ui's semantic tokens are read, so every theme works. */
+
+:root,
+[data-theme] {
+  /* Routing-key colours: six slots that stay apart in every theme, plus "no key". */
+  --rv-key-0: #f2b51b;
+  --rv-key-1: #1f9d55;
+  --rv-key-2: #5b8def;
+  --rv-key-3: #e8735a;
+  --rv-key-4: #9fd7c2;
+  --rv-key-5: #b07ce8;
+  --rv-key-none: #9a968a;
+  --rv-binding: var(--text-muted);
+  --rv-wire: var(--border);
+  --rv-consume: #3b6fe0;
+  --rv-ack: var(--success);
+  --rv-dead: var(--danger);
+  --rv-cell-size: 1rem;
+}
+
+/* ---------- Stage ---------- */
+
+/* The stage sizes itself to its box, not the window: a story's text takes a column beside it. */
+.rv-stage-box {
+  container-type: inline-size;
+}
+
+.rv-stage {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(8rem, 10rem) minmax(9rem, 11rem) minmax(12rem, 1fr) minmax(
+      11rem,
+      14rem
+    );
+  gap: var(--space-6) clamp(var(--space-5), 4cqi, 4rem);
+  align-items: start;
+  padding: var(--space-4);
+  background:
+    linear-gradient(var(--surface-sunken) 1px, transparent 1px) 0 0 / 16px 16px,
+    linear-gradient(90deg, var(--surface-sunken) 1px, transparent 1px) 0 0 / 16px 16px,
+    var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+@container (max-width: 52rem) {
+  .rv-stage {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@container (max-width: 34rem) {
+  .rv-stage {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+}
+
+.rv-flow {
+  image-rendering: pixelated;
+  z-index: 1;
+}
+
+.rv-lane {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.rv-lane__title {
+  margin: 0;
+  font: var(--text-xs) / 1.5 var(--font-pixel);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* ---------- Cards ---------- */
+
+.rv-card {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.rv-card--exchange {
+  border-radius: 999px / 1.5rem;
+  padding-inline: var(--space-4);
+  background: var(--accent-soft, var(--surface));
+}
+
+.rv-card--queue {
+  border-left-width: 6px;
+}
+
+.rv-card--selected {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.rv-card--off {
+  opacity: 0.6;
+}
+
+.rv-card--down {
+  border-style: dashed;
+  opacity: 0.7;
+  background: var(--surface-sunken);
+}
+
+.rv-card p {
+  margin: 0;
+}
+
+.rv-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+}
+
+.rv-card__name {
+  overflow: hidden;
+  font: 700 var(--text-sm) / 1.3 var(--font-pixel);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rv-link {
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.rv-card__line {
+  font-size: var(--text-xs);
+}
+
+.rv-card__stats {
+  font: var(--text-xs) / 1.4 var(--font-mono);
+  color: var(--text-muted);
+}
+
+.rv-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.rv-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.rv-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.35rem;
+  font: var(--text-xs) / 1.6 var(--font-mono);
+  color: var(--text);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.rv-tag--type {
+  font-family: var(--font-pixel);
+  background: var(--surface);
+}
+
+.rv-tag--warn {
+  border-color: var(--danger);
+}
+
+.rv-status {
+  font: var(--text-xs) / 1.4 var(--font-pixel);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.rv-status--bad {
+  color: var(--danger);
+}
+
+.rv-counts {
+  display: inline-flex;
+  gap: var(--space-2);
+  font: var(--text-xs) / 1.4 var(--font-mono);
+}
+
+/* A routing key chip in its colour. */
+.rv-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rv-key {
+  display: inline-block;
+  padding: 0 0.3rem;
+  font: var(--text-xs) / 1.6 var(--font-mono);
+  border: 1px solid var(--border);
+  border-left: 6px solid var(--rv-key);
+  background: var(--surface);
+}
+
+/* ---------- A queue's messages ---------- */
+
+.rv-strip {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  min-height: calc(var(--rv-cell-size) + 6px);
+  margin: 0;
+  padding: 2px;
+  overflow: hidden;
+  list-style: none;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+}
+
+.rv-cell {
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: var(--rv-cell-size);
+  height: var(--rv-cell-size);
+  background: var(--rv-key);
+  border: 1px solid var(--border);
+  /* A message close to its TTL fades out. */
+  opacity: calc(0.35 + 0.65 * var(--rv-life, 1));
+}
+
+/* Redelivered: a notch in the corner. */
+.rv-cell--again::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  border-top: 6px solid var(--danger);
+  border-left: 6px solid transparent;
+}
+
+.rv-strip__more,
+.rv-strip__empty {
+  margin-inline-end: auto;
+  font: var(--text-xs) / 1 var(--font-mono);
+  color: var(--text-muted);
+}
+
+.rv-meter {
+  height: 4px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+}
+
+.rv-meter > span {
+  display: block;
+  height: 100%;
+  background: var(--danger);
+}
+
+/* ---------- A consumer's prefetch window ---------- */
+
+.rv-window {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rv-slot {
+  position: relative;
+  width: calc(var(--rv-cell-size) + 4px);
+  height: calc(var(--rv-cell-size) + 4px);
+  overflow: hidden;
+  background: transparent;
+  border: 1px dashed var(--border);
+}
+
+.rv-slot--wire {
+  border: 2px solid var(--rv-key);
+  border-style: dotted;
+}
+
+.rv-slot--waiting {
+  background: var(--rv-key);
+  border-style: solid;
+  opacity: 0.6;
+}
+
+.rv-slot--working {
+  background: var(--rv-key);
+  border: 2px solid var(--border);
+}
+
+.rv-slot--settling {
+  border: 2px solid var(--rv-ack);
+}
+
+.rv-slot__progress {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--border);
+}
+
+/* ---------- Panels ---------- */
+
+.rv-panel section h4,
+.rv-inspector h4 {
+  margin: 0 0 var(--space-2);
+  font: 700 var(--text-xs) / 1.4 var(--font-pixel);
+  text-transform: uppercase;
+}
+
+.rv-inspector {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.rv-inspector h3 {
+  margin: 0;
+}
+
+.rv-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.rv-list__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.rv-table-wrap {
+  max-height: 22rem;
+  overflow: auto;
+}
+
+.rv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.rv-table th,
+.rv-table td {
+  padding: 2px var(--space-2);
+  text-align: start;
+  border-bottom: 1px solid var(--surface-sunken);
+  white-space: nowrap;
+}
+
+.rv-console {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rv-examples {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.rv-examples code {
+  font-size: var(--text-xs);
+  white-space: normal;
+  text-align: start;
+}
+
+/* ---------- Legend ---------- */
+
+.rv-legend {
+  padding: var(--space-3);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+.rv-legend summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rv-legend ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.rv-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rv-legend__sample {
+  display: inline-flex;
+  flex: none;
+  justify-content: center;
+  width: 3.5rem;
+}
+
+.rv-mark {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: var(--rv-key, var(--rv-key-none));
+  border: 1px solid var(--border);
+}
+
+.rv-mark--dot {
+  border-radius: 50%;
+}
+
+.rv-mark--hollow {
+  background: var(--rv-ack);
+  box-shadow:
+    inset 0 0 0 2px var(--rv-ack),
+    inset 0 0 0 5px var(--border);
+}
+
+.rv-mark--cross {
+  background:
+    linear-gradient(45deg, transparent 40%, var(--border) 40% 60%, transparent 60%),
+    linear-gradient(-45deg, transparent 40%, var(--border) 40% 60%, transparent 60%), var(--danger);
+}
+
+.rv-line {
+  display: inline-block;
+  min-width: 3rem;
+  padding: 0 4px;
+  font: var(--text-xs) / 1.2 var(--font-mono);
+  text-align: center;
+  border-top: 2px solid var(--rv-binding);
+}
+
+.rv-line--consume {
+  border-top: 2px dashed var(--rv-consume);
+}
+
+.rv-line--dead {
+  border-top: 2px dashed var(--rv-dead);
+}

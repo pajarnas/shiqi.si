@@ -10,27 +10,14 @@ import {
   type Partition,
   type TruncationMode,
 } from '@shiqi/kafka';
+import { stepRunLimit, type LabStep } from '@shiqi/lab';
 import { anchorId } from './anchors';
 
-export interface ScenarioStep {
-  /** Key of this step's text in KAFKA_STRINGS.scenarios.list[scenario].steps. */
-  id: string;
-  /** Done when the step plays, through the timeline, so a rewind undoes it. */
-  act?: (c: Cluster) => void;
-  /** Then play until this holds... */
-  until?: (c: Cluster) => boolean;
-  /** ...or for this long (also the cap for `until`). */
-  runMs?: number;
-  /** Index of the right option when the step asks for a prediction first. */
-  answer?: number;
+export interface ScenarioStep extends LabStep<Cluster> {
   /** On-screen things to point at while the step is open (anchor ids). */
   focus?: (c: Cluster) => string[];
   /** Partition to open in the inspector. */
   inspect?: (c: Cluster) => { topic: string; partition: number } | null;
-  /** Values for placeholders in the step's text. */
-  vars?: (c: Cluster) => Record<string, string | number>;
-  /** What must be true once the step has played; the tests hold every story to it. */
-  expect?: (c: Cluster) => boolean;
 }
 
 export interface Scenario {
@@ -62,8 +49,7 @@ export const SCENARIO_IDS = [
 
 export type ScenarioId = (typeof SCENARIO_IDS)[number];
 
-const DEFAULT_RUN_MS = 20_000;
-export const stepRunLimit = (s: ScenarioStep) => s.runMs ?? (s.until ? DEFAULT_RUN_MS : 0);
+export { stepRunLimit };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

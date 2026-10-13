@@ -2,6 +2,7 @@
 export * from './components/Button';
 export * from './components/Card';
 export * from './components/Clock';
+export * from './components/FlowLayer';
 export * from './components/Form';
 export * from './components/Island';
 export * from './components/Layout';
@@ -16,6 +17,7 @@ export * from './components/Rich';
 export * from './components/Quiz';
 export * from './components/Section';
 export * from './components/Segmented';
+export * from './components/Shell';
 export * from './components/Term';
 export * from './components/Toast';
 export * from './components/Window';

@@ -1,4 +1,5 @@
 import '@shiqi/ui/styles.css';
+import '@shiqi/lab/styles.css';
 import './app.css';
 
 import { ThemeProvider, ToastProvider, themeScript } from '@shiqi/ui';

@@ -2,6 +2,7 @@
 // consumer groups, advanced by tick(ms). Every random choice comes from one
 // seeded generator, so a seed replays the same story.
 import { rng, type Random } from '@shiqi/pixel';
+import { Simulation } from '@shiqi/sim';
 import {
   authorize,
   sameAcl,
@@ -230,71 +231,37 @@ export interface ProduceInput {
   producer?: string;
 }
 
-const EVENT_LOG_SIZE = 400;
 const MAX_SENDS_PER_TICK = 200;
 const MAX_POLL_RECORDS = 500;
 const RATE_SMOOTHING = 0.9;
 
-export class Cluster {
+export class Cluster extends Simulation<ClusterEvent> {
   readonly settings: ClusterSettings;
-  now = 0;
-  /** Bumped on every change; views compare it to know when to redraw. */
-  version = 0;
   brokers = new Map<BrokerId, Broker>();
   controller: BrokerId | null = null;
   topics = new Map<string, Topic>();
   producers = new Map<string, Producer>();
   groups = new Map<string, Group>();
-  /** The most recent events, oldest first. */
-  events: ClusterEvent[] = [];
   /** authorizer.class.name is set: every request is checked against `acls`. */
   authorizer = false;
   acls: Acl[] = [];
-  /** Called before every fixed step; a Timeline uses it to replay recorded actions on time. */
-  beforeStep?: (now: number) => void;
 
   private random: Random;
-  private carry = 0;
   private traces = new WeakMap<KRecord, RecordTrace>();
   private pending: PendingAck[] = [];
   private nextCleanAt = 0;
   private counters = { producer: 0 };
-  private eventListeners = new Set<(e: ClusterEvent) => void>();
-  private changeListeners = new Set<() => void>();
 
   constructor(options: { brokers?: number; racks?: number } & Partial<ClusterSettings> = {}) {
+    super();
     const { brokers = 3, racks = 0, ...settings } = options;
     this.settings = { ...CLUSTER_DEFAULTS, ...settings };
     this.random = rng(this.settings.seed);
     for (let i = 0; i < brokers; i++) this.addBroker(racks > 0 ? `rack-${(i % racks) + 1}` : '');
   }
 
-  // ── Listeners ────────────────────────────────────────────────────────────
-
-  /** Called for every event as it happens. Returns an unsubscribe function. */
-  onEvent(fn: (e: ClusterEvent) => void) {
-    this.eventListeners.add(fn);
-    return () => void this.eventListeners.delete(fn);
-  }
-
-  /** Called after any change (a tick, an admin call). Fits useSyncExternalStore. */
-  subscribe = (fn: () => void) => {
-    this.changeListeners.add(fn);
-    return () => void this.changeListeners.delete(fn);
-  };
-
-  getVersion = () => this.version;
-
-  private emit(event: ClusterEvent) {
-    this.events.push(event);
-    if (this.events.length > EVENT_LOG_SIZE)
-      this.events.splice(0, this.events.length - EVENT_LOG_SIZE);
-    for (const fn of this.eventListeners) fn(event);
-  }
-
-  private changed() {
-    this.version++;
-    for (const fn of this.changeListeners) fn();
+  protected override get stepMs() {
+    return this.settings.tickMs;
   }
 
   // ── Brokers ──────────────────────────────────────────────────────────────
@@ -1354,39 +1321,7 @@ export class Cluster {
 
   // ── Time ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Advance the simulation by `ms` of simulated time. Time moves in fixed
-   * steps of `tickMs`; a remainder waits for the next call, so the history is
-   * the same whatever size the calls are.
-   */
-  tick(ms: number) {
-    if (!(ms > 0)) return;
-    this.carry += ms;
-    const q = this.settings.tickMs;
-    let stepped = false;
-    while (this.carry >= q - 1e-6) {
-      this.carry -= q;
-      this.step(q);
-      stepped = true;
-    }
-    if (stepped) this.changed();
-  }
-
-  /** Step until `now` reaches `time`, dropping any partial step. */
-  runUntil(time: number) {
-    this.carry = 0;
-    const q = this.settings.tickMs;
-    let stepped = false;
-    while (this.now + q <= time + 1e-6) {
-      this.step(q);
-      stepped = true;
-    }
-    if (stepped) this.changed();
-  }
-
-  private step(ms: number) {
-    this.beforeStep?.(this.now);
-    this.now += ms;
+  protected override step(ms: number) {
     const before = new Map(
       [...this.brokers.values()].map((b) => [b.id, [b.bytesIn, b.bytesOut] as const]),
     );

@@ -1,0 +1,346 @@
+/* @shiqi/lab: the frame every simulation lab shares. Class names are
+   `lab-<block>[__element][--modifier]`; only @shiqi/ui's semantic tokens are read. */
+
+.lab-app {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.lab-muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Toolbar ---------- */
+
+.lab-toolbar > .ui-segmented,
+.lab-panels > .ui-segmented {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.lab-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lab-toolbar__clock {
+  font-size: var(--text-sm);
+}
+
+.lab-toolbar__timeline {
+  flex: 1 1 12rem;
+  min-width: 8rem;
+}
+
+.lab-toolbar__note {
+  margin: calc(-1 * var(--space-3)) 0 0;
+}
+
+/* ---------- Guided scenarios ---------- */
+
+/* Wide screens: the story on the left, the cluster it is about on the right. */
+@media (min-width: 80rem) {
+  .lab-app--guided {
+    grid-template-columns: minmax(18rem, 25rem) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .lab-app--guided > .lab-toolbar,
+  .lab-app--guided > .lab-toolbar__note {
+    grid-column: 1 / -1;
+  }
+
+  .lab-app--guided > :not(.lab-toolbar, .lab-toolbar__note, .lab-scenario) {
+    grid-column: 2;
+  }
+
+  .lab-app--guided > .lab-scenario {
+    position: sticky;
+    top: var(--space-4);
+    grid-row: span 3;
+    max-height: calc(100vh - 2 * var(--space-4));
+    overflow-y: auto;
+  }
+}
+
+.lab-scenario {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--border);
+}
+
+.lab-scenario p {
+  margin: 0;
+}
+
+.lab-scenario {
+  min-width: 0;
+}
+
+/* Long labels ("Continue: …") wrap instead of widening the panel. */
+.lab-scenario .ui-btn {
+  white-space: normal;
+  text-align: start;
+}
+
+.lab-scenario__head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.lab-scenario__title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.lab-scenario__step {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.lab-scenario__dots {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-scenario__dots li {
+  flex: 1;
+  height: 6px;
+  border: 1px solid var(--border);
+}
+
+.lab-scenario__dot--done {
+  background: var(--accent-2);
+}
+
+.lab-scenario__dot--now {
+  background: var(--accent);
+}
+
+.lab-scenario__question {
+  padding: var(--space-3);
+  gap: var(--space-3);
+  border: 1px dashed var(--border);
+}
+
+.lab-scenario__result {
+  padding: var(--space-2) var(--space-3);
+  border-left: 4px solid var(--accent-2);
+  background: var(--surface-sunken);
+}
+
+/* Story mode: one event at a time, with the earlier ones folded above. */
+.lab-story {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+}
+
+.lab-story__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lab-story__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-story__list > li {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.lab-story__list details > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.lab-story__list p {
+  margin: var(--space-1) 0 0;
+}
+
+.lab-story__n {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.lab-story__now {
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--border);
+  border-left: 6px solid var(--accent);
+  background: var(--surface);
+}
+
+.lab-story__now .lab-story__n {
+  background: var(--accent);
+}
+
+.lab-story__beat-title {
+  display: block;
+}
+
+.lab-story__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.lab-scenario__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.lab-scenario__source {
+  font-size: var(--text-xs);
+}
+
+.lab-scenarios > summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.lab-scenarios {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+}
+
+.lab-scenarios__group h3 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-family: var(--font-pixel);
+}
+
+.lab-scenarios__group ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-scenarios__item {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+}
+
+.lab-scenarios__item p {
+  margin: var(--space-1) 0 0;
+}
+
+/* What a scenario step is about: a stepped, sprite-like pulse. */
+.lab-focus {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  animation: lab-focus 1.2s steps(2) infinite;
+}
+
+@keyframes lab-focus {
+  50% {
+    outline-color: transparent;
+  }
+}
+
+/* ---------- Panels ---------- */
+
+.lab-panels {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.lab-panels > .ui-segmented {
+  justify-self: start;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.lab-panels__body {
+  min-height: 16rem;
+  padding: var(--space-4);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+}
+
+/* ---------- Events ---------- */
+
+.lab-events {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.lab-events__list {
+  display: grid;
+  gap: 2px;
+  max-height: 22rem;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.lab-events__list li {
+  padding: 2px var(--space-2);
+  border-left: 4px solid var(--border);
+}
+
+.lab-events__list time {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.lab-events__item--bad {
+  border-left-color: var(--danger) !important;
+}
+
+.lab-events__item--good {
+  border-left-color: var(--success) !important;
+}
+
+.lab-form {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.lab-form__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  width: 100%;
+}

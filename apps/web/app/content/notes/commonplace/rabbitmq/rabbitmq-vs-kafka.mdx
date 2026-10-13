@@ -1,0 +1,33 @@
+export const frontmatter = {
+  title: 'RabbitMQ vs Kafka',
+  date: '2026-10-13',
+  summary:
+    'A queue that forgets acked messages versus a log that keeps everything: how the two differ in routing, delivery, ordering, replay and failure, and when each fits.',
+  topics: ['rabbitmq', 'kafka', 'messaging'],
+};
+
+Both move messages from producers to consumers, but they are built on different ideas. Compare [the RabbitMQ lab](/rabbitmq) with [the Kafka lab](/kafka).
+
+## Queue versus log
+
+**RabbitMQ** keeps a message in a queue until a consumer acks it, then deletes it. The broker tracks every message's state (ready, unacked) and pushes messages to consumers.
+
+**Kafka** appends every record to a partitioned log and keeps it for a retention period, acked or not. Consumers pull and track their own position (the offset).
+
+| Question                          | RabbitMQ                                                  | Kafka                                                         |
+| --------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------- |
+| Who decides where a message goes? | the exchange, by key and bindings                         | the producer, by topic (and key → partition)                  |
+| What happens after processing?    | the message is deleted                                    | nothing; the group's offset moves on                          |
+| Can a new consumer read the past? | no, only what arrives while its queue is bound            | yes, from any offset still retained                           |
+| How is work shared?               | consumers on one queue, message by message, with prefetch | consumers in a group, partition by partition                  |
+| Ordering                          | per queue, broken by requeues and several consumers       | per partition, kept                                           |
+| A message that keeps failing      | nack/reject, dead-letter exchange, delivery limit         | the consumer must skip it or write it to a retry topic itself |
+| Per-message delay or expiry       | TTL, dead-letter retry                                    | no; retention is per topic                                    |
+
+## When each fits
+
+**RabbitMQ** fits task queues and commands: "send this email", "resize this image". Each job must be done once by some worker, failures need retries and dead letters, and routing rules change often.
+
+**Kafka** fits event streams: a history many independent readers consume at their own pace, replay after a bug fix, high throughput with ordering per key, and feeding stream processing or a data lake.
+
+The lines blur: RabbitMQ has **streams** (an append-only log type with offsets and replay), and Kafka is adding share groups (queue-like consumption, KIP-932). But the default mental model holds: RabbitMQ is a smart broker with simple consumers; Kafka is a simple log with smart consumers.

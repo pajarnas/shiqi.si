@@ -1,8 +1,8 @@
 import type { Cluster } from '@shiqi/kafka';
-import { Button, cx, Range, Segmented } from '@shiqi/ui';
+import { LabPanels, LabToolbar, type Speed } from '@shiqi/lab';
+import { cx } from '@shiqi/ui';
 import { useCallback, useState } from 'react';
 import { demoCluster } from '../demo';
-import { clock } from '../format';
 import { useClusterVersion, useSimulation, useTimeline } from '../hooks/useSimulation';
 import { SCENARIOS, type ScenarioId, type ScenarioStep } from '../scenarios';
 import { format, useKafkaStrings } from '../strings';
@@ -15,8 +15,6 @@ import { Legend } from './Legend';
 import { Terminal } from './Terminal';
 import { WireView } from './WireView';
 
-const SPEEDS = ['0.25', '0.5', '1', '2', '4'] as const;
-type Speed = (typeof SPEEDS)[number];
 const PANELS = [
   'inspect',
   'wire',
@@ -135,51 +133,25 @@ export function KafkaLab({
   const scenario = scenarioId ? SCENARIOS[scenarioId] : null;
 
   return (
-    <div className={cx('kv-app', scenario && 'kv-app--guided')}>
-      <div className="kv-toolbar">
-        <Button size="sm" onClick={() => setRunning((r) => !r)}>
-          {running ? t.toolbar.pause : t.toolbar.play}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={running}
-          onClick={() => cluster.tick(STEP_MS)}
-        >
-          {t.toolbar.step}
-        </Button>
-        <Segmented
-          label={t.toolbar.speed}
-          options={SPEEDS.map((s) => ({ value: s, label: `${s}×` }))}
-          value={speed}
-          onChange={setSpeed}
-        />
-        <Range
-          className="kv-toolbar__timeline"
-          aria-label={t.toolbar.timeline}
-          title={t.toolbar.timeline}
-          min={0}
-          max={Math.max(timeline.end, 1)}
-          step={cluster.settings.tickMs}
-          value={cluster.now}
-          onChange={(e) => seek(Number(e.target.value))}
-        />
-        <span className="kv-toolbar__clock ui-pixel">
-          {format(t.toolbar.clock, { time: clock(cluster.now) })}
-        </span>
-        {timeline.rewound && (
-          <Button size="sm" variant="ghost" onClick={() => seek(timeline.end)}>
-            {t.toolbar.goLive}
-          </Button>
-        )}
+    <div className={cx('lab-app kv-app', scenario && 'lab-app--guided')}>
+      <LabToolbar
+        strings={t.toolbar}
+        running={running}
+        onRunning={setRunning}
+        onStep={() => cluster.tick(STEP_MS)}
+        speed={speed}
+        onSpeed={setSpeed}
+        now={cluster.now}
+        end={timeline.end}
+        stepMs={cluster.settings.tickMs}
+        rewound={timeline.rewound}
+        onSeek={seek}
+        onReset={reset}
+      >
         {lostAcked > 0 && (
           <span className="kv-tag kv-tag--bad">{format(t.toolbar.lost, { n: lostAcked })}</span>
         )}
-        <Button size="sm" variant="ghost" onClick={reset}>
-          {t.toolbar.reset}
-        </Button>
-      </div>
-      {timeline.rewound && <p className="kv-muted kv-toolbar__note">{t.toolbar.rewound}</p>}
+      </LabToolbar>
 
       {scenario ? (
         <ScenarioPlayer
@@ -210,24 +182,22 @@ export function KafkaLab({
 
       {scenario && <Legend />}
 
-      <div className="kv-panels">
-        <Segmented
-          label={t.panels.label}
-          options={PANELS.map((p) => ({ value: p, label: t.panels[p] }))}
-          value={panel}
-          onChange={setPanel}
-        />
-        <div className="kv-panels__body">
-          {panel === 'inspect' && <Inspector cluster={cluster} selected={selected} />}
-          {panel === 'wire' && <WireView cluster={cluster} selected={selected} />}
-          {panel === 'terminal' && <Terminal cluster={cluster} />}
-          {panel === 'topics' && <TopicsPanel cluster={cluster} />}
-          {panel === 'produce' && <ProducersPanel cluster={cluster} />}
-          {panel === 'consume' && <ConsumersPanel cluster={cluster} />}
-          {panel === 'settings' && <SettingsPanel cluster={cluster} />}
-          {panel === 'events' && <EventLog cluster={cluster} />}
-        </div>
-      </div>
+      <LabPanels
+        label={t.panels.label}
+        panels={PANELS}
+        names={t.panels}
+        value={panel}
+        onChange={setPanel}
+      >
+        {panel === 'inspect' && <Inspector cluster={cluster} selected={selected} />}
+        {panel === 'wire' && <WireView cluster={cluster} selected={selected} />}
+        {panel === 'terminal' && <Terminal cluster={cluster} />}
+        {panel === 'topics' && <TopicsPanel cluster={cluster} />}
+        {panel === 'produce' && <ProducersPanel cluster={cluster} />}
+        {panel === 'consume' && <ConsumersPanel cluster={cluster} />}
+        {panel === 'settings' && <SettingsPanel cluster={cluster} />}
+        {panel === 'events' && <EventLog cluster={cluster} />}
+      </LabPanels>
     </div>
   );
 }

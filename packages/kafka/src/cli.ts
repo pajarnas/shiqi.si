@@ -1,6 +1,7 @@
 // A terminal for the simulated cluster: the stock Kafka scripts (kafka-topics,
 // kafka-console-producer, ...) with their real flags and output formats, plus
 // a few `broker ...` commands that only make sense in a simulator.
+import { table, tokenize } from '@shiqi/sim';
 import {
   describeAcl,
   resourceLine,
@@ -113,30 +114,8 @@ export const exceptionName = (code: KafkaErrorCode) =>
 
 // ── Parsing ────────────────────────────────────────────────────────────────
 
-/** Split a command line like a shell: spaces separate, quotes group. */
-export function tokenize(line: string): string[] {
-  const out: string[] = [];
-  let cur = '';
-  let quote: string | null = null;
-  let has = false;
-  for (const ch of line) {
-    if (quote) {
-      if (ch === quote) quote = null;
-      else cur += ch;
-    } else if (ch === '"' || ch === "'") {
-      quote = ch;
-      has = true;
-    } else if (/\s/.test(ch)) {
-      if (has || cur) out.push(cur);
-      cur = '';
-      has = false;
-    } else {
-      cur += ch;
-    }
-  }
-  if (has || cur) out.push(cur);
-  return out;
-}
+/** Shell-like splitting and admin-tool tables come from @shiqi/sim. */
+export { table, tokenize };
 
 interface Args {
   positional: string[];
@@ -195,18 +174,6 @@ function pairs(values: string[] | undefined): Record<string, string> {
 }
 
 class UsageError extends Error {}
-
-/** Columns padded to the widest cell, like the AdminClient tools print. */
-export function table(headers: string[], rows: (string | number | undefined)[][]): string[] {
-  const cells = [headers, ...rows.map((r) => r.map((c) => (c === undefined ? '-' : String(c))))];
-  const widths = headers.map((_, i) => Math.max(...cells.map((r) => (r[i] ?? '').length)));
-  return cells.map((r) =>
-    r
-      .map((c, i) => (c ?? '').padEnd(widths[i] ?? 0))
-      .join(' ')
-      .trimEnd(),
-  );
-}
 
 // ── Commands ───────────────────────────────────────────────────────────────
 

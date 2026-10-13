@@ -20,7 +20,7 @@ import { LANGUAGES } from '~/i18n/locales';
 import { VisitorMap } from '~/components/VisitorMap';
 import { publicCountryCounts } from '~/features/visits/visits.server';
 import { within } from '~/lib/redis.server';
-import { ABOUT, KAFKA_LINKS, NEXT, SITE, TOOLS } from '~/site';
+import { ABOUT, KAFKA_LINKS, NEXT, RABBITMQ_LINKS, SITE, TOOLS } from '~/site';
 import type { Route } from './+types/home';
 
 const LATEST = 4;
@@ -66,22 +66,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
       </Window>
 
-      <Window title={t.home.kafka.window}>
-        <p className="home__window-lede">{t.home.kafka.lede}</p>
-        <List className="flush">
-          {KAFKA_LINKS.map((k) => (
-            <ListItem
-              key={k.key}
-              as={Link}
-              to={k.path}
-              icon={<PixelIcon name={k.icon} />}
-              title={t.home.kafka.links[k.key].title}
-              description={t.home.kafka.links[k.key].description}
-              meta="›"
-            />
-          ))}
-        </List>
-      </Window>
+      <LinksWindow text={t.home.kafka} links={KAFKA_LINKS} />
+      <LinksWindow text={t.home.rabbitmq} links={RABBITMQ_LINKS} />
 
       <SkyWindow />
 
@@ -257,5 +243,38 @@ function FactList({
         />
       ))}
     </List>
+  );
+}
+
+interface LinkText {
+  title: string;
+  description: string;
+}
+
+/** A window of ways into one sub-project (Kafka, RabbitMQ): a lede and one row per link. */
+function LinksWindow<K extends string>({
+  text,
+  links,
+}: {
+  text: { window: string; lede: string; links: Record<K, LinkText> };
+  links: readonly { key: K; path: string; icon: IconName }[];
+}) {
+  return (
+    <Window title={text.window}>
+      <p className="home__window-lede">{text.lede}</p>
+      <List className="flush">
+        {links.map((k) => (
+          <ListItem
+            key={k.key}
+            as={Link}
+            to={k.path}
+            icon={<PixelIcon name={k.icon} />}
+            title={text.links[k.key].title}
+            description={text.links[k.key].description}
+            meta="›"
+          />
+        ))}
+      </List>
+    </Window>
   );
 }

@@ -1,11 +1,8 @@
 import type { Cluster, ClusterEvent } from '@shiqi/kafka';
-import { Checkbox, cx } from '@shiqi/ui';
-import { useState } from 'react';
-import { clock } from '../format';
+import { EventList } from '@shiqi/lab';
 import { eventVars } from '../story';
 import { format, useKafkaStrings, type KafkaStrings } from '../strings';
 
-const SHOWN = 80;
 /** Per-record events: there are many, so they are hidden unless asked for. */
 const DATA_EVENTS = new Set<ClusterEvent['type']>([
   'produce',
@@ -91,31 +88,17 @@ const tone = (e: ClusterEvent) =>
       ? 'good'
       : undefined;
 
+const isData = (e: ClusterEvent) => DATA_EVENTS.has(e.type) || (e.type === 'ack' && !e.error);
+
 export function EventLog({ cluster }: { cluster: Cluster }) {
   const t = useKafkaStrings();
-  const [data, setData] = useState(false);
-  const events = cluster.events
-    .filter((e) => data || !(DATA_EVENTS.has(e.type) || (e.type === 'ack' && !e.error)))
-    .slice(-SHOWN)
-    .reverse();
   return (
-    <div className="kv-events">
-      <Checkbox
-        label={t.events.showData}
-        checked={data}
-        onChange={(e) => setData(e.target.checked)}
-      />
-      {events.length === 0 ? (
-        <p className="kv-muted">{t.events.empty}</p>
-      ) : (
-        <ol className="kv-events__list">
-          {events.map((e, i) => (
-            <li key={`${e.at}-${i}`} className={cx(tone(e) && `kv-events__item--${tone(e)}`)}>
-              <time>{clock(e.at)}</time> {describeEvent(e, t.events)}
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
+    <EventList
+      strings={t.events}
+      events={cluster.events}
+      isData={isData}
+      describe={(e) => describeEvent(e, t.events)}
+      tone={tone}
+    />
   );
 }

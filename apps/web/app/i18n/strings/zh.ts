@@ -2,6 +2,45 @@
 import type { DeepPartial } from '../merge';
 import type { Strings } from './en';
 
+/** The shared lab frame's words (@shiqi/lab), used by every lab below. */
+const LAB_ZH = {
+  toolbar: {
+    play: '运行',
+    pause: '暂停',
+    step: '单步',
+    speed: '模拟速度',
+    reset: '重置',
+    clock: '模拟时间 {time}',
+    timeline: '倒回或重放模拟时间',
+    rewound: '已倒回。点运行会重放当时发生的事；在这里做任何操作，会从这一刻开出一段新的历史。',
+    goLive: '回到现在',
+  },
+  scenarios: {
+    open: '选一个故事',
+    start: '开始',
+    exit: '离开情景',
+    progress: '第 {n} 步，共 {total} 步',
+    play: '播放这一步',
+    lockIn: '锁定我的猜测并播放',
+    next: '下一步',
+    back: '上一步',
+    replay: '重放这一步',
+    finished: '这个故事讲完了。',
+    continueWith: '接着看：{title}',
+    source: '依据',
+  },
+  story: {
+    title: '刚才发生了什么',
+    continue: '继续',
+    auto: '自动往下讲',
+    skip: '直接看结果',
+    waiting: '正在运行，等下一件事发生……',
+    quiet: '之后又有 {n} 个同类事件没有停下来讲：都是上面讲过的事在重复。',
+    none: '这一步没有发生新的事。',
+  },
+  events: { empty: '还什么都没发生。' },
+};
+
 export const zh: DeepPartial<Strings> = {
   site: {
     description: 'Shiqi 的像素小站：小玩具、顺手的工具和一些笔记。',
@@ -13,6 +52,7 @@ export const zh: DeepPartial<Strings> = {
     tools: '工具',
     notes: '笔记',
     kafka: 'Kafka',
+    rabbitmq: 'RabbitMQ',
     ui: '组件库',
   },
   chrome: {
@@ -91,6 +131,21 @@ export const zh: DeepPartial<Strings> = {
         notes: {
           title: 'Kafka 笔记',
           description: '日志、分区、复制、消费者组：都在「杂学 / Kafka」里。',
+        },
+      },
+    },
+    rabbitmq: {
+      window: 'RabbitMQ — RABBITMQ',
+      lede: '看着 RabbitMQ 路由来学它：交换机、队列、确认和死信，一次一条消息。',
+      links: {
+        live: {
+          title: 'RabbitMQ 现场',
+          description:
+            '浏览器里的发布者、交换机、队列和消费者：引导故事、崩溃，还有能敲 rabbitmqctl 的终端。',
+        },
+        notes: {
+          title: 'RabbitMQ 笔记',
+          description: '交换机、确认、prefetch、死信：都在「杂学 / RabbitMQ」里。',
         },
       },
     },
@@ -363,7 +418,7 @@ export const zh: DeepPartial<Strings> = {
         description: '关于像素、标准和这个网站的一些想法。',
       },
     },
-    subfolders: { kafka: 'Kafka' },
+    subfolders: { kafka: 'Kafka', rabbitmq: 'RabbitMQ' },
     folderMissing: '没有这个文件夹',
     topics: '话题',
     latest: '最近',
@@ -378,6 +433,718 @@ export const zh: DeepPartial<Strings> = {
     translated: '看中文翻译',
     unavailable: '翻译暂时不可用，下面是英文原文。',
     pending: '翻译还在生成，过一会儿刷新就有了；先看英文原文。',
+  },
+  rabbitmq: {
+    title: 'RabbitMQ 现场',
+    description:
+      '在浏览器里跑的一个 RabbitMQ：看交换机把消息路由进队列、消费者确认消息、失败的消息进死信。还能敲真正的 rabbitmqctl 命令。',
+    lede: '一个 broker，一个 topic 交换机，四个队列和几个消费者，都在这一页里运行。跟着引导故事走一遍，或者自己玩：加一个发布者，让消费者崩溃，用自己的模式绑定队列，把时间轴拖回去，或者在终端里输入 rabbitmqctl list_queues。',
+    simulated:
+      '这是对 AMQP 0-9-1 的路由、确认、prefetch、TTL、长度上限和死信的忠实模拟，不是真的 broker。',
+    notes: 'RabbitMQ 笔记',
+    notesLede: '上面看到的东西背后的概念。它们也在「笔记」里，标签 #rabbitmq。',
+    noNotes: '还没有 RabbitMQ 笔记。',
+    start: {
+      text: '第一次来？先看一条消息的一生：从发布者出发，经过交换机，进队列，送到消费者，再以确认的形式回来，一次讲一件事。',
+      button: '开始：一条消息的一生',
+    },
+    lab: {
+      toolbar: LAB_ZH.toolbar,
+      lanes: {
+        publishers: '发布者',
+        exchanges: '交换机',
+        queues: '队列',
+        consumers: '消费者',
+        noPublishers: '没有发布者。在下面的「发布」面板里加一个。',
+        noQueues: '还没有队列。在「声明」面板或终端里声明一个。',
+        noConsumers: '没有消费者。在下面的「消费」面板里加一个。',
+      },
+      publisher: {
+        to: '发往 {exchange}',
+        rate: '{rate}/秒',
+        manual: '手动',
+        keys: '轮流使用的路由键',
+        confirm: '确认',
+        mandatory: 'mandatory',
+        stats: '已发 {sent} · 已确认 {confirmed} · 被退回 {returned} · 被拒 {nacked}',
+        onWire: '{n} 条在路上',
+        sendOne: '发一条',
+        pause: '暂停',
+        resume: '继续',
+        remove: '移除',
+      },
+      exchange: {
+        default: '（默认）',
+        defaultHint:
+          '默认交换机没有名字。每个队列都用自己的名字作为键绑定在它上面，所以用键 "jobs" 发给它，消息就进队列 "jobs"。',
+        types: {
+          direct: 'direct：发给绑定键和路由键完全相同的队列',
+          fanout: 'fanout：每个绑定的队列都发一份，不看键',
+          topic: 'topic：发给模式匹配路由键的队列（* = 一个词，# = 任意个词）',
+          headers: 'headers：发给绑定头和消息头匹配的队列',
+        },
+        alternate: '备用 → {name}',
+        alternateHint: '备用交换机：没有任何绑定匹配的消息改发到 {name}，而不是消失。',
+        internal: '内部',
+        stats: '收到 {in} · 已路由 {routed} · 无法路由 {unroutable}',
+        bindings: '{n} 个绑定',
+        all: '全部',
+        headersMatch: '{mode}：{pairs}',
+      },
+      queue: {
+        ready: '待投递',
+        unacked: '未确认',
+        readyHint: '等着投递。最老的（队头）在最右边，下一个就是它。',
+        unackedHint: '已经交给消费者，还没确认。如果消费者挂了，这些会回到队列。',
+        more: '+{n}',
+        empty: '空',
+        quorum: '仲裁',
+        ttl: 'TTL {s} 秒',
+        maxLength: '最多 {n}',
+        overflowReject: '拒收新的',
+        overflowDrop: '丢掉最老的',
+        dlx: '死信 → {name}',
+        deliveryLimit: '上限 {n} 次',
+        sac: '单活跃消费者',
+        stats:
+          '进 {enqueued} · 已确认 {acked} · 重投 {redelivered} · 进死信 {deadLettered} · 丢弃 {dropped}',
+        message: '{body} · 键 {key}{redelivered}',
+        redeliveredMark: ' · 重投',
+        inspect: '查看',
+        purge: '清空',
+      },
+      consumer: {
+        on: '消费 {queue}',
+        prefetch: 'prefetch {n}',
+        prefetchNone: '不限 prefetch',
+        autoAck: '自动确认',
+        work: '每条 {ms} 毫秒',
+        fails: '每第 {n} 条失败 → {action}',
+        actions: { requeue: 'nack 并重新入队', reject: '拒绝' },
+        window: '它的 prefetch 窗口：每个格子是一条它可以先拿着不确认的消息',
+        slotWire: '正送过来',
+        slotWaiting: '排队等着处理',
+        slotWorking: '正在处理',
+        slotSettling: '处理完了，确认正在回传',
+        idle: '空闲',
+        working: '工作中',
+        paused: '已暂停',
+        down: '已崩溃',
+        stats: '确认 {acked} · nack {nacked} · 拒绝 {rejected} · 丢失 {lost}',
+        pause: '暂停',
+        resume: '继续',
+        crash: '崩溃',
+        restart: '重启',
+        remove: '移除',
+      },
+      panels: {
+        label: '面板',
+        inspect: '查看',
+        terminal: '终端',
+        declare: '声明',
+        publish: '发布',
+        consume: '消费',
+        settings: '设置',
+        events: '事件',
+      },
+      inspect: {
+        none: '点舞台上的一个队列，看看里面有什么。',
+        title: '队列 {name}',
+        args: '参数',
+        noArgs: '没有参数：一个普通的经典队列。',
+        bindings: '绑定来源',
+        noBindings: '只有默认交换机（按它自己的名字）。',
+        consumers: '消费者',
+        noConsumers: '没有人在消费它。',
+        messages: '待投递的消息，队头在前',
+        noMessages: '没有待投递的消息。',
+        columns: {
+          id: '#',
+          body: '内容',
+          key: '路由键',
+          redelivered: '重投',
+          deliveries: '投递次数',
+          deaths: 'x-death',
+          age: '已等待',
+        },
+        yes: '是',
+        no: '否',
+        death: '{count}× {reason}，在 {queue}',
+        seconds: '{s} 秒',
+      },
+      forms: {
+        exchange: '声明交换机',
+        queue: '声明队列',
+        binding: '绑定',
+        name: '名字',
+        type: '类型',
+        alternate: '备用交换机',
+        none: '（无）',
+        ttl: '消息 TTL（毫秒）',
+        maxLength: '最大长度',
+        overflow: '满了以后',
+        dlx: '死信交换机',
+        dlrk: '死信路由键',
+        queueType: '队列类型',
+        deliveryLimit: '投递次数上限',
+        source: '从交换机',
+        destination: '到队列',
+        bindingKey: '绑定键',
+        bindingKeyHint: 'direct：一个词。topic：像 order.* 或 # 这样的模式。fanout：不看。',
+        declare: '声明',
+        bind: '绑定',
+        bindings: '绑定',
+        unbind: '解绑',
+        deleteExchange: '删除交换机',
+        deleteQueue: '删除队列',
+        publishOnce: '发布一条消息',
+        exchangeTo: '交换机',
+        routingKey: '路由键',
+        body: '内容',
+        addPublisher: '加一个发布者',
+        keys: '路由键（用逗号分隔）',
+        rate: '每秒几条',
+        confirm: '发布确认',
+        mandatory: 'Mandatory',
+        addConsumer: '加一个消费者',
+        queue_: '队列',
+        tag: '消费者标签',
+        prefetch: 'Prefetch（0 = 不限）',
+        autoAck: '自动确认',
+        workMs: '每条处理时间（毫秒）',
+        failEvery: '每第 N 条失败（0 = 从不）',
+        onFail: '失败时',
+        published: '已发布消息 {id}',
+        added: '已添加 {name}',
+      },
+      settings: {
+        netMs: '网络延迟（单程）：{ms} 毫秒',
+        netHint:
+          '每次发布、投递和确认都要过网络。延迟越长，越能看出 prefetch 的作用：prefetch 为 1 时，消费者每两条消息之间都要等一个来回。',
+      },
+      terminal: {
+        welcome:
+          "RabbitMQ 终端。试试 'rabbitmqctl list_queues name messages consumers'，或者输入 'help'。",
+        label: 'RabbitMQ 终端',
+        input: '命令',
+        stop: '停止',
+        examples: '试一个',
+      },
+      events: {
+        ...LAB_ZH.events,
+        showData: '显示每一条消息',
+        publish: '{publisher} 把消息 {id} 发到 {exchange}，键 {key}',
+        route: '{exchange} 把消息 {id} 路由到 {queues}',
+        unroutableDropped: '{exchange} 找不到接收消息 {id} 的队列（键 {key}）：丢弃',
+        unroutableReturned: '{exchange} 找不到接收消息 {id} 的队列（键 {key}）：退回给 {publisher}',
+        confirmOk: 'Broker 向 {publisher} 确认了消息 {id}',
+        confirmNack: 'Broker 向 {publisher} 拒收了消息 {id}',
+        deliver: '{queue} 把消息 {id} 投递给 {consumer}',
+        deliverAgain: '{queue} 把消息 {id} 再次投递给 {consumer}（重投）',
+        processOk: '{consumer} 处理完了消息 {id}',
+        processFail: '{consumer} 处理消息 {id} 失败',
+        ack: '{consumer} 确认了消息 {id}',
+        nackRequeue: '{consumer} nack 了消息 {id}，要求重新入队',
+        reject: '{consumer} 拒绝了消息 {id}',
+        requeue: '消息 {id} 回到 {queue} 的队头（{reason}）',
+        requeueReasons: {
+          nack: '被 nack',
+          crash: '它的消费者挂了',
+          get: '带 requeue 的 basic.get',
+          cancel: '它的消费者取消了订阅',
+        },
+        deadLetter: '{queue} 把消息 {id} 送进死信（{reason}），发往 {exchange}',
+        drop: '{queue} 丢弃了消息 {id}（{reason}）',
+        reasons: {
+          rejected: '被拒绝',
+          expired: 'TTL 过期',
+          maxlen: '队列满了',
+          delivery_limit: '达到投递次数上限',
+        },
+        rejectPublish: '{queue} 满了：拒收消息 {id}',
+        consumerDown: '{consumer} 崩溃：{requeued} 条回到 {queue}，{lost} 条丢失',
+        consumerUp: '{consumer} 重新连上了 {queue}',
+        consumerCancel: '{consumer} 不再消费 {queue}',
+        activeConsumer: '{consumer} 现在是 {queue} 唯一的活跃消费者',
+        get: 'basic.get 从 {queue} 取走了消息 {id}',
+        purge: '{queue} 被清空：{count} 条消息没了',
+        declare: '声明了{kind} {name}',
+        delete: '删除了{kind} {name}',
+        kinds: { exchange: '交换机', queue: '队列', binding: '绑定' },
+      },
+      story: {
+        ...LAB_ZH.story,
+        beats: {
+          publish: {
+            title: '{publisher} 发布消息 {id}',
+            body: '它发往<ex>交换机</ex> {exchange}，不是发往队列，带着<rk>路由键</rk> <code>{key}</code>。发布者从不挑队列，交换机来挑。',
+          },
+          route: {
+            title: '{exchange} 把它路由到 {queues}',
+            body: '交换机拿路由键和它的<bind>绑定</bind>比对，给每个匹配的队列放一份。现在它在<q>队列</q>里等着。',
+          },
+          unroutableDropped: {
+            title: '{exchange}：没有队列匹配 {key}',
+            body: '没有一个<bind>绑定</bind>对得上，于是消息<b>悄无声息地被丢掉了</b>。发布者还以为发出去了。',
+          },
+          unroutableReturned: {
+            title: '{exchange}：没有队列匹配，退回给 {publisher}',
+            body: '这条消息是带<mandatory>mandatory</mandatory>标志发布的，所以它没有消失，而是退回给发布者（basic.return），发布者可以记日志或者重试。',
+          },
+          confirmOk: {
+            title: '向 {publisher} 确认',
+            body: '开了<confirm>发布确认</confirm>，消息 {id} 安全进入它被路由到的每个队列后，broker 就告诉发布者。',
+          },
+          confirmNack: {
+            title: '向 {publisher} 拒收',
+            body: 'Broker 收不下消息 {id}（有个队列拒收了），并且明说。发布者知道自己得重试或者放弃。',
+          },
+          deliver: {
+            title: '{queue} 把消息 {id} 交给 {consumer}',
+            body: '队列把它推给一个<prefetch>prefetch</prefetch>窗口里还有空位的消费者。在被确认之前，它算<unacked>未确认</unacked>：仍然归队列负责。',
+          },
+          deliverAgain: {
+            title: '{queue} 再次投递消息 {id}',
+            body: '这次它带着<redelivered>重投</redelivered> = true：之前有人拿过它，却没有确认。消费者可能会看到它两次。',
+          },
+          processFail: {
+            title: '{consumer} 处理消息 {id} 失败',
+            body: '它的代码抛了异常。现在它得告诉队列怎么办：放回去（nack 并重新入队），或者放弃这条（拒绝）。',
+          },
+          ack: {
+            title: '{consumer} 确认消息 {id}',
+            body: '<ack>确认</ack>传回 broker。只有它到了，{queue} 才彻底忘掉这条消息，消费者也空出位置接下一条。',
+          },
+          nackRequeue: {
+            title: '{consumer} nack 消息 {id}，重新入队',
+            body: '它要求把消息放回 {queue} 的队头，再投递一次，也许投给别人。',
+          },
+          reject: {
+            title: '{consumer} 拒绝消息 {id}',
+            body: '不重新入队的拒绝意思是「这条别再给我了」。如果 {queue} 有<dlx>死信交换机</dlx>，它就去那里；没有就没了。',
+          },
+          requeue: {
+            title: '消息 {id} 回到 {queue} 的队头',
+            body: '回到原处，标上<redelivered>重投</redelivered>。一有消费者空出位置，它就再发出去。原因：{reason}。',
+          },
+          deadLetter: {
+            title: '{queue} 把消息 {id} 送进死信',
+            body: '原因：{reason}。{queue} 没有扔掉它，而是把它重新发布到自己的<dlx>死信交换机</dlx> {exchange}，带上一个 x-death 头，写明它死在哪里、为什么。',
+          },
+          drop: {
+            title: '{queue} 丢弃消息 {id}',
+            body: '原因：{reason}。{queue} 没有<dlx>死信交换机</dlx>，所以消息就这么没了。',
+          },
+          rejectPublish: {
+            title: '{queue} 满了，拒收消息 {id}',
+            body: 'x-overflow 是 reject-publish：新消息被挡在门外，而不是把旧的挤出去。开了确认的话，发布者会收到通知。',
+          },
+          consumerDown: {
+            title: '{consumer} 崩溃',
+            body: '它的连接断了。RabbitMQ 把它所有还没确认的消息（{requeued} 条）放回 {queue}。用<autoack>自动确认</autoack>拿到的消息已经不归 RabbitMQ 管了：丢了 {lost} 条。',
+          },
+          consumerUp: {
+            title: '{consumer} 回来了',
+            body: '它重新订阅，排到轮询队伍的最后。',
+          },
+          activeConsumer: {
+            title: '{consumer} 成为活跃消费者',
+            body: '开了单活跃消费者，同一时刻只有一个消费者收消息；其他的作为热备等着。',
+          },
+        },
+      },
+      legend: {
+        title: '图上是什么',
+        message: '一条消息，颜色代表它的路由键',
+        delivery: '投递给消费者',
+        ack: '传回去的确认',
+        bad: 'nack、拒绝、丢弃或死信',
+        binding: '一个绑定，标着它的键',
+        subscription: '消费者订阅了一个队列',
+        deadRoute: '死信去哪里',
+        ready: '队列里待投递的消息（队头在右）',
+        unacked: '未确认的消息',
+        redelivered: '重投',
+      },
+      glossary: {
+        ex: {
+          term: '交换机（Exchange）',
+          def: '发布者把消息发到这里。它从不存消息：它看路由键（或消息头）和自己的绑定，把消息复制进匹配的队列。',
+        },
+        bind: {
+          term: '绑定（Binding）',
+          def: '从交换机到队列的一条规则：「键匹配这个的消息发给我」。一个队列可以有很多绑定，一个交换机可以连很多队列。',
+        },
+        rk: {
+          term: '路由键（Routing key）',
+          def: '发布者给每条消息贴的一个短字符串，比如 order.paid。交换机按它路由。',
+        },
+        q: {
+          term: '队列（Queue）',
+          def: '一个有序的缓冲区，存着消息直到消费者确认。每条消息只投递给这个队列的一个消费者。',
+        },
+        ack: {
+          term: '确认（Ack）',
+          def: '消费者告诉 broker：「处理完了，这条可以忘掉了」。在那之前队列一直留着它，消费者挂了就交给别人。',
+        },
+        prefetch: {
+          term: 'Prefetch（basic.qos）',
+          def: '一个消费者同时最多能拿着几条未确认的消息。1 表示一次一条；0 表示不限，慢消费者就会囤着别人本可以处理的消息。',
+        },
+        unacked: {
+          term: '未确认（Unacked）',
+          def: '已经投递但还没确认。消费者挂了，这些不会丢：它们回到队列。',
+        },
+        redelivered: {
+          term: '重投标志（Redelivered）',
+          def: '一条之前投递过、没被确认的消息会带上它。消费者要准备好同一条消息看到两次（做到幂等）。',
+        },
+        dlx: {
+          term: '死信交换机（DLX）',
+          def: '队列放弃的消息被送去的地方：被拒绝的、过期的、被长度上限挤掉的、或超过投递次数上限的。',
+        },
+        ttl: {
+          term: '存活时间（TTL）',
+          def: '一条消息最多能在队列里等多久。过了就过期：队列有死信交换机就进死信，没有就丢掉。',
+        },
+        confirm: {
+          term: '发布确认（Publisher confirms）',
+          def: '每条消息安全进队后，broker 向发布者回一个确认；收不下就回一个 nack。',
+        },
+        mandatory: {
+          term: 'Mandatory 标志',
+          def: '用 mandatory = true 发布，无法路由的消息会退回给你（basic.return），而不是消失。',
+        },
+        autoack: {
+          term: '自动确认（Auto-ack）',
+          def: 'Broker 一发出消息就当它已确认。快，但消费者一挂，它手上的消息就丢了。',
+        },
+        defx: {
+          term: '默认交换机',
+          def: '一个没有名字的 direct 交换机，每个队列都用自己的名字绑在它上面。用键 "hello" 发给它，消息就进队列 "hello"。',
+        },
+        ae: {
+          term: '备用交换机（Alternate exchange）',
+          def: '设在另一个交换机上的交换机：没有任何绑定匹配的消息改发到这里，而不是被丢掉。',
+        },
+        quorum: {
+          term: '仲裁队列（Quorum queue）',
+          def: '一种由多数节点（Raft）共同保存的复制队列。它会数投递次数，所以能用 x-delivery-limit 拦住毒消息。',
+        },
+      },
+      scenarios: {
+        ...LAB_ZH.scenarios,
+        intro: '每个故事搭一个小 broker，一次讲一件事。先猜会发生什么，再看它真的发生。',
+        groups: {
+          basics: '基础',
+          routing: '路由',
+          failure: '出问题的时候',
+        },
+        sources: {
+          tutorial1: 'RabbitMQ 教程 1：Hello World',
+          tutorial2: 'RabbitMQ 教程 2：工作队列',
+          tutorial3: 'RabbitMQ 教程 3：发布/订阅',
+          tutorial4: 'RabbitMQ 教程 4：路由',
+          tutorial5: 'RabbitMQ 教程 5：Topics',
+          acks: 'RabbitMQ 文档：消费者确认与发布确认',
+          ae: 'RabbitMQ 文档：备用交换机',
+          dlx: 'RabbitMQ 文档：死信交换机',
+          ttl: 'RabbitMQ 文档：存活时间',
+          maxlength: 'RabbitMQ 文档：队列长度上限',
+        },
+        list: {
+          hello: {
+            title: '一条消息的一生',
+            summary: '发布者、交换机、队列、消费者、确认：完整的一趟，慢慢看。',
+            steps: {
+              meet: {
+                title: '四个角色',
+                body: '最左边是发布者 <b>app</b>。接着是<defx>默认交换机</defx>。然后是<q>队列</q> <b>hello</b>，最右边是消费者 <b>worker</b>。发布者从不自己往队列里写：它把消息交给<ex>交换机</ex>，由交换机决定消息去哪。',
+              },
+              send: {
+                title: '发一条消息',
+                body: 'app 发布一条消息，<rk>路由键</rk>是 <code>hello</code>。看它怎么走。',
+                question: '到了 RabbitMQ 以后，它在哪里等着？',
+                options: ['在交换机里', '在队列 hello 里', '哪都不等：直接送到 worker'],
+                result:
+                  '交换机只负责路由；队列存着消息，直到 worker 有空位，然后把它记为<unacked>未确认</unacked>，直到 worker 的<ack>确认</ack>回来。那时它才真正没了。',
+              },
+              'why-ack': {
+                title: '为什么要等确认？',
+                body: '如果 worker 处理到一半崩溃了，一条队列已经忘掉的消息就丢了。一直留到确认为止，RabbitMQ 就能把它交给别人。代价是：每条消息一个来回。',
+              },
+              stream: {
+                title: '现在每秒两条',
+                body: 'app 每秒发 2 条。worker 每条要 0.6 秒，一次只拿一条（<prefetch>prefetch</prefetch> 1），再加上网络来回，它一秒处理不到一条。',
+                question: '队列会怎样？',
+                options: ['一直是空的', '越来越长：队列是个缓冲区', 'RabbitMQ 让发布者慢下来配合'],
+                result:
+                  '8 秒后 worker 处理了 {done} 条，hello 里还有 {waiting} 条在等。队列能吸收突发流量，但不会让消费者变快。加一个 worker（下一个故事），或者调大 prefetch。',
+              },
+            },
+          },
+          'work-queue': {
+            title: '工作队列：分担工作',
+            summary:
+              '两个 worker 消费同一个队列。轮询、一个慢 worker，以及为什么 prefetch 1 更公平。',
+            steps: {
+              'round-robin': {
+                title: '六个任务，两个 worker',
+                body: '两个 worker 消费 <b>tasks</b>，没有 <prefetch>prefetch</prefetch> 上限。app 发 6 个任务。',
+                question: '它们怎么分？',
+                options: ['worker-1 全拿走', '轮流来：每人 3 个', '谁先应答谁拿得多'],
+                result: '轮询：RabbitMQ 轮流发牌，1、2、1、2……每个 worker 拿到 3 个。',
+              },
+              slow: {
+                title: 'worker-1 变慢了',
+                body: 'worker-1 现在每个任务要 3 秒，worker-2 仍然是 0.4 秒。app 再发 8 个。',
+                question: '这 8 个怎么分？',
+                options: [
+                  '还是 4 和 4：RabbitMQ 不看谁忙',
+                  '大部分给 worker-2',
+                  'worker-1 一个都没有',
+                ],
+                result:
+                  '还是每人 4 个。没有 prefetch 上限，4 个一下子全推给了 worker-1，它攥着慢慢做，worker-2 却闲着没事干。',
+              },
+              prefetch: {
+                title: 'Prefetch 1：公平分发',
+                body: '两个 worker 都把 <prefetch>prefetch</prefetch> 设成 1：每人最多一个<unacked>未确认</unacked>的任务。app 再发 8 个。',
+                question: '现在呢？',
+                options: ['还是 4 和 4', 'worker-2 做了大部分', 'worker-1 做了大部分'],
+                result:
+                  'worker-1 做了 {slow} 个，worker-2 做了 {fast} 个。worker 确认完上一个才拿到下一个，所以快的那个不停回来要。教程推荐的就是这个设置。',
+              },
+            },
+          },
+          crash: {
+            title: '一个 worker 拿着消息挂了',
+            summary: '未确认的消息会回来，标上重投。用自动确认的话，它们就丢了。',
+            steps: {
+              fill: {
+                title: '六个任务在路上',
+                body: '两个 worker 的 <prefetch>prefetch</prefetch> 都是 3。worker-1 很慢（每个任务 2.5 秒）。app 发 6 个任务；过一会儿 worker-1 手上拿着 3 个，一个都还没确认。',
+              },
+              kill: {
+                title: '干掉 worker-1',
+                body: 'worker-1 崩溃了，手上有 3 个<unacked>未确认</unacked>的任务。',
+                question: '这 3 个会怎样？',
+                options: ['丢了', '回到队列，标上重投；worker-2 来做', '等 worker-1 回来'],
+                result:
+                  'RabbitMQ 发现连接断了，把它们重新入队，标上<redelivered>重投</redelivered>。worker-2 做完了全部 6 个。一个没丢，但 worker-1 做到一半的任务会被做两次：让处理逻辑幂等。',
+              },
+              'auto-ack': {
+                title: '换成自动确认',
+                body: 'worker-1 回来了，开着<autoack>自动确认</autoack>：RabbitMQ 每发出一条就忘掉一条，想推多少推多少。app 再发 6 个。',
+              },
+              'kill-auto': {
+                title: '再干掉 worker-1',
+                body: 'worker-1 又崩溃了，手上还拿着消息。',
+                question: '这次它们会怎样？',
+                options: ['丢了：RabbitMQ 早忘了它们', '像上次一样回到队列', '进死信'],
+                result: '{lost} 条永远丢了。自动确认用安全换速度；只有丢消息无所谓时才用它。',
+              },
+            },
+          },
+          fanout: {
+            title: 'Fanout：一条消息，每个队列一份',
+            summary: '发布/订阅：fanout 交换机把每条消息复制给所有绑定的队列。',
+            steps: {
+              meet: {
+                title: '一个 fanout 交换机',
+                body: 'app 现在发布到 fanout 类型的<ex>交换机</ex> <b>logs</b>。两个队列 <b>screen</b> 和 <b>disk</b> <bind>绑定</bind>在它上面。',
+              },
+              send: {
+                title: '发一行日志',
+                body: 'app 发一条消息。',
+                question: '最后队列里有几份？',
+                options: ['一份', '两份：每个绑定的队列一份', '零份：没有匹配的键'],
+                result:
+                  'Fanout 不看键，给每个绑定的队列复制一份。然后每个队列把自己那份交给自己的消费者。',
+              },
+              late: {
+                title: '后来才绑定的队列',
+                body: '声明了一个新队列 <b>audit</b> 并绑到 logs 上，然后 app 再发一条。',
+                question: 'audit 也能收到第一条消息吗？',
+                options: ['不能，只能收到绑定之后发布的消息', '能，交换机会重放', '能，只要它要'],
+                result:
+                  '交换机什么都不存。队列只能看到它绑定期间发布的消息。（Kafka 不一样：新消费者可以从日志里读旧消息。）',
+              },
+            },
+          },
+          direct: {
+            title: 'Direct：按键精确路由',
+            summary: '错误进一个队列，全部进另一个；没人绑定的键就丢了。',
+            steps: {
+              meet: {
+                title: '带键的绑定',
+                body: '<b>direct_logs</b> 是一个 direct 交换机。<b>errors</b> 用键 <code>error</code> 绑定；<b>everything</b> 绑了三次，分别是 <code>info</code>、<code>warning</code> 和 <code>error</code>。三个发布者分别用这些键发送。',
+              },
+              error: {
+                title: '一条 error',
+                body: '发布者 <b>error</b> 用键 <code>error</code> 发一条消息。',
+                question: '它去哪？',
+                options: ['只去 errors', '只去 everything', '两个队列都去'],
+                result: '两个都去：每个有这个键的绑定的队列都拿到一份。',
+              },
+              info: {
+                title: '一条 info',
+                body: '现在发一条键为 <code>info</code> 的。',
+                question: '它去哪？',
+                options: ['只去 errors', '只去 everything', '两个都去'],
+                result: '只有 everything 有 info 的绑定。',
+              },
+              debug: {
+                title: '一条 debug',
+                body: '现在是 <code>debug</code>。没人绑定这个键。',
+                question: '会怎样？',
+                options: ['在交换机里等，直到有人绑定 debug', '悄悄被丢掉', '发布者收到一个错误'],
+                result: '一声不响就丢了：交换机把它记为无法路由。后面的故事会讲怎么接住这些消息。',
+              },
+            },
+          },
+          topic: {
+            title: 'Topic：按模式路由',
+            summary: '像 quick.orange.rabbit 这样的键，像 *.orange.* 或 lazy.# 这样的模式',
+            steps: {
+              meet: {
+                title: '模式',
+                body: '键是用点连起来的词。在绑定里，<code>*</code> 正好匹配一个词，<code>#</code> 匹配任意个词。Q1 要 <code>*.orange.*</code>；Q2 要 <code>*.*.rabbit</code> 和 <code>lazy.#</code>。',
+              },
+              both: {
+                title: 'quick.orange.rabbit',
+                body: '一条键为 <code>quick.orange.rabbit</code> 的消息。',
+                question: '哪些队列收到它？',
+                options: ['Q1', 'Q2', '两个都收到'],
+                result:
+                  '两个都收到：*.orange.* 和 *.*.rabbit 都匹配。Q2 是靠一个绑定匹配上的；就算它有两个绑定都匹配，也只收到一份。',
+              },
+              hash: {
+                title: 'lazy.orange.male.rabbit',
+                body: '这次是四个词：<code>lazy.orange.male.rabbit</code>。',
+                question: '哪些队列收到它？',
+                options: ['Q1', 'Q2', '两个都收到'],
+                result: '只有 Q2，靠 lazy.#（# 吃掉任意个词）。*.orange.* 要求正好三个词。',
+              },
+              none: {
+                title: 'quick.brown.fox',
+                body: '键 <code>quick.brown.fox</code>。',
+                question: '哪些队列收到它？',
+                options: ['都收不到', 'Q1', 'Q2'],
+                result: '两个模式都不匹配，所以它无法路由，被丢掉了。',
+              },
+              rest: {
+                title: '再来三个',
+                body: '<code>lazy.orange.elephant</code> 两个都去，<code>quick.orange.fox</code> 去 Q1，<code>lazy.brown.fox</code> 去 Q2。打开终端，用 rabbitmqadmin publish 试试你自己的。',
+              },
+            },
+          },
+          unroutable: {
+            title: '什么都不匹配的消息',
+            summary: '悄悄丢掉，用 mandatory 退回，或者被备用交换机接住。',
+            steps: {
+              silent: {
+                title: '一个没人听的退款',
+                body: '交换机 <b>orders</b> 只有一个 <code>paid</code> 的绑定。商店发布了一条 <code>refund</code>。',
+                question: '商店会知道什么？',
+                options: [
+                  '收到一个错误',
+                  '什么也不知道：消息消失了，商店以为发出去了',
+                  '消息会等着',
+                ],
+                result: '悄无声息地没了。这是默认行为。',
+              },
+              mandatory: {
+                title: '以 mandatory 发布',
+                body: 'careful-shop 带着<mandatory>mandatory</mandatory>标志发同样的退款。',
+                question: '现在呢？',
+                options: ['一样', '在交换机里等着', '退回给发布者'],
+                result: '被退回（basic.return）。发布者可以记日志、报警，或者稍后重试。',
+              },
+              alternate: {
+                title: '给 orders 一个备用交换机',
+                body: '重新声明 orders，带上<ae>备用交换机</ae> <b>unrouted</b>，它 fanout 到同名的队列。商店再发一条退款。',
+                question: '这条退款去哪？',
+                options: ['丢掉', '进队列 unrouted', '退回给商店'],
+                result: '被 unrouted 接住了，以后有人可以去看。发布者一行都不用改。',
+              },
+            },
+          },
+          'dead-letter': {
+            title: '死信和毒消息',
+            summary: '被拒绝的消息进死信交换机；没完没了的重新入队被投递次数上限拦住。',
+            steps: {
+              reject: {
+                title: '一个挑剔的 worker',
+                body: '队列 <b>work</b> 有一个<dlx>死信交换机</dlx> <b>dlx</b>，通向队列 <b>dead</b>。worker <b>picky</b> 每第三条消息就失败并拒绝。app 发 3 条。',
+                question: '第三条最后在哪？',
+                options: ['没了', '回到 work', '经过死信交换机进了 dead'],
+                result:
+                  '在 dead 里，带着 x-death 头：被拒绝，来自 work。打开「查看」面板就能看到。',
+              },
+              requeue: {
+                title: '改成重新入队',
+                body: '现在 picky 每条都失败，并且 nack 时要求重新入队。app 发一条。',
+                question: '会怎样？',
+                options: ['进死信', '一次又一次回来，永无止境', 'RabbitMQ 试 3 次后丢掉'],
+                result: '一个死循环：毒消息。在经典队列上没人拦得住；worker 永远在它身上烧 CPU。',
+              },
+              limit: {
+                title: '带投递次数上限的仲裁队列',
+                body: '把 work 重建成<quorum>仲裁队列</quorum>，<code>x-delivery-limit</code> 设为 3。app 再发一条。',
+                question: '现在呢？',
+                options: ['还是死循环', '第一次失败就丢掉', '失败投递超过 3 次后进死信'],
+                result:
+                  '投递 4 次后，它以 delivery_limit 的原因进了 dead。仲裁队列会数投递次数，经典队列不会。',
+              },
+            },
+          },
+          ttl: {
+            title: 'TTL：会过期的消息',
+            summary: '一个带消息 TTL 和死信交换机的队列就是一个延时器：稍后重试的模式。',
+            steps: {
+              meet: {
+                title: '一间等候室',
+                body: '队列 <b>wait-3s</b> 的 <ttl>TTL</ttl> 是 3 秒，<dlx>死信交换机</dlx>是 <b>retry</b>，通向 <b>tasks</b>。没人消费 wait-3s。',
+              },
+              expire: {
+                title: '往等候室送一条',
+                body: 'app 往 wait-3s 发布一条消息。',
+                question: '3 秒后会怎样？',
+                options: ['永远留在那', '过期后被丢掉', '过期后经过 retry 进 tasks'],
+                result: '过期，进死信（原因 expired），路由到 tasks，被投递，被确认：晚了三秒。',
+              },
+              pattern: {
+                title: '这有什么用',
+                body: '这是经典的延时重试：任务失败时，把它发到一个带 TTL 的等待队列；过一会儿它会回到工作队列。注意 RabbitMQ 只让队头的消息过期，所以排在前面的长 TTL 会挡住后面短 TTL 的消息。',
+              },
+            },
+          },
+          'max-length': {
+            title: '满了的队列',
+            summary: 'x-max-length 配 drop-head 会挤掉最老的；配 reject-publish 会拒收最新的。',
+            steps: {
+              'drop-head': {
+                title: '五条消息，只有三个位置',
+                body: '队列 <b>buffer</b> 最多存 3 条待投递的消息，而且没人消费。app 发 5 条。',
+                question: '剩下的是哪几条？',
+                options: ['前三条', '后三条', '一条都不剩'],
+                result:
+                  '后三条。默认的 x-overflow 是 drop-head，每条新消息都把最老的挤出去（有死信交换机就进死信）。',
+              },
+              'reject-publish': {
+                title: 'reject-publish，开着确认',
+                body: '把 buffer 重建，x-overflow 设为 reject-publish，app 打开<confirm>发布确认</confirm>。它发 5 条。',
+                question: '现在呢？',
+                options: ['一样', '五条都被拒收', '前三条留下；后两条向发布者 nack'],
+                result:
+                  '队列留着已有的，拒收其余的，发布者每条被拒的都收到一个 nack，可以放慢或者重试。这就是背压。',
+              },
+            },
+          },
+        },
+      },
+    },
   },
   kafka: {
     title: 'Kafka 现场',
@@ -460,16 +1227,8 @@ export const zh: DeepPartial<Strings> = {
     },
     lab: {
       toolbar: {
-        play: '运行',
-        pause: '暂停',
-        step: '单步',
-        speed: '模拟速度',
-        reset: '重置',
-        clock: '模拟时间 {time}',
-        timeline: '倒回或重放模拟时间',
-        rewound: '已倒回。点运行会重放当时发生的事；在这里做任何操作，会从这一刻开出一段新的历史。',
+        ...LAB_ZH.toolbar,
         live: '现在',
-        goLive: '回到现在',
         lost: '已确认却丢失的记录：{n}',
       },
       lanes: {
