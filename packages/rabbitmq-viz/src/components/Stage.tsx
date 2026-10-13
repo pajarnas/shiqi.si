@@ -278,48 +278,50 @@ export function Stage({ broker: b, speed, selected, onSelect, focus = [] }: Stag
   const consumers = [...b.consumers.values()];
 
   return (
-    <div className="rv-stage" ref={stageRef}>
-      <section className="rv-lane" aria-label={t.lanes.publishers}>
-        <h2 className="rv-lane__title">{t.lanes.publishers}</h2>
-        {publishers.length === 0 && <p className="lab-muted">{t.lanes.noPublishers}</p>}
-        {publishers.map((p) => (
-          <PublisherCard key={p.id} broker={b} publisher={p} anchors={anchors} />
-        ))}
-      </section>
-      <section className="rv-lane" aria-label={t.lanes.exchanges}>
-        <h2 className="rv-lane__title">{t.lanes.exchanges}</h2>
-        {visibleExchanges(b).map((x) => (
-          <ExchangeCard key={x.name} broker={b} exchange={x} anchors={anchors} />
-        ))}
-      </section>
-      <section className="rv-lane" aria-label={t.lanes.queues}>
-        <h2 className="rv-lane__title">{t.lanes.queues}</h2>
-        {queues.length === 0 && <p className="lab-muted">{t.lanes.noQueues}</p>}
-        {queues.map((q) => (
-          <QueueCard
-            key={q.name}
-            broker={b}
-            queue={q}
-            anchors={anchors}
-            selected={selected === q.name}
-            onSelect={() => onSelect(q.name)}
-          />
-        ))}
-      </section>
-      <section className="rv-lane" aria-label={t.lanes.consumers}>
-        <h2 className="rv-lane__title">{t.lanes.consumers}</h2>
-        {consumers.length === 0 && <p className="lab-muted">{t.lanes.noConsumers}</p>}
-        {consumers.map((c) => (
-          <ConsumerCard key={c.tag} broker={b} consumer={c} anchors={anchors} />
-        ))}
-      </section>
-      <FlowLayer
-        ref={flow}
-        anchors={anchors}
-        stageRef={stageRef}
-        links={() => linksOf(b, tRef.current)}
-        className="ui-flow rv-flow"
-      />
+    <div className="rv-stage-box">
+      <div className="rv-stage" ref={stageRef}>
+        <section className="rv-lane" aria-label={t.lanes.publishers}>
+          <h2 className="rv-lane__title">{t.lanes.publishers}</h2>
+          {publishers.length === 0 && <p className="lab-muted">{t.lanes.noPublishers}</p>}
+          {publishers.map((p) => (
+            <PublisherCard key={p.id} broker={b} publisher={p} anchors={anchors} />
+          ))}
+        </section>
+        <section className="rv-lane" aria-label={t.lanes.exchanges}>
+          <h2 className="rv-lane__title">{t.lanes.exchanges}</h2>
+          {visibleExchanges(b).map((x) => (
+            <ExchangeCard key={x.name} broker={b} exchange={x} anchors={anchors} />
+          ))}
+        </section>
+        <section className="rv-lane" aria-label={t.lanes.queues}>
+          <h2 className="rv-lane__title">{t.lanes.queues}</h2>
+          {queues.length === 0 && <p className="lab-muted">{t.lanes.noQueues}</p>}
+          {queues.map((q) => (
+            <QueueCard
+              key={q.name}
+              broker={b}
+              queue={q}
+              anchors={anchors}
+              selected={selected === q.name}
+              onSelect={() => onSelect(q.name)}
+            />
+          ))}
+        </section>
+        <section className="rv-lane" aria-label={t.lanes.consumers}>
+          <h2 className="rv-lane__title">{t.lanes.consumers}</h2>
+          {consumers.length === 0 && <p className="lab-muted">{t.lanes.noConsumers}</p>}
+          {consumers.map((c) => (
+            <ConsumerCard key={c.tag} broker={b} consumer={c} anchors={anchors} />
+          ))}
+        </section>
+        <FlowLayer
+          ref={flow}
+          anchors={anchors}
+          stageRef={stageRef}
+          links={() => linksOf(b, tRef.current)}
+          className="ui-flow rv-flow"
+        />
+      </div>
     </div>
   );
 }

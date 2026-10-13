@@ -1,0 +1,61 @@
+export const frontmatter = {
+  title: 'RabbitMQ: exchanges, bindings and routing',
+  date: '2026-10-13',
+  summary:
+    'Publishers never write to queues. How the four exchange types decide which queues get a copy, what topic patterns match, and what happens to a message nothing matches.',
+  topics: ['rabbitmq', 'messaging'],
+};
+
+On [the live broker](/rabbitmq), the second lane holds the exchanges and the lines to the queues are bindings, labelled with their keys. Publish a message with a key nobody bound and watch it vanish.
+
+## The path of a message
+
+A publisher sends a message to an **exchange** with a **routing key** (a short string like `order.paid`). The exchange stores nothing. It compares the key with its **bindings**, the rules "send messages matching this to that queue", and puts one copy into each queue that matches. Queues hold the messages until a consumer acknowledges them.
+
+This split is the main difference from Kafka: in Kafka the producer picks a topic and the topic is the storage. In RabbitMQ the publisher only names an exchange, so the routing can change without touching the publisher.
+
+## The four exchange types
+
+| Type      | A queue gets a copy when…                                                       |
+| --------- | ------------------------------------------------------------------------------- |
+| `direct`  | its binding key equals the routing key exactly                                  |
+| `fanout`  | it is bound at all; the key is ignored                                          |
+| `topic`   | its binding pattern matches the key, word by word (words are separated by dots) |
+| `headers` | the message headers match the binding's arguments (`x-match` = `all` or `any`)  |
+
+A queue gets **at most one copy** per message, even if several of its bindings match.
+
+## Topic patterns
+
+In a topic binding, `*` matches exactly one word and `#` matches zero or more words.
+
+| Key                       | `*.orange.*` | `*.*.rabbit` | `lazy.#` |
+| ------------------------- | ------------ | ------------ | -------- |
+| `quick.orange.rabbit`     | yes          | yes          | no       |
+| `lazy.orange.male.rabbit` | no           | no           | yes      |
+| `lazy`                    | no           | no           | yes      |
+| `quick.brown.fox`         | no           | no           | no       |
+
+A binding of just `#` turns a topic exchange into a fanout; a binding with no wildcards makes it behave like a direct exchange.
+
+## The default exchange
+
+Every broker has a direct exchange with an empty name, and every queue is bound to it automatically with the queue's own name as the key. That is why the first tutorial "publishes to a queue": it publishes to the default exchange with the key `hello`.
+
+## When nothing matches
+
+By default an unroutable message is **dropped silently**, and the publisher never knows. Two ways to catch it:
+
+- **`mandatory` flag** on the publish: the broker sends the message back with `basic.return`, and the publisher can log or retry.
+- **Alternate exchange** (`alternate-exchange` argument on the exchange): unroutable messages go to that exchange instead, usually a fanout into a queue someone inspects. No publisher has to change.
+
+## Try it
+
+In the terminal on [/rabbitmq](/rabbitmq):
+
+```
+rabbitmqadmin declare queue name=mine
+rabbitmqadmin declare binding source=orders destination=mine routing_key=order.#
+rabbitmqadmin publish exchange=orders routing_key=order.refund payload=hi
+rabbitmqctl list_bindings
+```

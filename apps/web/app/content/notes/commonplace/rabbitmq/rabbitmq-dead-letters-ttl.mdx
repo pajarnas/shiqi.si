@@ -1,0 +1,45 @@
+export const frontmatter = {
+  title: 'RabbitMQ: dead letters, TTL and length limits',
+  date: '2026-10-13',
+  summary:
+    'Where a queue sends the messages it gives up on, how message TTL and a dead-letter exchange make a delayed retry, and what a full queue does with one more message.',
+  topics: ['rabbitmq', 'messaging'],
+};
+
+On [the live broker](/rabbitmq), the red dashed line from a queue shows where its dead letters go. Open a queue in the inspector to see the `x-death` header on each dead message.
+
+## Dead-letter exchange
+
+A queue declared with `x-dead-letter-exchange` (and optionally `x-dead-letter-routing-key`) republishes a message to that exchange instead of dropping it when:
+
+| Reason           | Why                                                 |
+| ---------------- | --------------------------------------------------- |
+| `rejected`       | a consumer rejected or nacked it without requeue    |
+| `expired`        | its TTL ran out                                     |
+| `maxlen`         | a length limit pushed it out (`drop-head`)          |
+| `delivery_limit` | a quorum queue delivered it more times than allowed |
+
+Each dead-lettered message carries an `x-death` header: which queue, which reason, how many times. Without a dead-letter exchange the message is simply gone.
+
+## Poison messages and the delivery limit
+
+A message that crashes every consumer and is nacked with requeue comes back forever. A classic queue has no counter to stop it. A **quorum queue** counts deliveries, and with `x-delivery-limit` set it dead-letters (or drops) the message once the limit is passed.
+
+## TTL and delayed retry
+
+`x-message-ttl` on a queue (or `expiration` on a message) limits how long a message may wait. An expired message is dead-lettered with reason `expired`.
+
+Combine a TTL with a dead-letter exchange and nobody consuming the queue, and you have a delay: publish to `wait-3s`, and three seconds later the message comes out in `tasks`. This is the usual way to retry later without a plugin.
+
+One catch: RabbitMQ only expires messages at the **head** of a queue. A message with a long TTL in front holds back shorter ones behind it, so use one waiting queue per delay.
+
+## Length limits
+
+`x-max-length` (or `x-max-length-bytes`) caps the ready messages. What happens to one more depends on `x-overflow`:
+
+| `x-overflow`     | Effect                                                               |
+| ---------------- | -------------------------------------------------------------------- |
+| `drop-head`      | the oldest is pushed out (dead-lettered if possible); the default    |
+| `reject-publish` | the new message is refused; with confirms, the publisher gets a nack |
+
+`reject-publish` with confirms is back-pressure: publishers learn the queue is full and slow down.

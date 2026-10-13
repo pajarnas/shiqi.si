@@ -2,6 +2,7 @@
 // this shape, and keys missing there are filled by the translation service.
 // Placeholders look like {name}; tags like <b>…</b> mark rich text (see Rich).
 import { KAFKA_STRINGS } from '@shiqi/kafka-viz/strings';
+import { RABBIT_STRINGS } from '@shiqi/rabbitmq-viz/strings';
 import { UI_STRINGS } from '@shiqi/ui';
 import { CODE_STRINGS } from '@shiqi/code';
 
@@ -16,6 +17,7 @@ export const en = {
     tools: 'Tools',
     notes: 'Notes',
     kafka: 'Kafka',
+    rabbitmq: 'RabbitMQ',
     ui: 'Components',
   },
   chrome: {
@@ -89,6 +91,21 @@ export const en = {
         notes: {
           title: 'Kafka notes',
           description: 'Logs, partitions, replication, consumer groups: under Commonplace / Kafka.',
+        },
+      },
+    },
+    rabbitmq: {
+      window: 'RabbitMQ — RABBITMQ',
+      lede: 'Learn RabbitMQ by watching it route: exchanges, queues, acks and dead letters, one message at a time.',
+      links: {
+        live: {
+          title: 'RabbitMQ, live',
+          description:
+            'Publishers, exchanges, queues and consumers in your browser: guided stories, crashes, and a terminal for rabbitmqctl.',
+        },
+        notes: {
+          title: 'RabbitMQ notes',
+          description: 'Exchanges, acks, prefetch, dead letters: under Commonplace / RabbitMQ.',
         },
       },
     },
@@ -389,7 +406,7 @@ export const en = {
         description: 'Thoughts on pixels, standards and this site.',
       },
     },
-    subfolders: { kafka: 'Kafka' },
+    subfolders: { kafka: 'Kafka', rabbitmq: 'RabbitMQ' },
     folderMissing: 'No such folder',
     topics: 'Topics',
     latest: 'Latest',
@@ -405,6 +422,23 @@ export const en = {
     unavailable: 'The translation isn’t available right now, so this is the English original.',
     pending:
       'The translation is still being written. Refresh in a minute; here is the English original for now.',
+  },
+  rabbitmq: {
+    title: 'RabbitMQ, live',
+    description:
+      'A RabbitMQ broker running in your browser: watch exchanges route messages into queues, consumers ack them, and failed ones dead-letter. Type real rabbitmqctl commands.',
+    lede: 'One broker with a topic exchange, four queues and a few consumers, all running right here. Take a guided story, or play: add a publisher, crash a consumer, bind a queue with your own pattern, drag the timeline back, or type rabbitmqctl list_queues in the terminal.',
+    simulated:
+      'This is a faithful simulation of AMQP 0-9-1 routing, acks, prefetch, TTL, length limits and dead-lettering, not a real broker.',
+    notes: 'RabbitMQ notes',
+    notesLede:
+      'The concepts behind what you see above. They also live under Notes, tagged #rabbitmq.',
+    noNotes: 'No RabbitMQ notes yet.',
+    lab: RABBIT_STRINGS,
+    start: {
+      text: 'New here? Start with one message: from the publisher, through an exchange, into a queue, out to a consumer and back as an ack, one event at a time.',
+      button: 'Start: one message, start to finish',
+    },
   },
   kafka: {
     title: 'Kafka, live',

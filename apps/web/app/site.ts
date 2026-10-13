@@ -28,6 +28,7 @@ export const NAV = [
   { path: '/tools', key: 'tools' },
   { path: '/notes', key: 'notes' },
   { path: '/kafka', key: 'kafka' },
+  { path: '/rabbitmq', key: 'rabbitmq' },
   { path: '/ui', key: 'ui' },
 ] as const satisfies readonly { path: string; key: keyof Strings['nav'] }[];
 
@@ -73,6 +74,16 @@ export const KAFKA_LINKS = [
   icon: IconName;
 }[];
 
+/** The RabbitMQ window on the home page. */
+export const RABBITMQ_LINKS = [
+  { key: 'live', path: '/rabbitmq', icon: 'terminal' },
+  { key: 'notes', path: '/notes/commonplace#rabbitmq', icon: 'book' },
+] as const satisfies readonly {
+  key: keyof Strings['home']['rabbitmq']['links'];
+  path: string;
+  icon: IconName;
+}[];
+
 /** Window title (shown like a file name) and eyebrow of each page. */
 export const PAGES = {
   play: { file: 'play/', eyebrow: 'PLAY' },
@@ -87,5 +98,6 @@ export const PAGES = {
   json: { file: 'tools/json', eyebrow: 'JSON' },
   notes: { file: 'notes/', eyebrow: 'NOTES' },
   kafka: { file: 'kafka/', eyebrow: 'KAFKA' },
+  rabbitmq: { file: 'rabbitmq/', eyebrow: 'RABBITMQ' },
   ui: { file: 'ui/', eyebrow: '@shiqi/ui' },
 } as const;

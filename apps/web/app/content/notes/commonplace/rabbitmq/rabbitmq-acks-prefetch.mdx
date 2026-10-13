@@ -1,0 +1,45 @@
+export const frontmatter = {
+  title: 'RabbitMQ: acks, prefetch and redelivery',
+  date: '2026-10-13',
+  summary:
+    'Why a queue keeps a message until the consumer acks it, how prefetch decides who gets the next one, and what happens to messages a consumer was holding when it dies.',
+  topics: ['rabbitmq', 'messaging'],
+};
+
+On [the live broker](/rabbitmq), each consumer card shows its prefetch window: one box per message it may hold without acking. Crash a consumer with full boxes and watch the messages go back to the queue.
+
+## Ready and unacked
+
+A message in a queue is in one of two states:
+
+- **Ready**: waiting to be delivered.
+- **Unacked**: delivered to a consumer, not yet acknowledged.
+
+The queue only forgets a message when the consumer's **ack** arrives. If the consumer's connection drops first, every unacked message goes back to the head of the queue with the **redelivered** flag set, and another consumer gets it. Nothing is lost, but a message can be processed twice, so consumers should be idempotent.
+
+## Auto-ack
+
+With `autoAck = true` (often written `noAck`), the broker treats a message as acked the moment it sends it. It is faster, and the broker pushes without limit, but if the consumer dies everything it was holding is gone. Use it only when losing a message is acceptable.
+
+## Nack and reject
+
+A consumer that cannot process a message can:
+
+| Call                        | Effect                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `basic.nack` with `requeue` | back to the head of the queue, redelivered (maybe to someone else)                     |
+| `basic.reject` / no requeue | the queue gives up on it: dead-lettered if it has a dead-letter exchange, else dropped |
+
+Requeueing a message that always fails creates a **poison message** loop. See [dead letters, TTL and limits](/notes/commonplace/rabbitmq/rabbitmq-dead-letters-ttl) for how quorum queues stop it.
+
+## Prefetch (basic.qos)
+
+Prefetch is how many unacked messages a consumer may hold at once.
+
+- **0 (no limit)**: the queue deals messages round-robin as fast as it can. A slow consumer gets the same share as a fast one and sits on it while the fast one idles.
+- **1**: a consumer gets its next message only after acking the last. Work goes to whoever is free: fair dispatch.
+- **Higher values** keep a consumer busy across the network round trip. With prefetch 1, every message costs a full round trip of idle time; raise it until throughput stops improving.
+
+## Publisher confirms
+
+The same idea in the other direction: with confirms on, the broker acks each published message once it is safely in every queue it was routed to, or nacks it when a queue refused it (for example a full queue with `reject-publish`). Without confirms, a publisher cannot know whether a message arrived.

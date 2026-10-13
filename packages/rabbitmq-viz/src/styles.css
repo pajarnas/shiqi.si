@@ -21,11 +21,19 @@
 
 /* ---------- Stage ---------- */
 
+/* The stage sizes itself to its box, not the window: a story's text takes a column beside it. */
+.rv-stage-box {
+  container-type: inline-size;
+}
+
 .rv-stage {
   position: relative;
   display: grid;
-  grid-template-columns: 10rem 11rem minmax(14rem, 1fr) 14rem;
-  gap: var(--space-6) var(--space-7, 4rem);
+  grid-template-columns: minmax(8rem, 10rem) minmax(9rem, 11rem) minmax(12rem, 1fr) minmax(
+      11rem,
+      14rem
+    );
+  gap: var(--space-6) clamp(var(--space-5), 4cqi, 4rem);
   align-items: start;
   padding: var(--space-4);
   background:
@@ -35,13 +43,13 @@
   border: var(--border-width) solid var(--border);
 }
 
-@media (max-width: 72rem) {
+@container (max-width: 52rem) {
   .rv-stage {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-@media (max-width: 40rem) {
+@container (max-width: 34rem) {
   .rv-stage {
     grid-template-columns: 1fr;
     gap: var(--space-5);
@@ -436,14 +444,15 @@
 
 .rv-mark--hollow {
   background: var(--rv-ack);
-  box-shadow: inset 0 0 0 2px var(--rv-ack), inset 0 0 0 5px var(--border);
+  box-shadow:
+    inset 0 0 0 2px var(--rv-ack),
+    inset 0 0 0 5px var(--border);
 }
 
 .rv-mark--cross {
   background:
     linear-gradient(45deg, transparent 40%, var(--border) 40% 60%, transparent 60%),
-    linear-gradient(-45deg, transparent 40%, var(--border) 40% 60%, transparent 60%),
-    var(--danger);
+    linear-gradient(-45deg, transparent 40%, var(--border) 40% 60%, transparent 60%), var(--danger);
 }
 
 .rv-line {
