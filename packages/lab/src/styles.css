@@ -330,3 +330,17 @@
 .lab-events__item--good {
   border-left-color: var(--success) !important;
 }
+
+.lab-form {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.lab-form__fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+  width: 100%;
+}

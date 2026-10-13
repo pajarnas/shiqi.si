@@ -17,9 +17,9 @@ import {
   Segmented,
   Select,
   TextInput,
-  useToast,
 } from '@shiqi/ui';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { LabForm, useAdmin } from '@shiqi/lab';
+import { useState } from 'react';
 import { format, useKafkaStrings } from '../strings';
 
 const ACKS: Acks[] = [0, 1, 'all'];
@@ -27,41 +27,8 @@ const KEY_MODES: KeyMode[] = ['none', 'fixed', 'unique'];
 const ASSIGNORS: Assignor[] = ['range', 'roundrobin', 'cooperative-sticky'];
 const RESETS: OffsetReset[] = ['latest', 'earliest'];
 
-/** Run an admin call; Kafka errors become a toast instead of a crash. */
-function useAdmin() {
-  const toast = useToast();
-  return (fn: () => void) => {
-    try {
-      fn();
-      return true;
-    } catch (e) {
-      if (!(e instanceof KafkaError)) throw e;
-      toast(e.message);
-      return false;
-    }
-  };
-}
-
-function Form({
-  title,
-  onSubmit,
-  children,
-}: {
-  title: string;
-  onSubmit: () => void;
-  children: ReactNode;
-}) {
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    onSubmit();
-  };
-  return (
-    <form className="kv-form" onSubmit={submit}>
-      <div className="kv-form__fields">{children}</div>
-      <Button type="submit">{title}</Button>
-    </form>
-  );
-}
+const isKafkaError = (e: unknown): e is KafkaError => e instanceof KafkaError;
+const useKafkaAdmin = () => useAdmin(isKafkaError);
 
 function TopicSelect({
   cluster,
@@ -85,7 +52,7 @@ function TopicSelect({
 
 export function TopicsPanel({ cluster }: { cluster: Cluster }) {
   const t = useKafkaStrings();
-  const admin = useAdmin();
+  const admin = useKafkaAdmin();
   const [name, setName] = useState('events');
   const [partitions, setPartitions] = useState(3);
   const [rf, setRf] = useState(2);
@@ -138,7 +105,7 @@ export function TopicsPanel({ cluster }: { cluster: Cluster }) {
           />
         ))}
       </List>
-      <Form title={t.topics.create} onSubmit={create}>
+      <LabForm title={t.topics.create} onSubmit={create}>
         <Field label={t.topics.name}>
           {(p) => <TextInput {...p} value={name} onChange={(e) => setName(e.target.value)} />}
         </Field>
@@ -184,14 +151,14 @@ export function TopicsPanel({ cluster }: { cluster: Cluster }) {
           value={policy}
           onChange={setPolicy}
         />
-      </Form>
+      </LabForm>
     </div>
   );
 }
 
 export function ProducersPanel({ cluster }: { cluster: Cluster }) {
   const t = useKafkaStrings();
-  const admin = useAdmin();
+  const admin = useKafkaAdmin();
   const first = [...cluster.topics.keys()][0] ?? '';
   const [topic, setTopic] = useState(first);
   const [rate, setRate] = useState(3);
@@ -236,7 +203,7 @@ export function ProducersPanel({ cluster }: { cluster: Cluster }) {
           />
         ))}
       </List>
-      <Form
+      <LabForm
         title={t.produce.add}
         onSubmit={() => admin(() => void cluster.addProducer({ topic: chosen, rate, acks, keys }))}
       >
@@ -266,14 +233,14 @@ export function ProducersPanel({ cluster }: { cluster: Cluster }) {
           value={keys}
           onChange={setKeys}
         />
-      </Form>
+      </LabForm>
     </div>
   );
 }
 
 export function ConsumersPanel({ cluster }: { cluster: Cluster }) {
   const t = useKafkaStrings();
-  const admin = useAdmin();
+  const admin = useKafkaAdmin();
   const first = [...cluster.topics.keys()][0] ?? '';
   const [group, setGroup] = useState('billing');
   const [topic, setTopic] = useState(first);
@@ -308,7 +275,7 @@ export function ConsumersPanel({ cluster }: { cluster: Cluster }) {
           )),
         )}
       </List>
-      <Form
+      <LabForm
         title={t.consume.add}
         onSubmit={() =>
           admin(
@@ -359,7 +326,7 @@ export function ConsumersPanel({ cluster }: { cluster: Cluster }) {
           value={reset}
           onChange={setReset}
         />
-      </Form>
+      </LabForm>
     </div>
   );
 }
@@ -384,7 +351,7 @@ export function SettingsPanel({ cluster }: { cluster: Cluster }) {
   const t = useKafkaStrings();
   const s = cluster.settings;
   return (
-    <div className="kv-panel kv-form__fields">
+    <div className="kv-panel lab-form__fields">
       <Segmented
         label={t.settings.truncation}
         options={TRUNCATION_MODES.map((m) => ({ value: m, label: t.settings.truncationModes[m] }))}

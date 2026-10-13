@@ -1,6 +1,8 @@
 // @shiqi/lab: the frame every simulation lab on the site shares. Import the
 // styles once with `import '@shiqi/lab/styles.css'` (after @shiqi/ui's).
 export * from './components/EventList';
+export * from './components/Explain';
+export * from './components/LabForm';
 export * from './components/LabPanels';
 export * from './components/LabToolbar';
 export * from './components/ScenarioPlayer';
