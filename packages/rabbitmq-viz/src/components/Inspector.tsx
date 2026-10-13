@@ -21,7 +21,7 @@ export function Inspector({ broker: b, queue: name }: { broker: Broker; queue: s
       <h3>{format(s.title, { name: q.name })}</h3>
       <section>
         <h4>{s.args}</h4>
-        <QueueTags queue={q} t={t} />
+        <QueueTags args={q.args} t={t} />
         {q.args.type === 'classic' &&
           !q.args.messageTtl &&
           q.args.maxLength === null &&

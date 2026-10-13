@@ -725,13 +725,15 @@ ul.topic-tags {
   font-weight: 700;
 }
 
-/* ---------- /kafka: the real cluster ---------- */
+/* ---------- /kafka and /rabbitmq: the Simulation / Real switch ---------- */
 
-.kafka-mode {
+.lab-mode {
   justify-self: start;
 }
 
-.kr-status {
+/* ---------- /kafka: the real cluster ---------- */
+
+.real-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -862,4 +864,26 @@ ul.topic-tags {
 .home__window-lede {
   margin: 0 0 var(--space-3);
   color: var(--text-muted);
+}
+
+/* ---------- /rabbitmq: the real broker (cards come from @shiqi/rabbitmq-viz) ---------- */
+
+.rr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.rr-bindings {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--text-xs) / 1.6 var(--font-mono);
+}
+
+.rr-connect pre {
+  overflow-x: auto;
 }

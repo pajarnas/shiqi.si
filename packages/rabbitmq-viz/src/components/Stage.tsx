@@ -7,6 +7,7 @@ import {
   type Exchange,
   type Publisher,
   type Queue,
+  type QueueArgs,
 } from '@shiqi/rabbitmq';
 import {
   anchorRef,
@@ -466,7 +467,7 @@ function QueueCard({
           <Term definition={s.unackedHint}>{`${s.unacked} ${q.unacked}`}</Term>
         </span>
       </header>
-      <QueueTags queue={q} t={t} />
+      <QueueTags args={q.args} t={t} />
       {/* Newest on the left, the head (next out) on the right, next to the consumers. */}
       <ol className="rv-strip" aria-label={s.readyHint}>
         {hidden > 0 && <li className="rv-strip__more">{format(s.more, { n: hidden })}</li>}
@@ -514,9 +515,9 @@ function QueueCard({
   );
 }
 
-export function QueueTags({ queue: q, t }: { queue: Queue; t: RabbitStrings }) {
+/** A queue's arguments as short tags (quorum, TTL, max length, DLX…); also used for a real broker. */
+export function QueueTags({ args: a, t }: { args: QueueArgs; t: RabbitStrings }) {
   const s = t.queue;
-  const a = q.args;
   const tags: string[] = [];
   if (a.type === 'quorum') tags.push(s.quorum);
   if (a.messageTtl !== null) tags.push(format(s.ttl, { s: a.messageTtl / 1000 }));

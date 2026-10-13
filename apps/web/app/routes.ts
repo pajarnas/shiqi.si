@@ -43,6 +43,7 @@ export default [
       route('topics/:name', 'routes/api/kafka/topic.ts'),
       route('produce', 'routes/api/kafka/produce.ts'),
     ]),
+    ...prefix('rabbitmq', [route('snapshot', 'routes/api/rabbitmq/snapshot.ts')]),
   ]),
   route('sitemap.xml', 'routes/sitemap.ts'),
   route('robots.txt', 'routes/robots.ts'),

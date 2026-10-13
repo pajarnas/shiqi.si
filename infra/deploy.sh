@@ -21,7 +21,7 @@ if [ ! -t 0 ]; then
 fi
 
 source ./ensure-env.sh
-# The private CA and the TLS certificates MySQL and Kafka read (see certs.sh).
+# The private CA and the TLS certificates MySQL, Kafka and RabbitMQ read (see certs.sh).
 bash ./certs.sh server
 sed -i "s|^IMAGE=.*|IMAGE=${IMAGE}|" .env
 
@@ -32,26 +32,32 @@ set_env() {
   mv .env.tmp .env
 }
 
-# The Kafka cluster (compose profile `kafka`, ~1.5 GB) runs only with at least
-# 3.5 GB of RAM, so this is safe to deploy to the 1 GB VM before it's resized.
+# The Kafka cluster (compose profile `kafka`, ~1.5 GB) and RabbitMQ (profile
+# `rabbitmq`, 512 MB) run only with at least 3.5 GB of RAM, so this is safe to
+# deploy to the 1 GB VM before it's resized.
 # Both settings go in .env so a manual `docker compose up` does the same.
 KAFKA_MIN_KB=3670016
 mem_kb="$(awk '/^MemTotal:/ { print $2 }' /proc/meminfo)"
 if [ "${mem_kb:-0}" -ge "$KAFKA_MIN_KB" ]; then
-  set_env COMPOSE_PROFILES kafka
+  set_env COMPOSE_PROFILES kafka,rabbitmq
   set_env KAFKA_BROKERS kafka-1:9092,kafka-2:9092,kafka-3:9092
-  services=(kafka-1 kafka-2 kafka-3 web)
+  set_env RABBITMQ_API http://rabbitmq:15672
+  services=(kafka-1 kafka-2 kafka-3 rabbitmq web)
 else
   set_env COMPOSE_PROFILES ''
   set_env KAFKA_BROKERS ''
+  set_env RABBITMQ_API ''
   services=(web)
-  # Shrunk back below the line: stop a cluster left from before (keeps its data).
-  docker compose stop kafka-1 kafka-2 kafka-3 2>/dev/null || true
+  # Shrunk back below the line: stop what was left from before (keeps its data).
+  docker compose stop kafka-1 kafka-2 kafka-3 rabbitmq 2>/dev/null || true
 fi
-echo "Kafka cluster: $([ ${#services[@]} -gt 1 ] && echo on || echo "off (needs 3.5 GB RAM)")"
+echo "Kafka and RabbitMQ: $([ ${#services[@]} -gt 1 ] && echo on || echo "off (needs 3.5 GB RAM)")"
 
 docker compose pull "${services[@]}"
 # Starts MySQL and Redis too if they aren't running yet.
 docker compose up -d "${services[@]}"
+# Caddy keeps running across deploys; pick up a changed Caddyfile (new site names).
+docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 ||
+  echo "caddy: reload failed, still serving the old Caddyfile"
 docker image prune -f >/dev/null
 docker compose ps

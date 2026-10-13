@@ -44,7 +44,7 @@ export function RealCluster() {
 
   return (
     <div className="kv-app kr">
-      <p className="kr-status">
+      <p className="real-status">
         <span className="kv-led kv-led--on" aria-hidden="true" />
         {format(s.readAt, { time: new Date(snapshot.at).toLocaleTimeString(locale) })}
         <span className="kv-tag">

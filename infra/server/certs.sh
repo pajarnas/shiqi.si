@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# A private certificate authority for logging in to Kafka and MySQL from your
+# A private certificate authority for logging in to Kafka, MySQL and RabbitMQ from your
 # own computer with a client certificate (mutual TLS). Run from anywhere on the
 # server; everything lives in infra/server/certs/ (never in git).
 #
-#   bash certs.sh server       CA + server certificate, copied where Kafka and
-#                              MySQL read them (deploy.sh runs this; safe to re-run)
+#   bash certs.sh server       CA + server certificate, copied where Kafka, MySQL
+#                              and RabbitMQ read them (deploy.sh runs this; safe to re-run)
 #   bash certs.sh sign NAME    sign the CSR on stdin for /CN=NAME, print the
-#                              certificate, and give MySQL a user NAME that logs
-#                              in with it (infra/local/connect.sh calls this)
+#                              certificate, and give MySQL and RabbitMQ a user
+#                              NAME that logs in with it (infra/local/connect.sh calls this)
 #   bash certs.sh ca           print the CA certificate
 #   bash certs.sh list         who has been given a certificate
 #
-# Kafka's EXTERNAL listeners and MySQL are published on the server's localhost
+# Kafka's EXTERNAL listeners, MySQL and RabbitMQ are published on the server's localhost
 # only, so the certificate works through an SSH tunnel; nothing new is open to
 # the internet. A certificate is accepted by Kafka until it expires (no
 # revocation list): to cut everyone off, delete certs/ca and re-sign.
@@ -84,8 +84,77 @@ mysql_init() {
   echo "DO 0;"
 }
 
+# RabbitMQ's password hash: base64(salt + SHA-256(salt + password)), 4-byte salt.
+rabbit_hash() {
+  local salt
+  salt="$(mktemp)"
+  head -c 4 /dev/urandom >"$salt"
+  { cat "$salt"; { cat "$salt"; printf '%s' "$1"; } | openssl dgst -sha256 -binary; } | base64
+  rm -f "$salt"
+}
+
+# The value of NAME in .env (ensure-env.sh makes the RabbitMQ passwords).
+env_value() { sed -n "s/^$1=//p" .env 2>/dev/null | tail -n 1; }
+
+# RabbitMQ's definitions.json, imported on every start: `admin` (management
+# UI, password in .env), `web` (the site, read-only monitoring), one user per
+# issued certificate (no password: EXTERNAL login with that certificate only),
+# and the lab topology the /rabbitmq page shows.
+rabbitmq_definitions() {
+  local users=() perms=() name admin web
+  # user NAME HASH TAG / perm NAME CONFIGURE_AND_WRITE READ, as JSON objects.
+  user() {
+    users+=("{\"name\":\"$1\",\"password_hash\":\"$2\",\"hashing_algorithm\":\"rabbit_password_hashing_sha256\",\"tags\":[\"$3\"]}")
+  }
+  perm() {
+    perms+=("{\"user\":\"$1\",\"vhost\":\"/\",\"configure\":\"$2\",\"write\":\"$2\",\"read\":\"$3\"}")
+  }
+  admin="$(env_value RABBITMQ_ADMIN_PASSWORD)"
+  web="$(env_value RABBITMQ_WEB_PASSWORD)"
+  if [ -n "$admin" ]; then
+    user admin "$(rabbit_hash "$admin")" administrator
+    perm admin '.*' '.*'
+  fi
+  if [ -n "$web" ]; then
+    user web "$(rabbit_hash "$web")" monitoring
+    perm web '^$' '^$'
+  fi
+  for name in $(ls "$DIR/issued" | sed -n 's/\.crt$//p'); do
+    user "$name" "" management
+    perm "$name" '.*' '.*'
+  done
+  local IFS=,
+  cat <<EOF
+{
+  "users": [${users[*]}],
+  "vhosts": [{"name": "/"}],
+  "permissions": [${perms[*]}],
+  "exchanges": [
+    {"name": "lab.orders", "vhost": "/", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {}},
+    {"name": "lab.dlx", "vhost": "/", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {}}
+  ],
+  "queues": [
+    {"name": "lab.billing", "vhost": "/", "durable": true, "auto_delete": false,
+     "arguments": {"x-queue-type": "quorum", "x-dead-letter-exchange": "lab.dlx", "x-delivery-limit": 5}},
+    {"name": "lab.shipping", "vhost": "/", "durable": true, "auto_delete": false,
+     "arguments": {"x-queue-type": "classic", "x-dead-letter-exchange": "lab.dlx"}},
+    {"name": "lab.audit", "vhost": "/", "durable": true, "auto_delete": false,
+     "arguments": {"x-queue-type": "classic", "x-max-length": 1000}},
+    {"name": "lab.dead", "vhost": "/", "durable": true, "auto_delete": false,
+     "arguments": {"x-queue-type": "classic", "x-max-length": 1000}}
+  ],
+  "bindings": [
+    {"source": "lab.orders", "vhost": "/", "destination": "lab.billing", "destination_type": "queue", "routing_key": "order.created", "arguments": {}},
+    {"source": "lab.orders", "vhost": "/", "destination": "lab.shipping", "destination_type": "queue", "routing_key": "order.paid", "arguments": {}},
+    {"source": "lab.orders", "vhost": "/", "destination": "lab.audit", "destination_type": "queue", "routing_key": "#", "arguments": {}},
+    {"source": "lab.dlx", "vhost": "/", "destination": "lab.dead", "destination_type": "queue", "routing_key": "", "arguments": {}}
+  ]
+}
+EOF
+}
+
 # Copies $3... into $DIR/$1, owned by $2 (the uid:gid the service runs as;
-# Kafka 1000, MySQL 999), via a container because that user isn't us.
+# Kafka 1000, MySQL and RabbitMQ 999), via a container because that user isn't us.
 publish() {
   local target="$1" owner="$2" staging
   shift 2
@@ -108,6 +177,8 @@ sync_services() {
   mysql_init >"$tmp/init.sql"
   publish kafka 1000:1000 "$tmp/ca.crt" "$tmp/server.pem"
   publish mysql 999:999 "$tmp/ca.crt" "$tmp/server.crt" "$tmp/server.key" "$tmp/init.sql"
+  rabbitmq_definitions >"$tmp/definitions.json"
+  publish rabbitmq 999:999 "$tmp/ca.crt" "$tmp/server.crt" "$tmp/server.key" "$tmp/definitions.json"
   rm -rf "$tmp"
   cp "$DIR/ca/ca.crt" "$DIR/ca.crt"
   chmod 644 "$DIR/ca.crt"
@@ -135,8 +206,9 @@ keyUsage=critical,digitalSignature
 extendedKeyUsage=clientAuth" 365
   ensure_server
   sync_services
-  # MySQL reads the new user from init.sql when it starts.
+  # MySQL and RabbitMQ read the new user from their files when they start.
   docker compose restart mysql >&2
+  [ -z "$(docker compose ps -q rabbitmq 2>/dev/null)" ] || docker compose restart rabbitmq >&2
   cat "$DIR/issued/$name.crt"
   ;;
 ca)
