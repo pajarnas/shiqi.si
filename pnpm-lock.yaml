@@ -53,9 +53,21 @@ importers:
       '@shiqi/kafka-viz':
         specifier: workspace:*
         version: link:../../packages/kafka-viz
+      '@shiqi/lab':
+        specifier: workspace:*
+        version: link:../../packages/lab
       '@shiqi/pixel':
         specifier: workspace:*
         version: link:../../packages/pixel
+      '@shiqi/rabbitmq':
+        specifier: workspace:*
+        version: link:../../packages/rabbitmq
+      '@shiqi/rabbitmq-viz':
+        specifier: workspace:*
+        version: link:../../packages/rabbitmq-viz
+      '@shiqi/sim':
+        specifier: workspace:*
+        version: link:../../packages/sim
       '@shiqi/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -218,6 +230,34 @@ importers:
       '@shiqi/sim':
         specifier: workspace:*
         version: link:../sim
+
+  packages/rabbitmq-viz:
+    dependencies:
+      '@shiqi/lab':
+        specifier: workspace:*
+        version: link:../lab
+      '@shiqi/rabbitmq':
+        specifier: workspace:*
+        version: link:../rabbitmq
+      '@shiqi/sim':
+        specifier: workspace:*
+        version: link:../sim
+      '@shiqi/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.2.7
+        version: 19.3.0(@types/react@19.3.0)
+      react:
+        specifier: ^19.2.8
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.3.0(react@19.3.0)
 
   packages/sim:
     devDependencies:

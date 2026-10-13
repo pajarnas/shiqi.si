@@ -286,6 +286,8 @@ export class Broker extends Simulation<BrokerEvent> {
       this.emit({ type: 'consumer-cancel', at: this.now, consumer: tag, queue: name });
     }
     for (const c of this.consumers.values()) if (c.queue === name) this.consumers.delete(c.tag);
+    // Acks on their way to a queue that is gone have nothing to settle.
+    this.wire = this.wire.filter((f) => f.kind !== 'settle' || f.delivery.queue !== name);
     this.queues.delete(name);
     this.bindings = this.bindings.filter(
       (b) => !(b.destinationType === 'queue' && b.destination === name),
