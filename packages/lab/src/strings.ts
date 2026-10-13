@@ -36,6 +36,20 @@ export const LAB_STRINGS = {
     skip: 'Skip to the end',
     auto: 'Go on by itself',
   },
+  loop: {
+    label: 'Watch this step again',
+    play: 'Play',
+    pause: 'Pause',
+    prev: 'Previous event',
+    next: 'Next event',
+    scrub: 'Drag to any moment of this step',
+    position: '{now} of {total}',
+    mark: 'Event {n}',
+    loop: 'Loop',
+  },
+  lock: {
+    note: 'The controls are off during a story, so nothing gets in the way. Exit the story to try things yourself.',
+  },
   events: {
     showData: 'Show every message',
     empty: 'Nothing has happened yet.',

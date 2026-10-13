@@ -1,5 +1,5 @@
 import type { BeatPicker, Eventful, SimEvent } from '@shiqi/sim';
-import { useStory, type StoryRun } from '@shiqi/sim/react';
+import { useLoop, useStory, type LoopDriver } from '@shiqi/sim/react';
 import { Button, cx, format, Question, useLocalStorage } from '@shiqi/ui';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Beat } from '@shiqi/sim';
@@ -11,6 +11,7 @@ import {
   type StepText,
 } from '../scenario';
 import type { LabStrings } from '../strings';
+import { StepScrubber } from './StepScrubber';
 import { Story, type BeatWords } from './Story';
 
 /** How long a beat stays up when the story goes on by itself. */
@@ -19,12 +20,13 @@ const AUTO_MS = 7000;
 export interface ScenarioPlayerProps<E extends SimEvent, S extends Eventful<E>, K extends string> {
   strings: LabStrings['scenarios'];
   storyStrings: LabStrings['story'];
+  loopStrings: LabStrings['loop'];
   scenario: LabScenario<S>;
   /** The scenario's words: its title and each step's text by id. */
   text: { title: string; steps: Record<string, StepText> };
   sim: S;
-  /** Where Back and Replay rewind to. */
-  timeline: { now: number; seek: (time: number) => void };
+  /** Runs the simulation for the story, rewinds for Back and Replay, and loops a played step. */
+  clock: LoopDriver<S>;
   /** Picks the events the story stops at. */
   picker: () => BeatPicker<E, S, K>;
   /** One beat in words. */
@@ -37,10 +39,8 @@ export interface ScenarioPlayerProps<E extends SimEvent, S extends Eventful<E>, 
   source?: { label: string; href: string };
   /** Title of the scenario that follows, if any. */
   nextTitle?: string;
-  /** localStorage key for the "go on by itself" switch. */
-  autoKey: string;
-  /** Play the simulation until `until` holds, then call `done`. */
-  onRun: StoryRun<S>;
+  /** Prefix of the localStorage keys for the "go on by itself" and "loop" switches. */
+  storageKey: string;
   /** The step on screen changed. */
   onStep: (step: LabStep<S>) => void;
   /** What the story is pointing at right now; null to go back to the step's own focus. */
@@ -56,27 +56,28 @@ export interface ScenarioPlayerProps<E extends SimEvent, S extends Eventful<E>, 
 export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K extends string>({
   strings: s,
   storyStrings,
+  loopStrings,
   scenario,
   text,
   sim,
-  timeline,
+  clock,
   picker,
   beatWords,
   explain,
   expectedError,
   source,
   nextTitle,
-  autoKey,
-  onRun,
+  storageKey,
   onStep,
   onFocus,
   onNext,
   onExit,
 }: ScenarioPlayerProps<E, S, K>) {
   const [index, setIndex] = useState(0);
-  const story = useStory(sim, onRun, picker);
+  const story = useStory(sim, clock.run, picker);
   const phase = story.phase;
-  const [auto, setAuto] = useLocalStorage(autoKey, false);
+  const [auto, setAuto] = useLocalStorage(`${storageKey}:story-auto`, false);
+  const [looping, setLooping] = useLocalStorage(`${storageKey}:step-loop`, true);
   const [attempt, setAttempt] = useState(0);
   /** Simulated time each step started at, for Back and Replay. */
   const starts = useRef<number[]>([]);
@@ -86,11 +87,19 @@ export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K exte
   const last = index === scenario.steps.length - 1;
   const done = phase === 'done' || isNarrative(step);
 
+  // A played step has nothing left to do, so it can be watched again and again.
+  const span =
+    phase === 'done' && story.span && story.span.end > story.span.start ? story.span : null;
+  const loop = useLoop(clock, span, { loop: looping });
+  const replaying = !!span && (loop.playing || sim.now < span.end);
+  const marks = span ? story.beats.map((b) => b.event.at) : [];
+  const active = replaying ? marks.findLastIndex((at) => at <= sim.now) : -1;
+
   useEffect(() => {
     onStep(step);
   }, [step, onStep]);
 
-  const current = story.current;
+  const current = story.current ?? story.beats[active] ?? null;
   useEffect(() => {
     onFocus(current ? current.focus : null);
   }, [current, onFocus]);
@@ -103,7 +112,7 @@ export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K exte
   }, [auto, phase, current, next]);
 
   const play = () => {
-    starts.current[index] = timeline.now;
+    starts.current[index] = clock.now();
     story.start(
       () => {
         try {
@@ -117,9 +126,11 @@ export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K exte
   };
 
   const go = (to: number, rewind: boolean) => {
+    // Going on starts from the end of this step, wherever its replay was.
+    const at = rewind ? starts.current[to] : story.span?.end;
+    loop.pause();
     story.reset();
-    const at = starts.current[to];
-    if (rewind && at !== undefined) timeline.seek(at);
+    if (at !== undefined) clock.seek(at);
     setIndex(to);
     setAttempt((n) => n + 1);
   };
@@ -165,6 +176,24 @@ export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K exte
       onAuto={setAuto}
       onNext={story.next}
       onSkip={story.skip}
+      active={span ? active : undefined}
+    />
+  );
+
+  const scrubber = span && (
+    <StepScrubber
+      strings={loopStrings}
+      start={span.start}
+      end={span.end}
+      now={sim.now}
+      marks={marks}
+      active={active}
+      playing={loop.playing}
+      loop={looping}
+      onPlay={loop.play}
+      onPause={loop.pause}
+      onSeek={loop.seek}
+      onLoop={setLooping}
     />
   );
 
@@ -204,6 +233,7 @@ export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K exte
             checkLabel={s.lockIn}
             onCheck={play}
           />
+          {scrubber}
           {told}
           {phase === 'done' && result}
           {phase === 'done' && nav}
@@ -211,6 +241,7 @@ export function ScenarioPlayer<E extends SimEvent, S extends Eventful<E>, K exte
       ) : (
         <>
           {phase === 'ready' && !isNarrative(step) && <Button onClick={play}>{s.play}</Button>}
+          {scrubber}
           {told}
           {done && result}
           {done && last && !nextTitle && <p className="lab-muted">{s.finished}</p>}

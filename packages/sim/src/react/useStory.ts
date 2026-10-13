@@ -12,6 +12,12 @@ export interface StoryGoal<S> {
   until?: (s: S) => boolean;
 }
 
+/** The stretch of simulated time one played step covered. */
+export interface Span {
+  start: number;
+  end: number;
+}
+
 /** Simulate until `stop` holds, then call `then`. */
 export type StoryRun<S> = (stop: (s: S) => boolean, then: () => void) => void;
 
@@ -29,6 +35,9 @@ export function useStory<E extends SimEvent, S extends Eventful<E>, K extends st
   const [beats, setBeats] = useState<Beat<E, K>[]>([]);
   const [shown, setShown] = useState(0);
   const [quiet, setQuiet] = useState(0);
+  /** Once done: from just before the action to where the story stopped, for replaying it. */
+  const [span, setSpan] = useState<Span | null>(null);
+  const startedAt = useRef(0);
   const queue = useRef<Beat<E, K>[]>([]);
   const shownRef = useRef(0);
   const filter = useRef<BeatPicker<E, S, K> | null>(null);
@@ -57,6 +66,7 @@ export function useStory<E extends SimEvent, S extends Eventful<E>, K extends st
     shownRef.current = queue.current.length;
     setShown(shownRef.current);
     sync();
+    setSpan({ start: startedAt.current, end: sim.now });
     setPhase('done');
   };
 
@@ -86,6 +96,8 @@ export function useStory<E extends SimEvent, S extends Eventful<E>, K extends st
     filter.current = f;
     skipping.current = false;
     setShown(0);
+    setSpan(null);
+    startedAt.current = sim.now;
     unsubscribe.current = sim.onEvent((e) => {
       const beat = f.take(e, sim);
       if (beat) queue.current.push(beat);
@@ -109,9 +121,10 @@ export function useStory<E extends SimEvent, S extends Eventful<E>, K extends st
     setBeats([]);
     setShown(0);
     setQuiet(0);
+    setSpan(null);
     setPhase('ready');
   }, []);
 
   const current = phase === 'paused' ? (beats[shown - 1] ?? null) : null;
-  return { phase, beats: beats.slice(0, shown), current, quiet, start, next, skip, reset };
+  return { phase, beats: beats.slice(0, shown), current, quiet, span, start, next, skip, reset };
 }

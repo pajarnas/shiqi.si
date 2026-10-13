@@ -6,6 +6,8 @@ import { LAB_STRINGS } from '@shiqi/lab';
 
 export const RABBIT_STRINGS = {
   toolbar: LAB_STRINGS.toolbar,
+  loop: LAB_STRINGS.loop,
+  lock: LAB_STRINGS.lock,
   lanes: {
     publishers: 'Publishers',
     exchanges: 'Exchanges',

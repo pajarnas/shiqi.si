@@ -1,6 +1,7 @@
 // Every word @shiqi/kafka-viz shows. English is the default; apps pass their
 // own translation through <KafkaStringsProvider> (the site keeps zh in its
 // i18n/strings and lets the translation service fill the rest).
+import { LAB_STRINGS } from '@shiqi/lab';
 import { format } from '@shiqi/ui';
 import { createContext, useContext, type ReactNode } from 'react';
 import { BUILD_STRINGS } from './course/strings';
@@ -19,6 +20,8 @@ export const KAFKA_STRINGS = {
     goLive: 'Jump to now',
     lost: 'Acked records lost: {n}',
   },
+  loop: LAB_STRINGS.loop,
+  lock: LAB_STRINGS.lock,
   lanes: {
     producers: 'Producers',
     cluster: 'Cluster',
