@@ -21,7 +21,8 @@
     "@shiqi/pixel": "workspace:*",
     "@shiqi/ui": "workspace:*",
     "@shiqi/code": "workspace:*",
-    "@shiqi/sim": "workspace:*"
+    "@shiqi/sim": "workspace:*",
+    "@shiqi/lab": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0",

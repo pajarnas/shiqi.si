@@ -34,7 +34,9 @@ describe('rabbitmqadmin and rabbitmqctl', () => {
   it('lists the implicit default-exchange bindings and reports errors like the server', () => {
     const b = new Broker();
     run(b, 'rabbitmqadmin declare queue name=q');
-    expect(run(b, 'rabbitmqctl list_bindings').at(-1)).toMatch(/^\s+exchange\s+q\s+queue\s+q\s+\[\]$/);
+    expect(run(b, 'rabbitmqctl list_bindings').at(-1)).toMatch(
+      /^\s+exchange\s+q\s+queue\s+q\s+\[\]$/,
+    );
     expect(run(b, 'rabbitmqadmin delete queue name=nope')).toEqual([
       "Error: NOT_FOUND - no queue 'nope' in vhost '/'",
     ]);

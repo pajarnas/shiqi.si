@@ -163,9 +163,34 @@ importers:
       '@shiqi/kafka':
         specifier: workspace:*
         version: link:../kafka
+      '@shiqi/lab':
+        specifier: workspace:*
+        version: link:../lab
       '@shiqi/pixel':
         specifier: workspace:*
         version: link:../pixel
+      '@shiqi/sim':
+        specifier: workspace:*
+        version: link:../sim
+      '@shiqi/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.2.7
+        version: 19.3.0(@types/react@19.3.0)
+      react:
+        specifier: ^19.2.8
+        version: 19.3.0
+      react-dom:
+        specifier: ^19.2.8
+        version: 19.3.0(react@19.3.0)
+
+  packages/lab:
+    dependencies:
       '@shiqi/sim':
         specifier: workspace:*
         version: link:../sim
