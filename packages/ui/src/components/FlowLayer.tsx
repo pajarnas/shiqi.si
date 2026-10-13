@@ -66,7 +66,12 @@ interface Box {
 
 function box(el: HTMLElement, stage: DOMRect): Box {
   const r = el.getBoundingClientRect();
-  return { x: r.left - stage.left + r.width / 2, y: r.top - stage.top + r.height / 2, w: r.width, h: r.height };
+  return {
+    x: r.left - stage.left + r.width / 2,
+    y: r.top - stage.top + r.height / 2,
+    w: r.width,
+    h: r.height,
+  };
 }
 
 /** The two facing edges of boxes a and b, so a line between them doesn't cross either. */
@@ -251,7 +256,15 @@ export function FlowLayer({ anchors, stageRef, links, className, ref }: FlowLaye
           const y = a.y + (b.y - a.y) * k;
           const s = i === steps.length - 1 ? sq : sq * (0.5 + i * 0.15);
           ctx.globalAlpha = i === steps.length - 1 ? 1 : 0.35;
-          drawPacket(ctx, p.shape ?? 'square', Math.round(x - s / 2), Math.round(y - s / 2), s, fill, ink);
+          drawPacket(
+            ctx,
+            p.shape ?? 'square',
+            Math.round(x - s / 2),
+            Math.round(y - s / 2),
+            s,
+            fill,
+            ink,
+          );
         });
         ctx.globalAlpha = 1;
       }

@@ -8,16 +8,7 @@ import {
   type OffsetReset,
   type TruncationMode,
 } from '@shiqi/kafka';
-import {
-  Button,
-  Field,
-  List,
-  ListItem,
-  Range,
-  Segmented,
-  Select,
-  TextInput,
-} from '@shiqi/ui';
+import { Button, Field, List, ListItem, Range, Segmented, Select, TextInput } from '@shiqi/ui';
 import { LabForm, useAdmin } from '@shiqi/lab';
 import { useState } from 'react';
 import { format, useKafkaStrings } from '../strings';
