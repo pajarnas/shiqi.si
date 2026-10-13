@@ -13,6 +13,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@shiqi/pixel": "workspace:*"
+    "@shiqi/pixel": "workspace:*",
+    "@shiqi/sim": "workspace:*"
   }
 }

@@ -20,7 +20,8 @@
     "@shiqi/kafka": "workspace:*",
     "@shiqi/pixel": "workspace:*",
     "@shiqi/ui": "workspace:*",
-    "@shiqi/code": "workspace:*"
+    "@shiqi/code": "workspace:*",
+    "@shiqi/sim": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.0.0",

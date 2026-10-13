@@ -16,6 +16,7 @@ export * from './components/Rich';
 export * from './components/Quiz';
 export * from './components/Section';
 export * from './components/Segmented';
+export * from './components/Shell';
 export * from './components/Term';
 export * from './components/Toast';
 export * from './components/Window';

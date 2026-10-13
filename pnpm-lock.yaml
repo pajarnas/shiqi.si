@@ -151,6 +151,9 @@ importers:
       '@shiqi/pixel':
         specifier: workspace:*
         version: link:../pixel
+      '@shiqi/sim':
+        specifier: workspace:*
+        version: link:../sim
 
   packages/kafka-viz:
     dependencies:
@@ -163,6 +166,9 @@ importers:
       '@shiqi/pixel':
         specifier: workspace:*
         version: link:../pixel
+      '@shiqi/sim':
+        specifier: workspace:*
+        version: link:../sim
       '@shiqi/ui':
         specifier: workspace:*
         version: link:../ui
@@ -181,6 +187,21 @@ importers:
         version: 19.3.0(react@19.3.0)
 
   packages/pixel: {}
+
+  packages/rabbitmq:
+    dependencies:
+      '@shiqi/sim':
+        specifier: workspace:*
+        version: link:../sim
+
+  packages/sim:
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.18
+        version: 19.3.0
+      react:
+        specifier: ^19.2.8
+        version: 19.3.0
 
   packages/ui:
     dependencies:
