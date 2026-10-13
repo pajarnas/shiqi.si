@@ -1,14 +1,16 @@
 import {
+  LabLock,
+  LabLockable,
   LabPanels,
   LabToolbar,
   ScenarioMenu,
   ScenarioPlayer,
+  useLabClock,
   type LabStep,
-  type Speed,
   type StepText,
 } from '@shiqi/lab';
 import { BrokerTimeline, RabbitError, type Broker } from '@shiqi/rabbitmq';
-import { useSimulation, useSimVersion, useTimeline } from '@shiqi/sim/react';
+import { useSimVersion, useTimeline } from '@shiqi/sim/react';
 import { cx } from '@shiqi/ui';
 import { useCallback, useState } from 'react';
 import { useRabbitStrings } from '../i18n';
@@ -40,11 +42,6 @@ const PANELS = [
 ] as const;
 type Panel = (typeof PANELS)[number];
 const STEP_MS = 100;
-
-interface Goal {
-  until: (b: Broker) => boolean;
-  done: () => void;
-}
 
 export interface RabbitLabProps {
   /** The broker free play starts from. */
@@ -78,33 +75,22 @@ export function RabbitLab({
   const { timeline, sim: broker } = useTimeline<Broker, BrokerTimeline>(
     () => new BrokerTimeline(first ? SCENARIOS[first].build : initial),
   );
-  const [running, setRunning] = useState(first === null);
-  const [speed, setSpeed] = useState<Speed>('1');
+  const clock = useLabClock(broker, timeline, first === null);
   const [panel, setPanel] = useState<Panel>('inspect');
   const [selected, setSelected] = useState<string | null>(() => firstQueue(broker));
-  const [goal, setGoal] = useState<Goal | null>(null);
   const [step, setStep] = useState<ScenarioStep | null>(null);
   const [storyFocus, setStoryFocus] = useState<string[] | null>(null);
   const [opened, setOpened] = useState(0);
 
-  useSimulation(broker, running, Number(speed), {
-    stopWhen: goal?.until,
-    onStop: () => {
-      setRunning(false);
-      setGoal(null);
-      goal?.done();
-    },
-  });
   useSimVersion(broker);
 
   const start = (factory: () => Broker, id: ScenarioId | null) => {
     timeline.reset(factory);
     setScenarioId(id);
-    setGoal(null);
+    clock.restart(id === null);
     setStep(null);
     setStoryFocus(null);
     setOpened((n) => n + 1);
-    setRunning(id === null);
     setSelected(firstQueue(timeline.sim));
     onScenarioChange?.(id);
   };
@@ -126,17 +112,6 @@ export function RabbitLab({
     }
   }, []);
 
-  const run = (until: Goal['until'], done: Goal['done']) => {
-    setGoal({ until, done });
-    setRunning(true);
-  };
-
-  const seek = (time: number) => {
-    setRunning(false);
-    setGoal(null);
-    timeline.seek(time);
-  };
-
   let focus: string[] = storyFocus ?? [];
   try {
     if (!storyFocus) focus = step?.focus?.(broker) ?? [];
@@ -152,90 +127,116 @@ export function RabbitLab({
   };
 
   return (
-    <div className={cx('lab-app rv-app', scenario && 'lab-app--guided')}>
-      <LabToolbar
-        strings={t.toolbar}
-        running={running}
-        onRunning={setRunning}
-        onStep={() => broker.tick(STEP_MS)}
-        speed={speed}
-        onSpeed={setSpeed}
-        now={broker.now}
-        end={timeline.end}
-        stepMs={broker.settings.tickMs}
-        rewound={timeline.rewound}
-        onSeek={seek}
-        onReset={reset}
-      />
-
-      {scenario ? (
-        <ScenarioPlayer
-          key={`${scenario.id}:${opened}`}
-          strings={s}
-          storyStrings={t.story}
-          scenario={scenario}
-          text={{
-            title: s.list[scenario.id].title,
-            steps: s.list[scenario.id].steps as Record<string, StepText>,
-          }}
-          sim={broker}
-          timeline={timeline}
-          picker={picker}
-          beatWords={beatWords}
-          explain={explain}
-          expectedError={expectedError}
-          source={
-            scenario.source
-              ? {
-                  label: s.sources[scenario.source as keyof typeof s.sources],
-                  href: SCENARIO_SOURCES[scenario.source as keyof typeof SCENARIO_SOURCES],
-                }
-              : undefined
-          }
-          nextTitle={scenario.next ? s.list[scenario.next].title : undefined}
-          autoKey="rabbitmq:story-auto"
-          onRun={run}
-          onStep={onStep}
-          onFocus={setStoryFocus}
-          onNext={() => scenario.next && open(scenario.next)}
-          onExit={exit}
+    <LabLock locked={!!scenario} note={t.lock.note}>
+      <div className={cx('lab-app rv-app', scenario && 'lab-app--guided')}>
+        <LabToolbar
+          strings={t.toolbar}
+          running={clock.running}
+          onRunning={clock.setRunning}
+          onStep={() => broker.tick(STEP_MS)}
+          speed={clock.speed}
+          onSpeed={clock.setSpeed}
+          now={broker.now}
+          end={timeline.end}
+          stepMs={broker.settings.tickMs}
+          rewound={timeline.rewound}
+          onSeek={clock.seek}
+          onReset={reset}
         />
-      ) : (
-        <ScenarioMenu
-          strings={s}
-          groups={Object.entries(SCENARIO_GROUPS).map(([group, ids]) => ({
-            title: s.groups[group as keyof typeof s.groups],
-            items: ids.map((id) => ({ id, title: s.list[id].title, summary: s.list[id].summary })),
-          }))}
-          onOpen={(id) => open(id as ScenarioId)}
+
+        {scenario ? (
+          <ScenarioPlayer
+            key={`${scenario.id}:${opened}`}
+            strings={s}
+            storyStrings={t.story}
+            loopStrings={t.loop}
+            scenario={scenario}
+            text={{
+              title: s.list[scenario.id].title,
+              steps: s.list[scenario.id].steps as Record<string, StepText>,
+            }}
+            sim={broker}
+            clock={clock.driver}
+            picker={picker}
+            beatWords={beatWords}
+            explain={explain}
+            expectedError={expectedError}
+            source={
+              scenario.source
+                ? {
+                    label: s.sources[scenario.source as keyof typeof s.sources],
+                    href: SCENARIO_SOURCES[scenario.source as keyof typeof SCENARIO_SOURCES],
+                  }
+                : undefined
+            }
+            nextTitle={scenario.next ? s.list[scenario.next].title : undefined}
+            storageKey="rabbitmq"
+            onStep={onStep}
+            onFocus={setStoryFocus}
+            onNext={() => scenario.next && open(scenario.next)}
+            onExit={exit}
+          />
+        ) : (
+          <ScenarioMenu
+            strings={s}
+            groups={Object.entries(SCENARIO_GROUPS).map(([group, ids]) => ({
+              title: s.groups[group as keyof typeof s.groups],
+              items: ids.map((id) => ({
+                id,
+                title: s.list[id].title,
+                summary: s.list[id].summary,
+              })),
+            }))}
+            onOpen={(id) => open(id as ScenarioId)}
+          />
+        )}
+
+        {!scenario && <Legend />}
+        <Stage
+          broker={broker}
+          speed={Number(clock.speed)}
+          selected={selected}
+          onSelect={select}
+          focus={focus}
         />
-      )}
+        {scenario && <Legend />}
 
-      {!scenario && <Legend />}
-      <Stage
-        broker={broker}
-        speed={Number(speed)}
-        selected={selected}
-        onSelect={select}
-        focus={focus}
-      />
-      {scenario && <Legend />}
-
-      <LabPanels
-        label={t.panels.label}
-        panels={PANELS}
-        names={t.panels}
-        value={panel}
-        onChange={setPanel}
-      >
-        {panel === 'inspect' && <Inspector broker={broker} queue={selected} />}
-        {panel === 'terminal' && <Terminal broker={broker} />}
-        {panel === 'declare' && <DeclarePanel broker={broker} />}
-        {panel === 'publish' && <PublishPanel broker={broker} />}
-        {panel === 'consume' && <ConsumePanel broker={broker} />}
-        {panel === 'settings' && <SettingsPanel broker={broker} />}
-        {panel === 'events' && <EventLog broker={broker} />}
-      </LabPanels>
-    </div>
+        <LabPanels
+          label={t.panels.label}
+          panels={PANELS}
+          names={t.panels}
+          value={panel}
+          onChange={setPanel}
+        >
+          {panel === 'inspect' && <Inspector broker={broker} queue={selected} />}
+          {panel === 'terminal' && (
+            <LabLockable>
+              <Terminal broker={broker} />
+            </LabLockable>
+          )}
+          {panel === 'declare' && (
+            <LabLockable>
+              <DeclarePanel broker={broker} />
+            </LabLockable>
+          )}
+          {panel === 'publish' && (
+            <LabLockable>
+              <PublishPanel broker={broker} />
+            </LabLockable>
+          )}
+          {panel === 'consume' && (
+            <LabLockable>
+              <ConsumePanel broker={broker} />
+            </LabLockable>
+          )}
+          {panel === 'settings' && (
+            <LabLockable>
+              <SettingsPanel broker={broker} />
+            </LabLockable>
+          )}
+          {panel === 'events' && <EventLog broker={broker} />}
+        </LabPanels>
+      </div>
+    </LabLock>
   );
 }

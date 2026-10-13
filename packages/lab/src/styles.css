@@ -198,8 +198,90 @@
   background: var(--surface);
 }
 
-.lab-story__now .lab-story__n {
+.lab-story__now .lab-story__n,
+.lab-story__on .lab-story__n {
   background: var(--accent);
+}
+
+/* A played step, watched again like a short video. */
+.lab-loop {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border);
+  border-left: 6px solid var(--accent);
+  background: var(--surface);
+}
+
+.lab-loop__title {
+  margin: 0;
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lab-loop__bar {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.lab-loop__range {
+  width: 100%;
+}
+
+/* Numbered like the story's beats, under the moment each happened. */
+.lab-loop__marks {
+  position: relative;
+  margin: 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.lab-loop__marks > li {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.lab-loop__mark {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 2px;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  border: var(--border-width) solid var(--border);
+  background: var(--surface-sunken);
+  color: inherit;
+  cursor: pointer;
+}
+
+.lab-loop__mark--on {
+  background: var(--accent);
+}
+
+.lab-loop__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.lab-loop__time {
+  font-size: var(--text-sm);
+}
+
+/* Controls that change the simulation, off under a LabLock. */
+.lab-lockable {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.lab-lockable:disabled {
+  opacity: 0.6;
 }
 
 .lab-story__beat-title {

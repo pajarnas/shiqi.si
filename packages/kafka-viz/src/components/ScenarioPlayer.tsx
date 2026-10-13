@@ -1,4 +1,4 @@
-import { KafkaError, type Cluster, type Timeline } from '@shiqi/kafka';
+import { KafkaError, type Cluster } from '@shiqi/kafka';
 import {
   ScenarioMenu as LabScenarioMenu,
   ScenarioPlayer as LabScenarioPlayer,
@@ -6,6 +6,7 @@ import {
   type LabStep,
   type StepText,
 } from '@shiqi/lab';
+import type { LoopDriver } from '@shiqi/sim/react';
 import {
   SCENARIO_GROUPS,
   SCENARIO_SOURCES,
@@ -21,9 +22,8 @@ import { beatWords } from './Story';
 export interface ScenarioPlayerProps {
   scenario: Scenario;
   cluster: Cluster;
-  timeline: Timeline;
-  /** Play the simulation until `until` holds, then call `done`. */
-  onRun: (until: (c: Cluster) => boolean, done: () => void) => void;
+  /** Runs the simulation for the story, rewinds, and loops a played step. */
+  clock: LoopDriver<Cluster>;
   /** The step on screen changed (for highlights and the inspector). */
   onStep: (step: ScenarioStep) => void;
   /** What the story is pointing at right now; null to go back to the step's own focus. */
@@ -42,8 +42,7 @@ const expectedError = (e: unknown) => e instanceof KafkaError;
 export function ScenarioPlayer({
   scenario,
   cluster,
-  timeline,
-  onRun,
+  clock,
   onStep,
   onFocus,
   onOpen,
@@ -57,10 +56,11 @@ export function ScenarioPlayer({
     <LabScenarioPlayer
       strings={s}
       storyStrings={t.story}
+      loopStrings={t.loop}
       scenario={scenario as LabScenario<Cluster>}
       text={{ title: text.title, steps: text.steps as Record<string, StepText> }}
       sim={cluster}
-      timeline={timeline}
+      clock={clock}
       picker={picker}
       beatWords={(b) => beatWords(b, t)}
       explain={explain}
@@ -74,8 +74,7 @@ export function ScenarioPlayer({
           : undefined
       }
       nextTitle={next ? s.list[next].title : undefined}
-      autoKey="kafka:story-auto"
-      onRun={onRun}
+      storageKey="kafka"
       onStep={onStep as (step: LabStep<Cluster>) => void}
       onFocus={onFocus}
       onNext={() => next && onOpen(next)}

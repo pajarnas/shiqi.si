@@ -9,6 +9,7 @@ import {
   type Queue,
   type QueueArgs,
 } from '@shiqi/rabbitmq';
+import { LabAction } from '@shiqi/lab';
 import {
   anchorRef,
   Button,
@@ -371,21 +372,21 @@ function PublisherCard({
       <p className="rv-card__stats">{format(s.stats, p.stats)}</p>
       {onWire > 0 && <p className="rv-card__stats">{format(s.onWire, { n: onWire })}</p>}
       <div className="rv-card__actions">
-        <Button size="sm" variant="secondary" onClick={() => b.publishFrom(p.id)}>
+        <LabAction size="sm" variant="secondary" onClick={() => b.publishFrom(p.id)}>
           {s.sendOne}
-        </Button>
+        </LabAction>
         {p.rate > 0 && (
-          <Button
+          <LabAction
             size="sm"
             variant="ghost"
             onClick={() => b.updatePublisher(p.id, { paused: !p.paused })}
           >
             {p.paused ? s.resume : s.pause}
-          </Button>
+          </LabAction>
         )}
-        <Button size="sm" variant="ghost" onClick={() => b.removePublisher(p.id)}>
+        <LabAction size="sm" variant="ghost" onClick={() => b.removePublisher(p.id)}>
           {s.remove}
-        </Button>
+        </LabAction>
       </div>
     </article>
   );
@@ -502,14 +503,14 @@ function QueueCard({
         <Button size="sm" variant="ghost" onClick={onSelect}>
           {s.inspect}
         </Button>
-        <Button
+        <LabAction
           size="sm"
           variant="ghost"
           onClick={() => b.purgeQueue(q.name)}
           disabled={!q.ready.length}
         >
           {s.purge}
-        </Button>
+        </LabAction>
       </div>
     </article>
   );
@@ -630,26 +631,26 @@ function ConsumerCard({
       <p className="rv-card__stats">{format(s.stats, c.stats)}</p>
       <div className="rv-card__actions">
         {c.down ? (
-          <Button size="sm" variant="secondary" onClick={() => b.restartConsumer(c.tag)}>
+          <LabAction size="sm" variant="secondary" onClick={() => b.restartConsumer(c.tag)}>
             {s.restart}
-          </Button>
+          </LabAction>
         ) : (
           <>
-            <Button
+            <LabAction
               size="sm"
               variant="ghost"
               onClick={() => b.updateConsumer(c.tag, { paused: !c.paused })}
             >
               {c.paused ? s.resume : s.pause}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => b.crashConsumer(c.tag)}>
+            </LabAction>
+            <LabAction size="sm" variant="ghost" onClick={() => b.crashConsumer(c.tag)}>
               {s.crash}
-            </Button>
+            </LabAction>
           </>
         )}
-        <Button size="sm" variant="ghost" onClick={() => b.removeConsumer(c.tag)}>
+        <LabAction size="sm" variant="ghost" onClick={() => b.removeConsumer(c.tag)}>
           {s.remove}
-        </Button>
+        </LabAction>
       </div>
     </article>
   );

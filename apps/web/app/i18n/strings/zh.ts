@@ -38,6 +38,20 @@ const LAB_ZH = {
     quiet: '之后又有 {n} 个同类事件没有停下来讲：都是上面讲过的事在重复。',
     none: '这一步没有发生新的事。',
   },
+  loop: {
+    label: '把这一步再看一遍',
+    play: '播放',
+    pause: '暂停',
+    prev: '上一个事件',
+    next: '下一个事件',
+    scrub: '拖到这一步里的任意时刻',
+    position: '{now} / {total}',
+    mark: '第 {n} 个事件',
+    loop: '循环播放',
+  },
+  lock: {
+    note: '看故事的时候，操作按钮先关掉，免得分心。想自己动手试，就离开情景。',
+  },
   events: { empty: '还什么都没发生。' },
 };
 
@@ -478,6 +492,8 @@ export const zh: DeepPartial<Strings> = {
     },
     lab: {
       toolbar: LAB_ZH.toolbar,
+      loop: LAB_ZH.loop,
+      lock: LAB_ZH.lock,
       lanes: {
         publishers: '发布者',
         exchanges: '交换机',
@@ -1259,6 +1275,8 @@ export const zh: DeepPartial<Strings> = {
         live: '现在',
         lost: '已确认却丢失的记录：{n}',
       },
+      loop: LAB_ZH.loop,
+      lock: LAB_ZH.lock,
       lanes: {
         producers: '生产者',
         cluster: '集群',

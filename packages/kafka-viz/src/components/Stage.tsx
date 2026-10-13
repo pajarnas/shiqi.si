@@ -7,7 +7,8 @@ import {
   type Partition,
   type Producer,
 } from '@shiqi/kafka';
-import { Button, cx, PixelIcon, Term } from '@shiqi/ui';
+import { LabAction } from '@shiqi/lab';
+import { cx, PixelIcon, Term } from '@shiqi/ui';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { anchorId, anchorRef, type AnchorRegistry } from '../anchors';
 import { bytes, meterScale } from '../format';
@@ -230,31 +231,31 @@ function BrokerCard({
       <footer className="kv-broker__actions">
         {broker.up ? (
           <>
-            <Button size="sm" variant="secondary" onClick={() => cluster.stopBroker(broker.id)}>
+            <LabAction size="sm" variant="secondary" onClick={() => cluster.stopBroker(broker.id)}>
               {t.broker.stop}
-            </Button>
-            <Button
+            </LabAction>
+            <LabAction
               size="sm"
               variant="ghost"
               onClick={() => cluster.stopBroker(broker.id, { hard: true })}
             >
               {t.broker.powerCut}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => cluster.restartBroker(broker.id)}>
+            </LabAction>
+            <LabAction size="sm" variant="ghost" onClick={() => cluster.restartBroker(broker.id)}>
               {t.broker.restart}
-            </Button>
-            <Button
+            </LabAction>
+            <LabAction
               size="sm"
               variant="ghost"
               onClick={() => cluster.setBrokerSlow(broker.id, !broker.slow)}
             >
               {broker.slow ? t.broker.makeFast : t.broker.makeSlow}
-            </Button>
+            </LabAction>
           </>
         ) : (
-          <Button size="sm" variant="accent" onClick={() => cluster.startBroker(broker.id)}>
+          <LabAction size="sm" variant="accent" onClick={() => cluster.startBroker(broker.id)}>
             {t.broker.start}
-          </Button>
+          </LabAction>
         )}
       </footer>
     </article>
@@ -434,13 +435,13 @@ function ProducerCard({
           {format(t.producer.lastError, { error: p.lastError })}
         </p>
       )}
-      <Button
+      <LabAction
         size="sm"
         variant="ghost"
         onClick={() => cluster.updateProducer(p.id, { paused: !p.paused })}
       >
         {p.paused ? t.producer.resume : t.producer.pause}
-      </Button>
+      </LabAction>
     </article>
   );
 }
@@ -550,17 +551,21 @@ function GroupCard({
               </ul>
             )}
             <div className="kv-member__actions">
-              <Button size="sm" variant="ghost" onClick={() => cluster.removeConsumer(g.id, m.id)}>
+              <LabAction
+                size="sm"
+                variant="ghost"
+                onClick={() => cluster.removeConsumer(g.id, m.id)}
+              >
                 {t.group.leave}
-              </Button>
-              <Button
+              </LabAction>
+              <LabAction
                 size="sm"
                 variant="ghost"
                 disabled={!m.alive}
                 onClick={() => cluster.crashConsumer(g.id, m.id)}
               >
                 {t.group.crash}
-              </Button>
+              </LabAction>
             </div>
           </li>
         ))}

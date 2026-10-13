@@ -2,6 +2,7 @@ import { Button, format, Range, Segmented } from '@shiqi/ui';
 import type { ReactNode } from 'react';
 import { clock } from '../format';
 import type { LabStrings } from '../strings';
+import { useLabLock } from './LabLock';
 
 export const SPEEDS = ['0.25', '0.5', '1', '2', '4'] as const;
 export type Speed = (typeof SPEEDS)[number];
@@ -25,7 +26,10 @@ export interface LabToolbarProps {
   children?: ReactNode;
 }
 
-/** Play, step, speed, the rewind slider and the clock. */
+/**
+ * Play, step, speed, the rewind slider and the clock. Under a LabLock only
+ * speed and Reset stay on: something else (a story) owns the clock.
+ */
 export function LabToolbar({
   strings: t,
   running,
@@ -41,13 +45,14 @@ export function LabToolbar({
   onReset,
   children,
 }: LabToolbarProps) {
+  const { locked, note } = useLabLock();
   return (
     <>
       <div className="lab-toolbar">
-        <Button size="sm" onClick={() => onRunning(!running)}>
+        <Button size="sm" disabled={locked} onClick={() => onRunning(!running)}>
           {running ? t.pause : t.play}
         </Button>
-        <Button size="sm" variant="secondary" disabled={running} onClick={onStep}>
+        <Button size="sm" variant="secondary" disabled={locked || running} onClick={onStep}>
           {t.step}
         </Button>
         <Segmented
@@ -64,10 +69,11 @@ export function LabToolbar({
           max={Math.max(end, 1)}
           step={stepMs}
           value={now}
+          disabled={locked}
           onChange={(e) => onSeek(Number(e.target.value))}
         />
         <span className="lab-toolbar__clock ui-pixel">{format(t.clock, { time: clock(now) })}</span>
-        {rewound && (
+        {rewound && !locked && (
           <Button size="sm" variant="ghost" onClick={() => onSeek(end)}>
             {t.goLive}
           </Button>
@@ -77,7 +83,11 @@ export function LabToolbar({
           {t.reset}
         </Button>
       </div>
-      {rewound && <p className="lab-muted lab-toolbar__note">{t.rewound}</p>}
+      {locked ? (
+        <p className="lab-muted lab-toolbar__note">{note}</p>
+      ) : (
+        rewound && <p className="lab-muted lab-toolbar__note">{t.rewound}</p>
+      )}
     </>
   );
 }

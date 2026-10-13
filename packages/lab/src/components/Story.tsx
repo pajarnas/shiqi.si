@@ -1,4 +1,4 @@
-import { Button, Checkbox, format } from '@shiqi/ui';
+import { Button, Checkbox, cx, format } from '@shiqi/ui';
 import type { StoryPhase } from '@shiqi/sim/react';
 import type { ReactNode } from 'react';
 import type { LabStrings } from '../strings';
@@ -18,6 +18,8 @@ export interface StoryProps {
   onAuto: (on: boolean) => void;
   onNext: () => void;
   onSkip: () => void;
+  /** Once done, the beat a replay of the step has reached (-1 for none yet). */
+  active?: number;
 }
 
 /**
@@ -33,6 +35,7 @@ export function Story({
   onAuto,
   onNext,
   onSkip,
+  active,
 }: StoryProps) {
   if (phase === 'ready') return null;
   const live = phase !== 'done';
@@ -52,9 +55,9 @@ export function Story({
                 </div>
               </li>
             ) : (
-              <li key={i}>
+              <li key={i} className={cx(i === active && 'lab-story__on')}>
                 <span className="lab-story__n">{i + 1}</span>
-                <details open={!live && last}>
+                <details open={active === undefined ? !live && last : i === active}>
                   <summary>{b.title}</summary>
                   <p>{b.body}</p>
                 </details>
