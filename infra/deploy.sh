@@ -56,5 +56,8 @@ echo "Kafka and RabbitMQ: $([ ${#services[@]} -gt 1 ] && echo on || echo "off (n
 docker compose pull "${services[@]}"
 # Starts MySQL and Redis too if they aren't running yet.
 docker compose up -d "${services[@]}"
+# Caddy keeps running across deploys; pick up a changed Caddyfile (new site names).
+docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile >/dev/null 2>&1 ||
+  echo "caddy: reload failed, still serving the old Caddyfile"
 docker image prune -f >/dev/null
 docker compose ps

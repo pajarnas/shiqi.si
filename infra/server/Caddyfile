@@ -12,3 +12,13 @@ shiqi.si {
 www.shiqi.si {
 	redir https://shiqi.si{uri} permanent
 }
+
+# The RabbitMQ lab on its own name: the home page is /rabbitmq, everything
+# else (assets, the API, other pages) is the same site. Needs the DNS record
+# rabbitmq.shiqi.si → this server; until then Caddy just can't get its
+# certificate, and shiqi.si is unaffected.
+rabbitmq.shiqi.si {
+	encode zstd gzip
+	rewrite / /rabbitmq
+	reverse_proxy web:3000
+}
