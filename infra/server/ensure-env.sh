@@ -13,4 +13,5 @@ ensure_env() {
     }
   done
 }
-ensure_env ADMIN_PASSWORD
+# RabbitMQ's management users (see certs.sh): admin for you, web for the site.
+ensure_env ADMIN_PASSWORD RABBITMQ_ADMIN_PASSWORD RABBITMQ_WEB_PASSWORD

@@ -439,6 +439,36 @@ export const en = {
       text: 'New here? Start with one message: from the publisher, through an exchange, into a queue, out to a consumer and back as an ack, one event at a time.',
       button: 'Start: one message, start to finish',
     },
+    mode: { label: 'What to show', sim: 'Simulation', real: 'Real broker' },
+    real: {
+      about:
+        'A real RabbitMQ broker on this site’s server, read every 2 seconds from its management API. It is laid out like the simulation’s demo: a topic exchange lab.orders, a dead-letter exchange lab.dlx and four queues. This page only reads it; to publish and consume, connect from your own computer.',
+      loading: 'Connecting to the broker…',
+      unavailable: 'The real broker isn’t running right now. The simulation still works.',
+      error: 'Couldn’t read the broker (status {status}).',
+      readAt: 'Read at {time}',
+      version: 'RabbitMQ {version}',
+      memory: 'Memory {used} of {limit} MB',
+      memoryHint:
+        'When memory use reaches the limit, RabbitMQ raises an alarm and blocks every publisher until consumers catch up.',
+      alarm: 'Alarm: publishers are blocked',
+      connections: '{n} connections',
+      exchanges: 'Exchanges',
+      queues: 'Queues',
+      noExchanges: 'No exchanges besides the built-in ones.',
+      noQueues: 'No queues.',
+      exchangeRates: '{in}/s in · {out}/s out',
+      queueRates:
+        'publish {publish}/s · deliver {deliver}/s · ack {ack}/s · redeliver {redeliver}/s',
+      consumers: '{n} consumers',
+      noBindings: 'No bindings.',
+      binding: '→ {destination}',
+      bindingKey: 'key {key}',
+      connect: {
+        title: 'Connect from your computer',
+        text: 'AMQPS (port 5671) and the management UI (port 15672) listen on the server’s localhost only. With the SSH tunnel open, log in to AMQPS with your client certificate and no password; the management UI uses the admin password.',
+      },
+    },
   },
   kafka: {
     title: 'Kafka, live',

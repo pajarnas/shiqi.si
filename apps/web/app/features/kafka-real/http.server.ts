@@ -5,16 +5,10 @@ import { within } from '~/lib/redis.server';
 import { requireAdmin } from '~/features/visits/auth.server';
 import { clientIp } from '~/features/visits/visits';
 import { KAFKA_TIMEOUT_MS, type KafkaPort, getKafka } from './client.server';
-import { UNAVAILABLE } from './snapshot';
+import { badRequest, json, limitPublic, unavailable } from '~/lib/api.server';
 import { KAFKA_API_TEXT } from './text';
 
-const NO_STORE = { 'Cache-Control': 'no-store' };
-
-export const json = (body: unknown, status = 200, headers: HeadersInit = NO_STORE) =>
-  Response.json(body, { status, headers });
-
-export const unavailable = () => json(UNAVAILABLE, 503);
-export const badRequest = (error: string, status = 400) => json({ error }, status);
+export { badRequest, json, limitPublic, unavailable };
 
 /** Error codes for a cluster that answered "no", as opposed to one that didn't answer. */
 const REFUSED = new Set(['PLT_KFK_RESPONSE', 'PLT_KFK_PROTOCOL', 'PLT_KFK_USER']);
@@ -62,15 +56,7 @@ export async function withKafka(
   }
 }
 
-const publicLimit = rateLimiter(120, 60_000);
 const adminLimit = rateLimiter(30, 60_000);
-
-/** Public reads: a generous per-IP limit. Null when the request may pass. */
-export function limitPublic(request: Request): Response | null {
-  return publicLimit.take(clientIp(request.headers))
-    ? null
-    : badRequest(KAFKA_API_TEXT.tooMany, 429);
-}
 
 /**
  * Admin writes: the /admin password (HTTP Basic), JSON bodies only (a

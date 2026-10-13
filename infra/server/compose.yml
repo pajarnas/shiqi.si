@@ -1,5 +1,6 @@
 # Production stack for a small VM: the site, Redis, MySQL, and Caddy for HTTPS,
-# plus a 3-node Kafka cluster (profile `kafka`) once the VM has 4 GB.
+# plus a 3-node Kafka cluster (profile `kafka`) and a RabbitMQ broker (profile
+# `rabbitmq`) once the VM has 4 GB.
 # bootstrap.sh writes .env next to this file (IMAGE, ACME_EMAIL) and ensure-env.sh
 # adds ADMIN_PASSWORD; deploy.sh updates IMAGE. Run from this folder: `docker compose ps`, `docker compose logs -f web`.
 name: shiqi
@@ -74,6 +75,11 @@ services:
       ADMIN_TIME_ZONE: ${ADMIN_TIME_ZONE:-America/New_York}
       # Set by deploy.sh when the kafka profile runs; empty = no real cluster.
       KAFKA_BROKERS: ${KAFKA_BROKERS:-}
+      # Set by deploy.sh when the rabbitmq profile runs: the management API,
+      # read with the monitoring-only user `web`. Empty = no real broker.
+      RABBITMQ_API: ${RABBITMQ_API:-}
+      RABBITMQ_API_USER: web
+      RABBITMQ_API_PASSWORD: ${RABBITMQ_WEB_PASSWORD:-}
     # API keys live in secrets.env next to this file (never in git), e.g.
     # AZURE_TRANSLATOR_KEY=... for the translation service. CI fills it from
     # GitHub Secrets named APP_<NAME> (see infra/deploy.sh).
@@ -91,7 +97,7 @@ services:
       timeout: 5s
       start_period: 20s
     depends_on: [redis, mysql]
-    networks: [default, kafka]
+    networks: [default, kafka, rabbitmq]
 
   redis:
     image: redis:8.8.3-alpine
@@ -190,9 +196,38 @@ services:
     ports: ['127.0.0.1:39094:9094']
     volumes: [kafka-3:/var/lib/kafka/data, ./certs/kafka:/certs:ro]
 
+  # A real RabbitMQ for /rabbitmq: one node with the management plugin. The web
+  # app reads the management API on the internal network; AMQPS (5671, client
+  # certificate required, login by certificate name) and the management UI
+  # (15672) are on the server's localhost only, for the SSH tunnel.
+  # Users, permissions and the lab exchanges/queues come from definitions.json,
+  # which certs.sh writes (one user per issued certificate, like MySQL).
+  # Off unless the `rabbitmq` profile is enabled (deploy.sh: 3.5 GB of RAM).
+  rabbitmq:
+    image: rabbitmq:4.3.5-management
+    profiles: [rabbitmq]
+    restart: unless-stopped
+    hostname: rabbitmq
+    networks: [rabbitmq, default]
+    ports: ['127.0.0.1:5671:5671', '127.0.0.1:15672:15672']
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/conf.d/20-shiqi.conf:ro
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - ./certs/rabbitmq:/certs:ro
+    mem_limit: 512m
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 60s
+      timeout: 10s
+      start_period: 60s
+
 networks:
   # Kafka's own network: no route out, only web and the brokers are on it.
   kafka:
+    internal: true
+  # RabbitMQ's, the same way: only web and the broker.
+  rabbitmq:
     internal: true
 
 volumes:
@@ -203,3 +238,4 @@ volumes:
   kafka-1:
   kafka-2:
   kafka-3:
+  rabbitmq:

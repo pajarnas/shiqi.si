@@ -68,9 +68,6 @@ export interface KafkaRecordView {
   timestamp: number;
 }
 
-/** Every route answers this, status 503, when there is no cluster to talk to. */
-export const UNAVAILABLE = { available: false } as const;
-
 /** Topics the admin API may create, write to, and delete. */
 export const LAB_TOPIC_PREFIX = 'lab-';
 export const RECORDS_MAX = 50;

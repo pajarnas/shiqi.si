@@ -1,9 +1,10 @@
 import '@shiqi/kafka-viz/styles.css';
 
 import { isScenarioId, KafkaLab, KafkaStringsProvider, type ScenarioId } from '@shiqi/kafka-viz';
-import { Button, Callout, Section, Segmented } from '@shiqi/ui';
+import { Button, Callout, Section } from '@shiqi/ui';
 import { useState } from 'react';
 import { Link, useSearchParams, type ShouldRevalidateFunction } from 'react-router';
+import { LabModeSwitch, useLabMode } from '~/components/LabMode';
 import { NoteList } from '~/components/NoteList';
 import { RealCluster } from '~/features/kafka-real/RealCluster';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
@@ -18,9 +19,6 @@ const TOPIC = 'kafka';
 
 /** The happy path every newcomer should see first. */
 const FIRST_SCENARIO: ScenarioId = 'first-record';
-
-/** ?mode=real shows the real cluster instead of the simulation. */
-type Mode = 'sim' | 'real';
 
 export const meta: Route.MetaFunction = ({ matches }) => pageMeta(matches, (t) => t.kafka);
 
@@ -38,11 +36,9 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
   const notes = notesTagged(TOPIC);
   const [params, setParams] = useSearchParams();
   const scenario = params.get('scenario');
-  const mode: Mode = params.get('mode') === 'real' ? 'real' : 'sim';
+  const [mode, onModeChange] = useLabMode();
   const onScenarioChange = (id: ScenarioId | null) =>
     setParams(id ? { scenario: id } : {}, { replace: true, preventScrollReset: true });
-  const onModeChange = (next: Mode) =>
-    setParams(next === 'real' ? { mode: 'real' } : {}, { replace: true, preventScrollReset: true });
   // The lab only reads ?scenario= when it mounts, so starting from here remounts it.
   const [labKey, setLabKey] = useState(0);
   const startHere = () => {
@@ -50,10 +46,6 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
     setLabKey((n) => n + 1);
   };
   const current = isScenarioId(scenario) ? scenario : null;
-  const modes = [
-    { value: 'sim' as const, label: t.kafka.mode.sim },
-    { value: 'real' as const, label: t.kafka.mode.real },
-  ];
   return (
     <div className="desk-wide">
       <PageWindow page="kafka" title={t.kafka.title} lede={t.kafka.lede}>
@@ -66,13 +58,7 @@ export default function Kafka({ loaderData: { noteText } }: Route.ComponentProps
         <Callout>
           {t.kafka.course} <Link to="/kafka/build">{t.kafka.courseLink}</Link>
         </Callout>
-        <Segmented
-          className="kafka-mode"
-          label={t.kafka.mode.label}
-          options={modes}
-          value={mode}
-          onChange={onModeChange}
-        />
+        <LabModeSwitch mode={mode} onChange={onModeChange} text={t.kafka.mode} />
         {mode === 'real' ? (
           <>
             <Callout>{t.kafka.real.about}</Callout>
