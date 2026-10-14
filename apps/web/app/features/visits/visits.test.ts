@@ -27,6 +27,8 @@ describe('pagePath', () => {
       '/api/visit',
       '/admin',
       '/admin/x',
+      '/visa/3',
+      '/chat/visa/3',
       '/assets/a.js',
       '/robots.txt',
     ]) {

@@ -101,6 +101,26 @@ docker compose exec mysql sh -c 'mysql -ushiqi -p"$MYSQL_PASSWORD" shiqi'   # �
 
 以后想换成 Azure 的托管 MySQL（Azure Database for MySQL 灵活服务器），只要把 `compose.yml` 里 web 的 `MYSQL_HOST` 指过去、去掉 `mysql` 服务，代码不用动。
 
+## 家人美签助手（/visa）
+
+全家人用一个密码登录 <https://shiqi.si/visa>：每人一张卡片，点「去聊天」用中文（或英文）和 AI 聊天，助手把回答整理成 DS-160 的答案（探亲的 B1/B2，以及 H-1B 回国续签）。卡片页显示英文答案、中文翻译和每一项的说明，可以打印；首页还有办理指南、材料清单、费用、小工具和官方链接。档案全家共享，谁都可以帮别人填。网站不会替任何人提交，DS-160 要自己去 ceac.state.gov 填。
+
+在 GitHub 的 production environment 里加这几个 secret：
+
+| Secret                     | 内容                                                                                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `APP_VISA_FAMILY_PASSWORD` | 全家共用的登录密码。没有它 /visa 进不去。                                                                                                                                                               |
+| `APP_VISA_FAMILY`          | 家人名单，第一次启动时据此建档案（已有档案就不再动）。格式 `名字:签证类型`，用逗号分开，签证类型是 `B1/B2` 或 `H-1B`（不写默认 B1/B2），例如 `张三:B1/B2,李四:H-1B`。名单不写进代码，因为仓库是公开的。 |
+| `APP_ANTHROPIC_API_KEY`    | console.anthropic.com 生成的 key。没有它页面照常，只是不能聊天，可以直接填表。                                                                                                                          |
+| `APP_VISA_MODEL`（可选）   | 换模型，默认 `claude-opus-5-5`。                                                                                                                                                                        |
+
+- 页面：`/visa` 首页和卡片，`/visa/<编号>` 某个人的资料，`/chat/visa/<编号>` 和助手聊天。登录后 30 天内不用再输密码。
+- 后台：<https://shiqi.si/admin/visa>，和访客记录同一个 `ADMIN_PASSWORD`。可以加人、删人、看聊天记录、删除整个案件。
+- 加密：资料和聊天记录都用 `VISA_DATA_KEY` 加密后才存进 MySQL，这个 key 也用来签登录 cookie。它由 `ensure-env.sh` 自动生成在 `infra/server/.env` 里；**弄丢了数据就读不出来了**，换服务器时记得把它一起搬走。
+- 表结构在 `packages/visa/src/store.ts` 的 `VISA_MIGRATIONS`，记在自己的 `visa_schema_migrations` 表里，以后把签证 API 拆成单独服务时可以整包带走。
+- 签证知识（步骤、材料、费用、链接）在 `packages/visa/src/knowledge.ts`，页面和助手读的是同一份；政策变了改这里。
+- `/visa` 和 `/chat` 下的页面不进访客记录，也不让搜索引擎收录。办完签证在后台点「删除整个案件」，数据就从数据库里删掉了。
+
 ## 5. 打开翻译服务（可选）
 
 笔记用英文写，中文版由 Azure AI Translator 的免费档（F0，每月 200 万字符，不收费）翻译。

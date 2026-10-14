@@ -15,3 +15,5 @@ ensure_env() {
 }
 # RabbitMQ's management users (see certs.sh): admin for you, web for the site.
 ensure_env ADMIN_PASSWORD RABBITMQ_ADMIN_PASSWORD RABBITMQ_WEB_PASSWORD
+# Encryption key for the visa helper's data (see compose.yml).
+ensure_env VISA_DATA_KEY

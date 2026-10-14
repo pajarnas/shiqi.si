@@ -16,7 +16,7 @@ export interface Visit {
 
 /** Paths that are not pages a person reads. */
 const IGNORED =
-  /^\/(?:api|admin|assets|fonts)(?:\/|$)|^\/(?:sitemap\.xml|robots\.txt|favicon\.svg)$/;
+  /^\/(?:api|admin|assets|chat|fonts|visa)(?:\/|$)|^\/(?:sitemap\.xml|robots\.txt|favicon\.svg)$/;
 
 /**
  * Turns a request path into the page path to record, or null to skip it.
