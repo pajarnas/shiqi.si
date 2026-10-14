@@ -1,6 +1,6 @@
 // The DS-160 answer sheet: every question that applies, in form order, with the
 // answer as it should be typed into ceac.state.gov.
-import { SECTIONS, type Answers } from './schema';
+import { sectionsFor, withShared, type Answers, type VisaType } from './schema';
 import { crossCheck } from './validate';
 
 export interface SheetRow {
@@ -24,11 +24,11 @@ export interface Sheet {
   missing: number;
 }
 
-/** Builds the sheet for one applicant; shared case answers fill in what they did not answer. */
-export function buildSheet(caseAnswers: Answers, answers: Answers): Sheet {
-  const merged = { ...caseAnswers, ...answers };
+/** Builds the sheet for one applicant; shared family answers fill in what applies to them. */
+export function buildSheet(visa: VisaType, caseAnswers: Answers, answers: Answers): Sheet {
+  const merged = withShared(visa, caseAnswers, answers);
   let missing = 0;
-  const sections = SECTIONS.map((s) => ({
+  const sections = sectionsFor(visa).map((s) => ({
     id: s.id,
     en: s.en,
     zh: s.zh,

@@ -2,7 +2,14 @@
 // AES-256-GCM with a key derived from VISA_DATA_KEY; the database only ever
 // sees ciphertext, so a leaked dump or backup reveals nothing. Lose the key and
 // the data is gone too — that is the point.
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'node:crypto';
 
 export interface Sealer {
   seal(value: unknown): string;
@@ -39,12 +46,29 @@ export function createSealer(secret: string): Sealer {
   };
 }
 
-/** A fresh link token for one applicant: 32 random bytes, URL-safe. */
-export function newToken(): string {
-  return randomBytes(32).toString('base64url');
+/**
+ * Signs short values (the family login cookie) with a key derived from the
+ * same secret, so a cookie can't be forged without VISA_DATA_KEY.
+ */
+export function createSigner(secret: string) {
+  const key = createHash('sha256').update(`shiqi-visa-cookie:${secret}`).digest();
+  const mac = (value: string) => createHmac('sha256', key).update(value).digest('base64url');
+  return {
+    sign: (value: string) => `${value}.${mac(value)}`,
+    /** The value if the signature is right, else null. */
+    verify(signed: string): string | null {
+      const dot = signed.lastIndexOf('.');
+      if (dot < 0) return null;
+      const value = signed.slice(0, dot);
+      const given = Buffer.from(signed.slice(dot + 1));
+      const want = Buffer.from(mac(value));
+      return given.length === want.length && timingSafeEqual(given, want) ? value : null;
+    },
+  };
 }
 
-/** What the database keeps to look a token up; the token itself is never stored in the clear. */
-export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+/** Compares two secrets in constant time. */
+export function sameSecret(a: string, b: string): boolean {
+  const digest = (s: string) => createHash('sha256').update(s).digest();
+  return timingSafeEqual(digest(a), digest(b));
 }

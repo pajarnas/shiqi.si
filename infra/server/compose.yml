@@ -74,8 +74,9 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_TIME_ZONE: ${ADMIN_TIME_ZONE:-America/New_York}
       # Encrypts everything the visa helper (/visa) stores; made up by ensure-env.sh.
-      # Losing it makes the stored visa data unreadable. ANTHROPIC_API_KEY for its
-      # chat comes from secrets.env (GitHub Secret APP_ANTHROPIC_API_KEY).
+      # Losing it makes the stored visa data unreadable. ANTHROPIC_API_KEY,
+      # VISA_FAMILY_PASSWORD and VISA_FAMILY come from secrets.env (GitHub
+      # Secrets APP_ANTHROPIC_API_KEY, APP_VISA_FAMILY_PASSWORD, APP_VISA_FAMILY).
       VISA_DATA_KEY: ${VISA_DATA_KEY:-}
       # Set by deploy.sh when the kafka profile runs; empty = no real cluster.
       KAFKA_BROKERS: ${KAFKA_BROKERS:-}

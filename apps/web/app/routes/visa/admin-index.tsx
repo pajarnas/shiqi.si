@@ -4,7 +4,7 @@ import { Form, Link, redirect } from 'react-router';
 import { PageWindow } from '~/components/PageWindow';
 import { VISA_TEXT as T } from '~/features/visa/text';
 import { adminOnly, getVisa, PRIVATE_HEADERS } from '~/features/visa/visa.server';
-import type { Route } from './+types/admin';
+import type { Route } from './+types/admin-index';
 
 export const meta = () => [
   { title: `${T.adminTitle} · shiqi.si` },
@@ -29,8 +29,9 @@ export async function loader({ request }: Route.LoaderArgs) {
         people: people.map((p) => ({
           id: p.id,
           name: p.profile.name,
+          visa: p.profile.visa,
           status: p.status,
-          progress: progress({ ...c.answers, ...p.answers }),
+          progress: progress(p.answers, p.profile.visa),
         })),
       };
     }),
@@ -46,7 +47,7 @@ export async function action({ request }: Route.ActionArgs) {
   const label = String(form.get('label') ?? '').trim();
   if (!label) return null;
   const id = await visa.store.createCase(label.slice(0, 100));
-  return redirect(`/visa/admin/case/${id}`);
+  return redirect(`/admin/visa/case/${id}`);
 }
 
 export default function VisaAdmin({ loaderData: d }: Route.ComponentProps) {
@@ -70,13 +71,13 @@ export default function VisaAdmin({ loaderData: d }: Route.ComponentProps) {
             ) : (
               <div className="visa__cases">
                 {d.cases.map((c) => (
-                  <Card key={c.id} as={Link} to={`/visa/admin/case/${c.id}`} interactive padded>
+                  <Card key={c.id} as={Link} to={`/admin/visa/case/${c.id}`} interactive padded>
                     <strong>{c.label}</strong>
                     <p>{T.applicantsCount(c.people.length)}</p>
                     <ul className="visa__people">
                       {c.people.map((p) => (
                         <li key={p.id}>
-                          {p.name}{' '}
+                          {p.name} <small>{p.visa}</small>{' '}
                           <Badge tone={p.status === 'collecting' ? 'gold' : 'green'}>
                             {T.status[p.status]}
                           </Badge>{' '}

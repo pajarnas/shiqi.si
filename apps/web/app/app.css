@@ -1029,3 +1029,180 @@ ul.topic-tags {
   font-family: var(--font-mono);
   font-size: 0.8rem;
 }
+.visa__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-block-end: var(--space-4);
+}
+.visa__login {
+  max-inline-size: 28rem;
+  margin-block-start: var(--space-4);
+}
+.visa__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--space-3);
+}
+.visa__card {
+  display: grid;
+  gap: var(--space-2);
+}
+.visa__card--done {
+  border-color: var(--success, var(--accent));
+}
+.visa__card-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.visa__card-head small {
+  display: block;
+  opacity: 0.7;
+}
+.visa__card-name {
+  font-size: 1.15rem;
+}
+.visa__avatar {
+  display: grid;
+  place-items: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  font-size: 1.2rem;
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+}
+.visa__visa {
+  font: var(--text-xs) / 1 var(--font-mono);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid currentColor;
+}
+.visa__card-status,
+.visa__card .visa__progress,
+.visa__card .visa__actions {
+  margin: 0;
+}
+.visa__shared {
+  margin-block-start: var(--space-4);
+}
+.visa__shared summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.visa__tabs {
+  display: flex;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+.visa__tab {
+  font: inherit;
+  padding: var(--space-1) var(--space-3);
+  background: var(--surface);
+  color: inherit;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  cursor: pointer;
+}
+.visa__tab--on {
+  background: var(--accent-soft);
+  border-color: var(--border);
+  font-weight: 600;
+}
+.visa__guide,
+.visa__links,
+.visa__tools {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-3);
+}
+.visa__guide h3,
+.visa__tool h3 {
+  margin-block: 0 var(--space-2);
+}
+.visa__steps p {
+  margin-block: var(--space-1) var(--space-2);
+}
+.visa__docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+.visa__doc-tag {
+  font: var(--text-xs) / 1 var(--font-mono);
+  padding: 2px var(--space-1);
+  border: 1px dashed currentColor;
+  opacity: 0.7;
+}
+.visa__doc--required .visa__doc-tag {
+  border-style: solid;
+  opacity: 1;
+}
+.visa__fees {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.visa__fees dd {
+  margin: 0;
+  opacity: 0.85;
+}
+.visa__links p {
+  margin-block: var(--space-1);
+}
+.visa__url {
+  font-family: var(--font-mono);
+  opacity: 0.6;
+}
+.visa__tool {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+.visa__ok {
+  color: var(--success, inherit);
+}
+.visa__done {
+  margin-block-end: var(--space-3);
+}
+.visa__zh {
+  display: block;
+  font-family: var(--font-sans, inherit);
+  opacity: 0.75;
+}
+.visa__tip {
+  position: relative;
+  cursor: help;
+  opacity: 0.7;
+}
+.visa__tip:hover,
+.visa__tip:focus {
+  opacity: 1;
+}
+.visa__tip:hover::after,
+.visa__tip:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 10;
+  inset-block-start: 1.5em;
+  inset-inline-start: 0;
+  inline-size: max-content;
+  max-inline-size: min(20rem, 70vw);
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.85rem;
+  font-weight: normal;
+  line-height: 1.5;
+  white-space: normal;
+  background: var(--surface);
+  color: var(--text, inherit);
+  border: 1px solid var(--border);
+  box-shadow: 2px 2px 0 var(--border);
+}
+@media print {
+  .visa__tip {
+    display: none;
+  }
+}

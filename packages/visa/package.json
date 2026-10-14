@@ -2,7 +2,7 @@
   "name": "@shiqi/visa",
   "version": "0.1.0",
   "private": true,
-  "description": "The family visa helper's backend: the DS-160 (B1/B2) question set, field-level encryption, MySQL storage and the chat agent that fills the form. No web framework, so it can move into its own API service.",
+  "description": "The family visa helper's backend: the DS-160 question set (B1/B2 and H-1B), a visa knowledge base, field-level encryption, MySQL storage and the chat agent that fills the form. No web framework, so it can move into its own API service.",
   "type": "module",
   "sideEffects": false,
   "exports": {

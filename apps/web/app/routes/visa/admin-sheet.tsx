@@ -1,11 +1,11 @@
-import { buildSheet, transcript } from '@shiqi/visa/forms';
+import { buildSheet, STEPS, transcript } from '@shiqi/visa/forms';
 import { Button, Card, Section } from '@shiqi/ui';
 import { Form, Link, data } from 'react-router';
 import { PageWindow } from '~/components/PageWindow';
 import { SheetView } from '~/features/visa/components';
 import { VISA_TEXT as T } from '~/features/visa/text';
 import { adminOnly, getVisa, PRIVATE_HEADERS } from '~/features/visa/visa.server';
-import type { Route } from './+types/sheet';
+import type { Route } from './+types/admin-sheet';
 
 export const meta = () => [{ title: `DS-160 · shiqi.si` }, { name: 'robots', content: 'noindex' }];
 
@@ -28,8 +28,10 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   return {
     caseId: a.caseId,
     name: a.profile.name,
+    visa: a.profile.visa,
     status: a.status,
-    sheet: buildSheet(caseAnswers, a.answers),
+    sheet: buildSheet(a.profile.visa, caseAnswers, a.answers),
+    answersZh: a.answersZh,
     chat: transcript(a.messages),
   };
 }
@@ -51,7 +53,7 @@ export default function VisaSheet({ loaderData: d }: Route.ComponentProps) {
       lede={T.sheetLede}
     >
       <div className="visa__actions visa__no-print">
-        <Link to={`/visa/admin/case/${d.caseId}`}>← {T.applicantsTitle}</Link>
+        <Link to={`/admin/visa/case/${d.caseId}`}>← {T.applicantsTitle}</Link>
         <Button type="button" size="sm" onClick={() => window.print()}>
           {T.print}
         </Button>
@@ -68,13 +70,15 @@ export default function VisaSheet({ loaderData: d }: Route.ComponentProps) {
         </span>
       </div>
 
-      <SheetView sheet={d.sheet} />
+      <SheetView sheet={d.sheet} answersZh={d.answersZh} />
 
-      <Section title={T.stepsTitle}>
+      <Section title="提交步骤">
         <Card padded>
           <ol>
-            {T.submitSteps.map((s) => (
-              <li key={s}>{s}</li>
+            {STEPS[d.visa].map((s) => (
+              <li key={s.title.en}>
+                <strong>{s.title.zh}</strong> {s.zh}
+              </li>
             ))}
           </ol>
         </Card>

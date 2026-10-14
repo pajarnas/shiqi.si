@@ -1,52 +1,53 @@
-import { buildSheet, checkAnswers, progress, transcript } from '@shiqi/visa/forms';
+import { buildSheet, checkAnswers, progress, sectionsFor, transcript } from '@shiqi/visa/forms';
 import { Button, Card, Section, TextArea } from '@shiqi/ui';
 import { useEffect, useRef } from 'react';
-import { Form, data, useFetcher } from 'react-router';
+import { Form, Link, useFetcher } from 'react-router';
 import { PageWindow } from '~/components/PageWindow';
-import { AnswerForm, SheetView, formAnswers } from '~/features/visa/components';
-import { VISA_TEXT as T } from '~/features/visa/text';
-import { chatLimit, getVisa, PRIVATE_HEADERS, runTurn } from '~/features/visa/visa.server';
+import {
+  AnswerForm,
+  formAnswers,
+  LangToggle,
+  SheetView,
+  useLang,
+} from '~/features/visa/components';
+import { chatLimit, loadPerson, PRIVATE_HEADERS, runTurn } from '~/features/visa/visa.server';
 import type { Route } from './+types/chat';
 
-export const meta = () => [{ title: T.eyebrow }, { name: 'robots', content: 'noindex, nofollow' }];
+export const meta = () => [{ title: '美签助手' }, { name: 'robots', content: 'noindex, nofollow' }];
 
 export function headers({ errorHeaders }: Route.HeadersArgs) {
   return errorHeaders ?? PRIVATE_HEADERS;
 }
 
-async function load(token: string) {
-  const visa = await getVisa();
-  if (!visa) throw data(null, { status: 503 });
-  const a = await visa.store.applicantByToken(token);
-  if (!a) throw data(null, { status: 404 });
-  const c = await visa.store.getCase(a.caseId);
-  return { visa, a, caseAnswers: c?.answers ?? {} };
-}
-
-export async function loader({ params }: Route.LoaderArgs) {
-  const { visa, a, caseAnswers } = await load(params.token);
+export async function loader({ request, params }: Route.LoaderArgs) {
+  const { visa, a, caseAnswers } = await loadPerson(request, params.id);
   return {
+    id: a.id,
     name: a.profile.name,
+    visa: a.profile.visa,
     status: a.status,
     chatOn: visa.create !== null,
     chat: transcript(a.messages),
-    progress: progress({ ...caseAnswers, ...a.answers }),
+    progress: progress(a.answers, a.profile.visa),
     answers: a.answers,
-    sheet: a.status === 'collecting' ? null : buildSheet(caseAnswers, a.answers),
+    answersZh: a.answersZh,
+    sheet: a.status === 'collecting' ? null : buildSheet(a.profile.visa, caseAnswers, a.answers),
   };
 }
 
+type Problem = 'chatOff' | 'busy' | 'failed';
+
 export async function action({ request, params }: Route.ActionArgs) {
-  const { visa, a, caseAnswers } = await load(params.token);
+  const { visa, a, caseAnswers } = await loadPerson(request, params.id);
   const form = await request.formData();
   const intent = form.get('intent');
 
   if (intent === 'say' || intent === 'start') {
     const text = String(form.get('text') ?? '').slice(0, 4000);
-    if (!visa.create) return { error: T.chatOff };
+    if (!visa.create) return { problem: 'chatOff' as Problem };
     if (intent === 'say' && !text.trim()) return null;
     if (intent === 'start' && a.messages.length > 0) return null;
-    if (!chatLimit.take(String(a.id))) return { error: T.busy };
+    if (!chatLimit.take(String(a.id))) return { problem: 'busy' as Problem };
     try {
       const out = await runTurn({
         create: visa.create,
@@ -59,12 +60,19 @@ export async function action({ request, params }: Route.ActionArgs) {
       return null;
     } catch (err) {
       console.warn('[visa] chat turn failed:', err instanceof Error ? err.message : err);
-      return { error: T.failed };
+      return { problem: 'failed' as Problem };
     }
   }
   if (intent === 'edit') {
-    const { values, errors } = checkAnswers(formAnswers(form, 'applicant'));
-    await visa.store.saveApplicant({ ...a, answers: { ...a.answers, ...values } });
+    const own = sectionsFor(a.profile.visa).filter((s) => s.scope === 'applicant');
+    const { values, errors } = checkAnswers(formAnswers(form, own));
+    // A Chinese note no longer matches an answer that was changed by hand.
+    const answersZh = Object.fromEntries(
+      Object.entries(a.answersZh).filter(
+        ([k]) => values[k] === undefined || values[k] === a.answers[k],
+      ),
+    );
+    await visa.store.saveApplicant({ ...a, answers: { ...a.answers, ...values }, answersZh });
     return { errors };
   }
   if (intent === 'confirm') await visa.store.saveApplicant({ ...a, status: 'confirmed' });
@@ -77,7 +85,10 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
   const end = useRef<HTMLDivElement>(null);
   const sending = fetcher.state !== 'idle';
   const pendingText = sending ? String(fetcher.formData?.get('text') ?? '') : '';
-  const error = fetcher.data && 'error' in fetcher.data ? fetcher.data.error : null;
+  const [lang, t, setLang] = useLang();
+  const problem = fetcher.data && 'problem' in fetcher.data ? fetcher.data.problem : null;
+  const own = sectionsFor(d.visa).filter((s) => s.scope === 'applicant');
+  const errors = actionData && 'errors' in actionData ? actionData.errors : [];
 
   // A fresh link: let the assistant say hello first.
   const started = useRef(false);
@@ -93,15 +104,24 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
   }, [d.chat.length, sending]);
 
   return (
-    <PageWindow file={T.file} eyebrow={T.eyebrow} title={T.chatTitle(d.name)} lede={T.chatLede}>
+    <PageWindow
+      file={`chat/visa/${d.id}`}
+      eyebrow={`${t.eyebrow} · ${d.visa}`}
+      title={t.chatTitle(d.name)}
+      lede={t.chatLede}
+    >
+      <div className="visa__bar">
+        <Link to={`/visa/${d.id}`}>← {t.openCard}</Link>
+        <LangToggle lang={lang} onChange={setLang} />
+      </div>
       <p className="visa__note">
-        {T.privacy} {T.progressLabel} {d.progress.done}/{d.progress.total}
+        {t.privacy} {t.progress} {d.progress.done}/{d.progress.total}
       </p>
       <progress className="visa__progress" value={d.progress.done} max={d.progress.total} />
 
       {d.status === 'collecting' ? (
         <>
-          {!d.chatOn && <Card padded>{T.chatOff}</Card>}
+          {!d.chatOn && <Card padded>{t.chatOff}</Card>}
           <Card padded className="visa__chat" aria-live="polite">
             {d.chat.map((m, i) => (
               <p key={i} className={`visa__bubble visa__bubble--${m.role}`}>
@@ -110,9 +130,9 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
             ))}
             {pendingText && <p className="visa__bubble visa__bubble--user">{pendingText}</p>}
             {sending && (
-              <p className="visa__bubble visa__bubble--assistant visa__typing">{T.thinking}</p>
+              <p className="visa__bubble visa__bubble--assistant visa__typing">{t.thinking}</p>
             )}
-            {error && <p className="visa__error">{error}</p>}
+            {problem && <p className="visa__error">{t[problem]}</p>}
             <div ref={end} />
           </Card>
           {d.chatOn && (
@@ -129,28 +149,29 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
                 name="text"
                 rows={3}
                 required
-                placeholder={T.placeholder}
-                aria-label={T.placeholder}
+                placeholder={t.placeholder}
+                aria-label={t.placeholder}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey))
                     e.currentTarget.form?.requestSubmit();
                 }}
               />
               <Button type="submit" disabled={sending}>
-                {T.send}
+                {t.send}
               </Button>
             </fetcher.Form>
           )}
           {!d.chatOn && (
-            <Section title={T.reviewTitle}>
+            <Section title={t.reviewTitle}>
               <Card padded>
                 <AnswerForm
                   key={JSON.stringify(d.answers)}
-                  scope="applicant"
+                  sections={own}
                   answers={d.answers}
                   intent="edit"
-                  submitLabel={T.save}
-                  errors={actionData && 'errors' in actionData ? actionData.errors : []}
+                  submitLabel={t.save}
+                  errors={errors}
+                  lang={lang}
                 />
               </Card>
             </Section>
@@ -158,17 +179,18 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
         </>
       ) : (
         <>
-          {d.status === 'confirmed' && <Card padded>{T.confirmedNote}</Card>}
-          {d.sheet && <SheetView sheet={d.sheet} />}
-          <Section title={T.reviewTitle} description={T.reviewDesc}>
+          {d.status === 'confirmed' && <Card padded>{t.confirmedNote}</Card>}
+          {d.sheet && <SheetView sheet={d.sheet} answersZh={d.answersZh} lang={lang} />}
+          <Section title={t.reviewTitle} description={t.reviewDesc}>
             <Card padded>
               <AnswerForm
                 key={JSON.stringify(d.answers)}
-                scope="applicant"
+                sections={own}
                 answers={d.answers}
                 intent="edit"
-                submitLabel={T.save}
-                errors={actionData && 'errors' in actionData ? actionData.errors : []}
+                submitLabel={t.save}
+                errors={errors}
+                lang={lang}
               />
             </Card>
           </Section>
@@ -176,14 +198,14 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
             {d.status === 'review' && (
               <Form method="post">
                 <input type="hidden" name="intent" value="confirm" />
-                <Button type="submit">{T.confirm}</Button>
+                <Button type="submit">{t.confirm}</Button>
               </Form>
             )}
             {d.chatOn && (
               <Form method="post">
                 <input type="hidden" name="intent" value="reopen" />
                 <Button type="submit" variant="secondary">
-                  {T.keepChatting}
+                  {t.keepChatting}
                 </Button>
               </Form>
             )}

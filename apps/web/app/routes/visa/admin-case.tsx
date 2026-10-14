@@ -1,12 +1,14 @@
-import { checkAnswers, progress } from '@shiqi/visa/forms';
-import { Badge, Button, Card, Field, Section, TextInput } from '@shiqi/ui';
-import { useState } from 'react';
+import { checkAnswers, progress, sectionsFor, VISA_TYPES, type VisaType } from '@shiqi/visa/forms';
+import { Badge, Button, Card, Field, Section, Select, TextInput } from '@shiqi/ui';
 import { Form, Link, data, redirect } from 'react-router';
 import { PageWindow } from '~/components/PageWindow';
 import { AnswerForm, formAnswers } from '~/features/visa/components';
 import { VISA_TEXT as T } from '~/features/visa/text';
-import { adminOnly, chatUrl, getVisa, PRIVATE_HEADERS } from '~/features/visa/visa.server';
-import type { Route } from './+types/case';
+import { adminOnly, getVisa, PRIVATE_HEADERS } from '~/features/visa/visa.server';
+import type { Route } from './+types/admin-case';
+
+/** The family's shared sections: only visitors share a trip. */
+const SHARED = sectionsFor('B1/B2').filter((s) => s.scope === 'case');
 
 export const meta = ({ loaderData: d }: Route.MetaArgs) => [
   { title: `${d?.label ?? T.adminTitle} · shiqi.si` },
@@ -37,9 +39,9 @@ export async function loader({ request, params }: Route.LoaderArgs) {
       id: p.id,
       name: p.profile.name,
       relation: p.profile.relation,
+      visa: p.profile.visa,
       status: p.status,
-      progress: progress({ ...c.answers, ...p.answers }),
-      link: chatUrl(request, p.token),
+      progress: progress(p.answers, p.profile.visa),
     })),
   };
 }
@@ -49,7 +51,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   const form = await request.formData();
   switch (form.get('intent')) {
     case 'shared': {
-      const { values, errors } = checkAnswers(formAnswers(form, 'case'));
+      const { values, errors } = checkAnswers(formAnswers(form, SHARED));
       await visa.store.saveCaseAnswers(c.id, { ...c.answers, ...values });
       return { errors, saved: errors.length === 0 };
     }
@@ -60,7 +62,9 @@ export async function action({ request, params }: Route.ActionArgs) {
       const relation = String(form.get('relation') ?? '')
         .trim()
         .slice(0, 40);
-      if (name) await visa.store.addApplicant(c.id, { name, relation });
+      const type = String(form.get('visa'));
+      const visaType: VisaType = VISA_TYPES.find((v) => v === type) ?? 'B1/B2';
+      if (name) await visa.store.addApplicant(c.id, { name, relation, visa: visaType });
       return null;
     }
     case 'remove': {
@@ -71,25 +75,9 @@ export async function action({ request, params }: Route.ActionArgs) {
     }
     case 'deleteCase':
       await visa.store.deleteCase(c.id);
-      return redirect('/visa/admin');
+      return redirect('/admin/visa');
   }
   return null;
-}
-
-function CopyLink({ link }: { link: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      onClick={() => {
-        void navigator.clipboard.writeText(link).then(() => setCopied(true));
-      }}
-    >
-      {copied ? T.copied : T.copyLink}
-    </Button>
-  );
 }
 
 function confirmSubmit(message: string) {
@@ -102,7 +90,7 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
   return (
     <PageWindow file={`${T.file}/${d.id}`} eyebrow={T.eyebrow} title={d.label}>
       <p>
-        <Link to="/visa/admin">← {T.adminTitle}</Link>
+        <Link to="/admin/visa">← {T.adminTitle}</Link>
       </p>
 
       <Section title={T.applicantsTitle}>
@@ -110,7 +98,10 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
           {d.people.map((p) => (
             <Card key={p.id} padded className="visa__person">
               <strong>
-                {p.name} <small>{p.relation}</small>
+                {p.name}{' '}
+                <small>
+                  {p.relation} · {p.visa}
+                </small>
               </strong>
               <p>
                 <Badge tone={p.status === 'collecting' ? 'gold' : 'green'}>
@@ -118,18 +109,16 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
                 </Badge>{' '}
                 {T.progress(p.progress.done, p.progress.total)}
               </p>
-              <TextInput
-                readOnly
-                value={p.link}
-                aria-label={T.copyLink}
-                className="visa__link"
-                onFocus={(e) => e.currentTarget.select()}
-              />
               <div className="visa__actions">
-                <CopyLink link={p.link} />
+                <Button as={Link} to={`/visa/${p.id}`} variant="secondary" size="sm">
+                  {T.openCard}
+                </Button>
+                <Button as={Link} to={`/chat/visa/${p.id}`} variant="secondary" size="sm">
+                  {T.openChat}
+                </Button>
                 <Button
                   as={Link}
-                  to={`/visa/admin/applicant/${p.id}`}
+                  to={`/admin/visa/applicant/${p.id}`}
                   variant="secondary"
                   size="sm"
                 >
@@ -157,6 +146,15 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
           <Field label={T.relation}>
             {(c) => <TextInput {...c} name="relation" maxLength={40} />}
           </Field>
+          <Field label={T.visaType}>
+            {(c) => (
+              <Select {...c} name="visa" defaultValue="B1/B2">
+                {VISA_TYPES.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </Select>
+            )}
+          </Field>
           <Button type="submit">{T.add}</Button>
         </Form>
       </Section>
@@ -165,7 +163,7 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
         <Card padded>
           <AnswerForm
             key={JSON.stringify(d.answers)}
-            scope="case"
+            sections={SHARED}
             answers={d.answers}
             intent="shared"
             submitLabel={actionData?.saved ? T.saved : T.save}

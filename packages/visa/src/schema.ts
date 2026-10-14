@@ -1,7 +1,10 @@
-// The B1/B2 (visitor) DS-160 question set: what to ask each family member, in
-// the order the DS-160 pages ask it. Answers are stored the way they get typed
+// The DS-160 question set for the visas this family needs — B1/B2 visitors and
+// H-1B renewals — in the order the DS-160 pages ask it. Answers are stored the way they get typed
 // into ceac.state.gov — English, names in pinyin, dates as YYYY-MM-DD — so the
 // answer sheet can be copied field by field.
+
+export const VISA_TYPES = ['B1/B2', 'H-1B'] as const;
+export type VisaType = (typeof VISA_TYPES)[number];
 
 export type FieldType = 'text' | 'date' | 'choice' | 'yesno' | 'list';
 
@@ -20,20 +23,28 @@ export interface Field {
   /** Guidance for the assistant: format, what counts as an answer, common mistakes. */
   hint?: string;
   optional?: boolean;
+  /** Asked only for these visa types; every type when absent. */
+  only?: readonly VisaType[];
   /** Asked only when this returns true for the answers so far. */
   when?: (a: Answers) => boolean;
 }
 
-export interface Section {
+interface SectionDef {
   id: string;
   zh: string;
   en: string;
   /**
-   * `case`: filled once by the organiser and shared by every applicant in the
-   * family (the trip, the US contact). `applicant`: asked of each person.
+   * Filled once by the organiser for visitors travelling together (the trip,
+   * the U.S. contact). Someone on a work visa answers these for themselves.
    */
-  scope: 'case' | 'applicant';
+  shared?: boolean;
   fields: readonly Field[];
+}
+
+/** A section as one visa type sees it: only its fields, and who fills it in. */
+export interface Section extends SectionDef {
+  /** `case`: shared by the family, filled by the organiser. `applicant`: asked of each person. */
+  scope: 'case' | 'applicant';
 }
 
 const yes = (key: string) => (a: Answers) => a[key] === 'yes';
@@ -42,15 +53,19 @@ const married = (a: Answers) =>
 const employed = (a: Answers) =>
   !['RETIRED', 'NOT EMPLOYED', 'HOMEMAKER', 'STUDENT'].includes(a.occupation ?? '');
 
-export const SECTIONS: readonly Section[] = [
+const VISITOR = ['B1/B2'] as const;
+const WORKER = ['H-1B'] as const;
+
+const DEFS: readonly SectionDef[] = [
   {
     id: 'trip',
     zh: '行程',
     en: 'Travel Information',
-    scope: 'case',
+    shared: true,
     fields: [
       {
         key: 'purpose',
+        only: VISITOR,
         zh: '来美目的',
         en: 'Purpose of Trip',
         type: 'choice',
@@ -61,9 +76,33 @@ export const SECTIONS: readonly Section[] = [
         ],
         hint: 'Visiting family is B2 TOURISM.',
       },
+      {
+        key: 'purposeH',
+        zh: '来美目的',
+        en: 'Purpose of Trip',
+        type: 'choice',
+        only: WORKER,
+        options: ['TEMPORARY WORKER (H) - SPECIALTY OCCUPATION (H1B)'],
+      },
+      {
+        key: 'petitionNumber',
+        zh: 'I-797 批准通知上的申请号（Receipt Number）',
+        en: 'Petition Number',
+        type: 'text',
+        only: WORKER,
+        hint: 'Three letters and ten digits from the I-797 approval notice, e.g. WAC2412345678.',
+      },
+      {
+        key: 'petitioner',
+        zh: '递交 H-1B 申请的公司（I-797 上的 Petitioner）',
+        en: 'Name of Person/Company who Filed Petition',
+        type: 'text',
+        only: WORKER,
+      },
       { key: 'arrivalDate', zh: '预计到达日期', en: 'Intended Date of Arrival', type: 'date' },
       {
         key: 'stayLength',
+        only: VISITOR,
         zh: '预计停留多久',
         en: 'Intended Length of Stay',
         type: 'text',
@@ -78,6 +117,7 @@ export const SECTIONS: readonly Section[] = [
       },
       {
         key: 'payer',
+        only: VISITOR,
         zh: '谁付旅费',
         en: 'Person/Entity Paying for Your Trip',
         type: 'choice',
@@ -85,6 +125,7 @@ export const SECTIONS: readonly Section[] = [
       },
       {
         key: 'payerDetails',
+        only: VISITOR,
         zh: '付款人姓名、关系、电话、地址',
         en: 'Payer Name, Relationship, Phone, Address',
         type: 'text',
@@ -96,7 +137,7 @@ export const SECTIONS: readonly Section[] = [
     id: 'usContact',
     zh: '在美联系人',
     en: 'U.S. Point of Contact Information',
-    scope: 'case',
+    shared: true,
     fields: [
       {
         key: 'contactName',
@@ -128,7 +169,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'personal',
     zh: '个人信息',
     en: 'Personal Information',
-    scope: 'applicant',
     fields: [
       {
         key: 'surname',
@@ -218,7 +258,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'address',
     zh: '地址和电话',
     en: 'Address and Phone Information',
-    scope: 'applicant',
     fields: [
       {
         key: 'homeAddress',
@@ -242,7 +281,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'passport',
     zh: '护照',
     en: 'Passport Information',
-    scope: 'applicant',
     fields: [
       {
         key: 'passportNumber',
@@ -284,7 +322,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'companions',
     zh: '同行人',
     en: 'Travel Companions',
-    scope: 'applicant',
     fields: [
       {
         key: 'companions',
@@ -300,7 +337,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'previousTravel',
     zh: '以前去美国的记录',
     en: 'Previous U.S. Travel',
-    scope: 'applicant',
     fields: [
       {
         key: 'beenToUs',
@@ -331,6 +367,41 @@ export const SECTIONS: readonly Section[] = [
         hint: 'The red 8-digit number on the visa foil.',
       },
       {
+        key: 'sameVisaType',
+        zh: '这次申请的签证类型和上次一样吗',
+        en: 'Are you applying for the same type of visa?',
+        type: 'yesno',
+        when: yes('hadVisa'),
+      },
+      {
+        key: 'sameCountry',
+        zh: '这次在同一个国家申请吗，并且那里是你的常住地',
+        en: 'Are you applying in the same country or location where the visa above was issued, and is this country your place of principal residence?',
+        type: 'yesno',
+        when: yes('hadVisa'),
+      },
+      {
+        key: 'tenPrinted',
+        zh: '以前录过十指指纹吗（面签时按过十个手指）',
+        en: 'Have you been ten-printed?',
+        type: 'yesno',
+        when: yes('hadVisa'),
+      },
+      {
+        key: 'visaLost',
+        zh: '美国签证丢过或被偷过吗',
+        en: 'Has your U.S. Visa ever been lost or stolen?',
+        type: 'yesno',
+        when: yes('hadVisa'),
+      },
+      {
+        key: 'visaCancelled',
+        zh: '美国签证被取消或吊销过吗',
+        en: 'Has your U.S. Visa ever been cancelled or revoked?',
+        type: 'yesno',
+        when: yes('hadVisa'),
+      },
+      {
         key: 'refused',
         zh: '有没有被拒签过，或在入境时被拒',
         en: 'Have you ever been refused a U.S. Visa, or been refused admission?',
@@ -355,7 +426,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'family',
     zh: '家庭',
     en: 'Family Information',
-    scope: 'applicant',
     fields: [
       {
         key: 'fatherName',
@@ -420,7 +490,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'work',
     zh: '工作和教育',
     en: 'Present/Previous Work/Education/Training',
-    scope: 'applicant',
     fields: [
       {
         key: 'occupation',
@@ -463,11 +532,11 @@ export const SECTIONS: readonly Section[] = [
       { key: 'startDate', zh: '入职日期', en: 'Start Date', type: 'date', when: employed },
       {
         key: 'monthlyIncome',
-        zh: '月收入（人民币）',
+        zh: '月收入（当地货币）',
         en: 'Monthly Income in Local Currency',
         type: 'text',
         when: employed,
-        hint: 'Digits only, in CNY.',
+        hint: 'Digits only, in the currency where they work: CNY in China, USD for a U.S. employer.',
       },
       {
         key: 'duties',
@@ -497,7 +566,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'additional',
     zh: '其他',
     en: 'Additional Work/Education/Training Information',
-    scope: 'applicant',
     fields: [
       {
         key: 'clan',
@@ -545,7 +613,6 @@ export const SECTIONS: readonly Section[] = [
     id: 'security',
     zh: '安全和背景问题',
     en: 'Security and Background',
-    scope: 'applicant',
     fields: [
       {
         key: 'securityAllNo',
@@ -565,9 +632,8 @@ export const SECTIONS: readonly Section[] = [
   },
 ];
 
-export const ALL_FIELDS: readonly (Field & { section: Section })[] = SECTIONS.flatMap((s) =>
-  s.fields.map((f) => ({ ...f, section: s })),
-);
+/** Every field of every visa type, for looking a key up. */
+export const ALL_FIELDS: readonly Field[] = DEFS.flatMap((s) => s.fields);
 
 const BY_KEY = new Map(ALL_FIELDS.map((f) => [f.key, f]));
 
@@ -575,19 +641,51 @@ export function fieldByKey(key: string) {
   return BY_KEY.get(key);
 }
 
+const forVisa = (f: Field, visa: VisaType) => !f.only || f.only.includes(visa);
+
+/** The form one visa type fills in: its fields, with shared sections shared only between visitors. */
+export function sectionsFor(visa: VisaType): Section[] {
+  return DEFS.map((s) => ({
+    ...s,
+    scope: s.shared && visa === 'B1/B2' ? ('case' as const) : ('applicant' as const),
+    fields: s.fields.filter((f) => forVisa(f, visa)),
+  })).filter((s) => s.fields.length > 0);
+}
+
+/** Field keys a person on this visa answers themselves. */
+export function applicantKeys(visa: VisaType): string[] {
+  return sectionsFor(visa)
+    .filter((s) => s.scope === 'applicant')
+    .flatMap((s) => s.fields.map((f) => f.key));
+}
+
+/** One person's answers with the family's shared answers filled in where they apply. */
+export function withShared(visa: VisaType, caseAnswers: Answers, answers: Answers): Answers {
+  const shared = sectionsFor(visa)
+    .filter((s) => s.scope === 'case')
+    .flatMap((s) => s.fields.map((f) => f.key));
+  return {
+    ...Object.fromEntries(shared.filter((k) => caseAnswers[k]).map((k) => [k, caseAnswers[k]!])),
+    ...answers,
+  };
+}
+
 /** Fields that apply to someone with these answers (conditional ones dropped). */
-export function activeFields(answers: Answers, scope?: Section['scope']) {
-  return ALL_FIELDS.filter(
-    (f) => (!scope || f.section.scope === scope) && (!f.when || f.when(answers)),
+export function activeFields(answers: Answers, visa: VisaType, scope?: Section['scope']) {
+  return sectionsFor(visa)
+    .filter((s) => !scope || s.scope === scope)
+    .flatMap((s) => s.fields.map((f) => ({ ...f, section: s })))
+    .filter((f) => !f.when || f.when(answers));
+}
+
+/** Questions this person still has to answer, in asking order. */
+export function missingFields(answers: Answers, visa: VisaType) {
+  return activeFields(answers, visa, 'applicant').filter(
+    (f) => !f.optional && !answers[f.key]?.trim(),
   );
 }
 
-/** Applicant fields still needed, in asking order. */
-export function missingFields(answers: Answers) {
-  return activeFields(answers, 'applicant').filter((f) => !f.optional && !answers[f.key]?.trim());
-}
-
-export function progress(answers: Answers): { done: number; total: number } {
-  const needed = activeFields(answers, 'applicant').filter((f) => !f.optional);
+export function progress(answers: Answers, visa: VisaType): { done: number; total: number } {
+  const needed = activeFields(answers, visa, 'applicant').filter((f) => !f.optional);
   return { done: needed.filter((f) => answers[f.key]?.trim()).length, total: needed.length };
 }

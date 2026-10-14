@@ -2,8 +2,8 @@
 // before it is written; only ids, status and timestamps are plain columns.
 import type { Anthropic } from '@anthropic-ai/sdk';
 import type { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
-import { hashToken, newToken, type Sealer } from './crypto';
-import type { Answers } from './schema';
+import type { Sealer } from './crypto';
+import type { Answers, VisaType } from './schema';
 
 /**
  * Schema changes, applied in order and recorded in their own visa_schema_migrations
@@ -21,15 +21,13 @@ export const VISA_MIGRATIONS: readonly string[] = [
   `CREATE TABLE visa_applicants (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     case_id INT UNSIGNED NOT NULL,
-    token_hash CHAR(64) NOT NULL,
-    token_sealed TEXT NOT NULL,
     profile_sealed TEXT NOT NULL,
     answers_sealed MEDIUMTEXT NOT NULL,
+    answers_zh_sealed MEDIUMTEXT NOT NULL,
     messages_sealed MEDIUMTEXT NOT NULL,
     status ENUM('collecting', 'review', 'confirmed') NOT NULL DEFAULT 'collecting',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY visa_applicants_token (token_hash),
     KEY visa_applicants_case (case_id),
     CONSTRAINT visa_applicants_case_fk FOREIGN KEY (case_id) REFERENCES visa_cases (id) ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
@@ -57,10 +55,11 @@ export async function migrateVisa(db: Pool): Promise<void> {
 export type ApplicantStatus = 'collecting' | 'review' | 'confirmed';
 
 export interface Profile {
-  /** How the family calls them, e.g. 妈妈. */
+  /** Their name as the family writes it, e.g. 张三. */
   name: string;
   /** Relationship to the organiser, e.g. 母亲. */
   relation: string;
+  visa: VisaType;
 }
 
 export interface Applicant {
@@ -68,6 +67,8 @@ export interface Applicant {
   caseId: number;
   profile: Profile;
   answers: Answers;
+  /** The same answers as the family gave them in Chinese, where that differs from the English. */
+  answersZh: Answers;
   /** The whole conversation with the assistant, tool calls included, as sent to the API. */
   messages: Anthropic.Beta.BetaMessageParam[];
   status: ApplicantStatus;
@@ -92,9 +93,9 @@ interface CaseRow extends RowDataPacket {
 interface ApplicantRow extends RowDataPacket {
   id: number;
   case_id: number;
-  token_sealed: string;
   profile_sealed: string;
   answers_sealed: string;
+  answers_zh_sealed: string;
   messages_sealed: string;
   status: ApplicantStatus;
   updated_at: Date;
@@ -121,6 +122,7 @@ export class VisaStore {
       caseId: r.case_id,
       profile: this.sealer.open<Profile>(r.profile_sealed),
       answers: this.sealer.open<Answers>(r.answers_sealed),
+      answersZh: this.sealer.open<Answers>(r.answers_zh_sealed),
       messages: this.sealer.open<Anthropic.Beta.BetaMessageParam[]>(r.messages_sealed),
       status: r.status,
       updatedAt: r.updated_at,
@@ -157,33 +159,30 @@ export class VisaStore {
     await this.db.query('DELETE FROM visa_cases WHERE id = ?', [id]);
   }
 
-  /** Adds a family member and returns their private link token. */
-  async addApplicant(caseId: number, profile: Profile): Promise<string> {
-    const token = newToken();
-    await this.db.query(
-      `INSERT INTO visa_applicants (case_id, token_hash, token_sealed, profile_sealed, answers_sealed, messages_sealed)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+  async addApplicant(caseId: number, profile: Profile): Promise<number> {
+    const [res] = await this.db.query<ResultSetHeader>(
+      `INSERT INTO visa_applicants (case_id, profile_sealed, answers_sealed, answers_zh_sealed, messages_sealed)
+       VALUES (?, ?, ?, ?, ?)`,
       [
         caseId,
-        hashToken(token),
-        this.sealer.seal(token),
         this.sealer.seal(profile),
+        this.sealer.seal({}),
         this.sealer.seal({}),
         this.sealer.seal([]),
       ],
     );
-    return token;
+    return res.insertId;
   }
 
-  async listApplicants(caseId: number): Promise<(Applicant & { token: string })[]> {
+  /** One case's applicants, or everyone's when no case is given. */
+  async listApplicants(caseId?: number): Promise<Applicant[]> {
     const [rows] = await this.db.query<ApplicantRow[]>(
-      'SELECT * FROM visa_applicants WHERE case_id = ? ORDER BY id',
-      [caseId],
+      caseId === undefined
+        ? 'SELECT * FROM visa_applicants ORDER BY id'
+        : 'SELECT * FROM visa_applicants WHERE case_id = ? ORDER BY id',
+      caseId === undefined ? [] : [caseId],
     );
-    return rows.map((r) => ({
-      ...this.toApplicant(r),
-      token: this.sealer.open<string>(r.token_sealed),
-    }));
+    return rows.map((r) => this.toApplicant(r));
   }
 
   async getApplicant(id: number): Promise<Applicant | null> {
@@ -194,18 +193,18 @@ export class VisaStore {
     return rows[0] ? this.toApplicant(rows[0]) : null;
   }
 
-  async applicantByToken(token: string): Promise<Applicant | null> {
-    const [rows] = await this.db.query<ApplicantRow[]>(
-      'SELECT * FROM visa_applicants WHERE token_hash = ?',
-      [hashToken(token)],
-    );
-    return rows[0] ? this.toApplicant(rows[0]) : null;
-  }
-
-  async saveApplicant(a: Pick<Applicant, 'id' | 'answers' | 'messages' | 'status'>): Promise<void> {
+  async saveApplicant(
+    a: Pick<Applicant, 'id' | 'answers' | 'answersZh' | 'messages' | 'status'>,
+  ): Promise<void> {
     await this.db.query(
-      'UPDATE visa_applicants SET answers_sealed = ?, messages_sealed = ?, status = ? WHERE id = ?',
-      [this.sealer.seal(a.answers), this.sealer.seal(a.messages), a.status, a.id],
+      'UPDATE visa_applicants SET answers_sealed = ?, answers_zh_sealed = ?, messages_sealed = ?, status = ? WHERE id = ?',
+      [
+        this.sealer.seal(a.answers),
+        this.sealer.seal(a.answersZh),
+        this.sealer.seal(a.messages),
+        a.status,
+        a.id,
+      ],
     );
   }
 
