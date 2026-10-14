@@ -101,6 +101,16 @@ docker compose exec mysql sh -c 'mysql -ushiqi -p"$MYSQL_PASSWORD" shiqi'   # �
 
 以后想换成 Azure 的托管 MySQL（Azure Database for MySQL 灵活服务器），只要把 `compose.yml` 里 web 的 `MYSQL_HOST` 指过去、去掉 `mysql` 服务，代码不用动。
 
+## 家人美签助手（/visa）
+
+给家人发一个专属链接，他们用中文和 AI 聊天，助手把回答整理成 DS-160（B1/B2）的答案；你在后台核对、打印答案单，再自己去 ceac.state.gov 提交。网站不会替任何人提交。
+
+- 后台：<https://shiqi.si/visa/admin>，和访客记录同一个 `ADMIN_PASSWORD`。
+- 打开聊天：GitHub 里加 secret `APP_ANTHROPIC_API_KEY`（console.anthropic.com 生成的 key）。没有它时页面照常，家人只能直接填表。模型默认 `claude-opus-5-5`，想换就在 secret 里加 `APP_VISA_MODEL`。
+- 加密：家人说的一切（资料、聊天记录、链接）都用 `VISA_DATA_KEY` 加密后才存进 MySQL。这个 key 由 `ensure-env.sh` 自动生成在 `infra/server/.env` 里；**弄丢了数据就读不出来了**，换服务器时记得把它一起搬走。
+- 表结构在 `packages/visa/src/store.ts` 的 `VISA_MIGRATIONS`，记在自己的 `visa_schema_migrations` 表里，以后把签证 API 拆成单独服务时可以整包带走。
+- `/visa` 下的页面不进访客记录，也不让搜索引擎收录。办完签证在后台点「删除整个案件」，数据就从数据库里删掉了。
+
 ## 5. 打开翻译服务（可选）
 
 笔记用英文写，中文版由 Azure AI Translator 的免费档（F0，每月 200 万字符，不收费）翻译。

@@ -29,6 +29,12 @@ export default [
     route('kafka/build/:chapter', 'routes/kafka/chapter.tsx'),
     route('ui', 'routes/ui.tsx'),
     route('admin/visits', 'routes/admin/visits.tsx'),
+    ...prefix('visa', [
+      route('c/:token', 'routes/visa/chat.tsx'),
+      route('admin', 'routes/visa/admin.tsx'),
+      route('admin/case/:caseId', 'routes/visa/case.tsx'),
+      route('admin/applicant/:id', 'routes/visa/sheet.tsx'),
+    ]),
     route('*', 'routes/not-found.tsx'),
   ]),
   ...prefix('api', [

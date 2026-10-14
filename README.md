@@ -42,6 +42,7 @@ packages/ui/           @shiqi/ui 组件库：主题、tokens、React 组件
 packages/pixel/        @shiqi/pixel 像素绘图库：不依赖框架
 packages/kafka/        @shiqi/kafka Kafka 集群模拟引擎 + CLI 模拟器：不依赖框架
 packages/kafka-viz/    @shiqi/kafka-viz Kafka 可视化的 React 视图，/kafka 页用它
+packages/visa/         @shiqi/visa 家人美签助手的后端：DS-160 问题清单、加密存储、AI 聊天；不依赖框架，/visa 页用它
 infra/                 服务器初始化和部署脚本；server/ 是 Docker Compose，k8s/ 留给以后的大机器
 .github/workflows/     CI：检查 → 构建镜像 → 部署
 ```
