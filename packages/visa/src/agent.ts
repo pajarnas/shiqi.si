@@ -14,7 +14,8 @@ import {
   type VisaType,
 } from './schema';
 import { knowledgeDigest } from './knowledge';
-import { STATE_TAG } from './transcript';
+import { readDocuments, type Attachment } from './extract';
+import { ATTACH_TAG, STATE_TAG } from './transcript';
 import { checkAnswers, crossCheck } from './validate';
 
 type Params = Anthropic.Beta.MessageCreateParamsNonStreaming;
@@ -169,6 +170,8 @@ export interface TurnInput {
   status: ApplicantStatus;
   /** What the family member typed; empty to have the assistant open the conversation. */
   text: string;
+  /** Files sent with this message; read once for answers, never stored. */
+  attachments?: readonly Attachment[];
 }
 
 export interface TurnResult {
@@ -190,6 +193,39 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
   let answersZh = { ...input.answersZh };
   let status = input.status;
   const messages = [...input.messages];
+  const files = input.attachments ?? [];
+  let note = '';
+  if (files.length > 0) {
+    const read = await readDocuments({
+      create: input.create,
+      model: input.model ?? DEFAULT_MODEL,
+      visa,
+      files,
+    });
+    const out = runTool(
+      visa,
+      'save_answers',
+      { answers: read.fields },
+      { answers, answersZh },
+      input.caseAnswers,
+    );
+    const filled = Object.fromEntries(
+      read.fields
+        .filter((f) => out.answers[f.key] !== answers[f.key])
+        .map((f) => [f.key, out.answers[f.key]]),
+    );
+    answers = out.answers;
+    answersZh = out.answersZh;
+    note = [
+      ATTACH_TAG,
+      `files: ${files.map((f) => f.name.replace(/[|\n]/g, ' ')).join(' | ')}`,
+      `documents: ${read.documents || 'could not be read'}`,
+      `saved from the files: ${JSON.stringify(filled)}`,
+      `result: ${out.content}`,
+      'Tell the family member in one or two sentences what you read from the files, ask them to check those answers, then carry on with the missing questions.',
+      '</attachments>',
+    ].join('\n');
+  }
   const opener =
     messages.length === 0
       ? `（现在开始为「${input.profile.name}」准备 ${visa} 签证的资料，打字的可能是本人，也可能是家人代填。请先打招呼，简单说明要做什么、要准备哪些证件，然后开始问第一个问题。）`
@@ -198,7 +234,10 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
     role: 'user',
     content: [
       { type: 'text', text: formState(visa, answers, input.caseAnswers) },
-      { type: 'text', text: input.text.trim() || opener || '（继续）' },
+      ...(note ? [{ type: 'text' as const, text: note }] : []),
+      ...(note && !input.text.trim()
+        ? []
+        : [{ type: 'text' as const, text: input.text.trim() || opener || '（继续）' }]),
     ],
   });
 

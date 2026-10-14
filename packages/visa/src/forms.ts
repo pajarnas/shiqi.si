@@ -4,5 +4,6 @@ export * from './schema';
 export * from './sheet';
 export * from './validate';
 export * from './transcript';
+export * from './extract';
 export * from './knowledge';
 export * from './tips';
