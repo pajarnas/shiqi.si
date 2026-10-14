@@ -236,3 +236,50 @@ describe('describeError', () => {
     expect(describeError(new Error('boom'))).toBe('boom');
   });
 });
+
+describe('attachments', () => {
+  it('reads documents once and keeps the files out of the conversation', async () => {
+    const seen: Anthropic.Beta.MessageCreateParamsNonStreaming[] = [];
+    const create: CreateMessage = async (p) => {
+      seen.push(p);
+      if (p.output_config?.format)
+        return reply(
+          [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                documents: '护照个人信息页',
+                fields: [
+                  { key: 'surname', value: 'ZHANG', zh: '张' },
+                  { key: 'passportNumber', value: 'E12345678', zh: '' },
+                  { key: 'notAField', value: 'x', zh: '' },
+                ],
+              }),
+            },
+          ],
+          'end_turn',
+        );
+      return reply([{ type: 'text', text: '看到了护照，请核对。' }], 'end_turn');
+    };
+    const out = await runTurn({
+      create,
+      profile: { name: '妈妈', visa: 'B1/B2' },
+      answers: {},
+      answersZh: {},
+      caseAnswers: {},
+      messages: [],
+      status: 'collecting',
+      text: '',
+      attachments: [{ name: 'passport.jpg', mediaType: 'image/jpeg', data: 'QUJD' }],
+    });
+    expect(seen).toHaveLength(2);
+    expect(JSON.stringify(seen[0]!.messages)).toContain('QUJD');
+    expect(out.answers).toMatchObject({ surname: 'ZHANG', passportNumber: 'E12345678' });
+    expect(out.answersZh).toEqual({ surname: '张' });
+    expect(JSON.stringify(out.messages)).not.toContain('QUJD');
+    expect(transcript(out.messages)).toEqual([
+      { role: 'user', text: '📎 passport.jpg' },
+      { role: 'assistant', text: '看到了护照，请核对。' },
+    ]);
+  });
+});

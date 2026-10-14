@@ -7,6 +7,15 @@ type MessageParam = Anthropic.Beta.BetaMessageParam;
 /** Marks the per-turn form state prepended to each user turn, so the chat view can hide it. */
 export const STATE_TAG = '<form_state>';
 
+/** Marks the note on files uploaded with a turn; the chat view shows only the file names. */
+export const ATTACH_TAG = '<attachments>';
+
+function visible(t: string): string {
+  if (!t.startsWith(ATTACH_TAG)) return t;
+  const files = /^files: (.*)$/m.exec(t)?.[1] ?? '';
+  return files ? `📎 ${files.split(' | ').join('、')}` : '';
+}
+
 export interface ChatLine {
   role: 'user' | 'assistant';
   text: string;
@@ -27,6 +36,8 @@ export function transcript(messages: readonly MessageParam[]): ChatLine[] {
       .filter(
         (t) => !t.startsWith(STATE_TAG) && !(i === 0 && m.role === 'user' && t.startsWith('（')),
       )
+      .map(visible)
+      .filter(Boolean)
       .join('\n\n')
       .trim();
     if (!text) return;
