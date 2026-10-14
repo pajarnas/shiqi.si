@@ -57,7 +57,12 @@ export async function getVisa(): Promise<Visa | null> {
 }
 
 /** Chat turns per person: generous for someone typing, a stop for a runaway script. */
-export const chatLimit = rateLimiter(30, 10 * 60_000);
+const perPerson = rateLimiter(30, 10 * 60_000);
+/** And for the whole family together, so the API bill has a ceiling. */
+const everyone = rateLimiter(100, 10 * 60_000);
+export const chatLimit = {
+  take: (person: string) => !everyone.full('*') && perPerson.take(person) && everyone.take('*'),
+};
 
 /** Headers for every visa page: never cached, never indexed. */
 export const PRIVATE_HEADERS = {
@@ -83,9 +88,12 @@ const MAX_AGE = 30 * 24 * 60 * 60;
 const loginLimit = rateLimiter(10, 15 * 60_000);
 const loginFailsAll = rateLimiter(100, 15 * 60_000);
 
+// The password is part of the signing key, so changing VISA_FAMILY_PASSWORD
+// logs out every browser that is still holding the old login.
 function signer() {
   const key = process.env.VISA_DATA_KEY;
-  return key ? createSigner(key) : null;
+  const password = process.env.VISA_FAMILY_PASSWORD;
+  return key && password ? createSigner(`${key}\0family\0${password}`) : null;
 }
 
 function readCookie(request: Request, name: string): string | null {
