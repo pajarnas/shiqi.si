@@ -170,7 +170,7 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
   const messages = [...input.messages];
   const opener =
     messages.length === 0
-      ? `（现在开始为${input.profile.relation}「${input.profile.name}」准备 ${visa} 签证的资料，打字的可能是本人，也可能是家人代填。请先打招呼，简单说明要做什么、要准备哪些证件，然后开始问第一个问题。）`
+      ? `（现在开始为「${input.profile.name}」准备 ${visa} 签证的资料，打字的可能是本人，也可能是家人代填。请先打招呼，简单说明要做什么、要准备哪些证件，然后开始问第一个问题。）`
       : '';
   messages.push({
     role: 'user',

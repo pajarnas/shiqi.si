@@ -1,17 +1,20 @@
 // The family's member list, given once in the VISA_FAMILY setting so names stay
-// out of the (public) repository: "张三:母亲:B1/B2,王五:哥哥:B1/B2,…".
+// out of the (public) repository: "张三:B1/B2,李四:H-1B,…".
 import { VISA_TYPES, type VisaType } from './schema';
 import type { Profile, VisaStore } from './store';
 
-/** Reads "name:relation:visa" entries separated by commas, semicolons or new lines. */
+/**
+ * Reads "name:visa" entries separated by commas, semicolons or new lines. The
+ * visa defaults to B1/B2; anything between name and visa is ignored.
+ */
 export function parseFamily(raw: string | undefined): Profile[] {
   return (raw ?? '')
     .split(/[,;，；\n]/)
     .map((entry) => entry.split(/[:：]/).map((p) => p.trim()))
     .filter(([name]) => name)
-    .map(([name, relation = '', visa = '']) => ({
-      name: name!,
-      relation,
+    .map((parts) => ({ name: parts[0]!, visa: parts.length > 1 ? parts.at(-1)! : '' }))
+    .map(({ name, visa }) => ({
+      name,
       visa: (VISA_TYPES as readonly string[]).includes(visa.toUpperCase())
         ? (visa.toUpperCase() as VisaType)
         : 'B1/B2',

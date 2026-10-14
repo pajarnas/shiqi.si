@@ -48,7 +48,8 @@ export async function loader({ request }: Route.LoaderArgs) {
           const missing = buildSheet(p.profile.visa, c.answers, p.answers).missing;
           return {
             id: p.id,
-            ...p.profile,
+            name: p.profile.name,
+            visa: p.profile.visa,
             status: p.status,
             progress: progress(p.answers, p.profile.visa),
             complete: missing === 0,
@@ -150,10 +151,7 @@ export default function VisaHome({ loaderData: d, actionData }: Route.ComponentP
                   <span className="visa__avatar" aria-hidden="true">
                     {p.name.slice(-1)}
                   </span>
-                  <div>
-                    <strong className="visa__card-name">{p.name}</strong>
-                    <small>{p.relation}</small>
-                  </div>
+                  <strong className="visa__card-name">{p.name}</strong>
                   <span className="visa__visa">{p.visa}</span>
                 </div>
                 <p className="visa__card-status">

@@ -20,7 +20,8 @@ export async function loader({ request, params }: Route.LoaderArgs) {
   const { a, caseAnswers } = await loadPerson(request, params.id);
   return {
     id: a.id,
-    ...a.profile,
+    name: a.profile.name,
+    visa: a.profile.visa,
     status: a.status,
     progress: progress(a.answers, a.profile.visa),
     sheet: buildSheet(a.profile.visa, caseAnswers, a.answers),
@@ -32,12 +33,7 @@ export default function VisaPerson({ loaderData: d }: Route.ComponentProps) {
   const [lang, t, setLang] = useLang();
   const done = d.sheet.missing === 0;
   return (
-    <PageWindow
-      file={`visa/${d.id}`}
-      eyebrow={`${d.relation} · ${d.visa}`}
-      title={d.name}
-      lede={t.showcaseLede}
-    >
+    <PageWindow file={`visa/${d.id}`} eyebrow={d.visa} title={d.name} lede={t.showcaseLede}>
       <div className="visa__bar visa__no-print">
         <Link to="/visa">← {t.backHome}</Link>
         <LangToggle lang={lang} onChange={setLang} />

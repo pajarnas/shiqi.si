@@ -102,10 +102,11 @@ describe('visa types', () => {
   });
 
   it('reads the family list', () => {
-    expect(parseFamily('张三:母亲:B1/B2，李四：本人：h-1b\n王五:哥哥')).toEqual([
-      { name: '张三', relation: '母亲', visa: 'B1/B2' },
-      { name: '李四', relation: '本人', visa: 'H-1B' },
-      { name: '王五', relation: '哥哥', visa: 'B1/B2' },
+    expect(parseFamily('张三:B1/B2，李四：h-1b\n王五\n赵六:母亲:H-1B')).toEqual([
+      { name: '张三', visa: 'B1/B2' },
+      { name: '李四', visa: 'H-1B' },
+      { name: '王五', visa: 'B1/B2' },
+      { name: '赵六', visa: 'H-1B' },
     ]);
     expect(parseFamily(undefined)).toEqual([]);
   });
@@ -152,7 +153,7 @@ describe('runTurn', () => {
 
     const out = await runTurn({
       create,
-      profile: { name: '妈妈', relation: '母亲', visa: 'B1/B2' as const },
+      profile: { name: '妈妈', visa: 'B1/B2' as const },
       answers: {},
       answersZh: {},
       caseAnswers: {},
@@ -178,7 +179,7 @@ describe('runTurn', () => {
       reply([{ type: 'tool_use', id: 't', name: 'finish_collection', input: {} }], 'end_turn');
     const base = {
       create,
-      profile: { name: '爸爸', relation: '父亲', visa: 'B1/B2' as const },
+      profile: { name: '爸爸', visa: 'B1/B2' as const },
       answersZh: {},
       caseAnswers: {},
       messages: [],

@@ -57,8 +57,6 @@ export type ApplicantStatus = 'collecting' | 'review' | 'confirmed';
 export interface Profile {
   /** Their name as the family writes it, e.g. 张三. */
   name: string;
-  /** Relationship to the organiser, e.g. 母亲. */
-  relation: string;
   visa: VisaType;
 }
 

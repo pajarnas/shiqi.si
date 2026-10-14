@@ -22,7 +22,6 @@ export const VISA_TEXT = {
   addTitle: '加一位家人',
   addDesc: '加好后 TA 就会出现在 /visa 的卡片里。',
   name: '名字（比如：张三）',
-  relation: '和你的关系（比如：母亲）',
   visaType: '签证类型',
   add: '加上',
   applicantsTitle: '家人',

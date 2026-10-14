@@ -38,7 +38,6 @@ export async function loader({ request, params }: Route.LoaderArgs) {
     people: people.map((p) => ({
       id: p.id,
       name: p.profile.name,
-      relation: p.profile.relation,
       visa: p.profile.visa,
       status: p.status,
       progress: progress(p.answers, p.profile.visa),
@@ -59,12 +58,9 @@ export async function action({ request, params }: Route.ActionArgs) {
       const name = String(form.get('name') ?? '')
         .trim()
         .slice(0, 40);
-      const relation = String(form.get('relation') ?? '')
-        .trim()
-        .slice(0, 40);
       const type = String(form.get('visa'));
       const visaType: VisaType = VISA_TYPES.find((v) => v === type) ?? 'B1/B2';
-      if (name) await visa.store.addApplicant(c.id, { name, relation, visa: visaType });
+      if (name) await visa.store.addApplicant(c.id, { name, visa: visaType });
       return null;
     }
     case 'remove': {
@@ -98,10 +94,7 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
           {d.people.map((p) => (
             <Card key={p.id} padded className="visa__person">
               <strong>
-                {p.name}{' '}
-                <small>
-                  {p.relation} · {p.visa}
-                </small>
+                {p.name} <small>{p.visa}</small>
               </strong>
               <p>
                 <Badge tone={p.status === 'collecting' ? 'gold' : 'green'}>
@@ -142,9 +135,6 @@ export default function VisaCase({ loaderData: d, actionData }: Route.ComponentP
           <input type="hidden" name="intent" value="add" />
           <Field label={T.name}>
             {(c) => <TextInput {...c} name="name" required maxLength={40} />}
-          </Field>
-          <Field label={T.relation}>
-            {(c) => <TextInput {...c} name="relation" maxLength={40} />}
           </Field>
           <Field label={T.visaType}>
             {(c) => (
