@@ -26,9 +26,15 @@ export type CreateMessage = (params: Params) => Promise<Message>;
 
 export const DEFAULT_MODEL = 'claude-opus-5-5';
 
-/** The real API: reads ANTHROPIC_API_KEY unless a key is given. */
-export function anthropicCaller(apiKey?: string): CreateMessage {
-  const client = new Anthropic({ apiKey });
+/**
+ * The real API: reads ANTHROPIC_API_KEY unless a key is given. A key that is
+ * not scoped to a workspace needs the workspace named on every request.
+ */
+export function anthropicCaller(apiKey?: string, workspaceId?: string): CreateMessage {
+  const client = new Anthropic({
+    apiKey,
+    defaultHeaders: workspaceId ? { 'anthropic-workspace-id': workspaceId } : undefined,
+  });
   return (params) => client.beta.messages.create(params);
 }
 /**

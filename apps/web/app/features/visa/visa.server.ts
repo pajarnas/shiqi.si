@@ -49,7 +49,9 @@ export async function getVisa(): Promise<Visa | null> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   return {
     store,
-    create: apiKey ? anthropicCaller(apiKey) : null,
+    create: apiKey
+      ? anthropicCaller(apiKey, process.env.ANTHROPIC_WORKSPACE_ID || undefined)
+      : null,
     model: process.env.VISA_MODEL || undefined,
   };
 }
