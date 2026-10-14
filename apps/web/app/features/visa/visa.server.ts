@@ -78,7 +78,10 @@ export function adminOnly(request: Request) {
 export const FAMILY_HOME = '/visa';
 const COOKIE = 'visa_family';
 const MAX_AGE = 30 * 24 * 60 * 60;
+// Ten tries per address, and 100 wrong passwords from everyone together (a
+// guesser spread over many addresses), per 15 minutes.
 const loginLimit = rateLimiter(10, 15 * 60_000);
+const loginFailsAll = rateLimiter(100, 15 * 60_000);
 
 function signer() {
   const key = process.env.VISA_DATA_KEY;
@@ -115,8 +118,13 @@ export type LoginResult = { ok: true; cookie: string } | { ok: false; reason: 'w
 export function login(request: Request, password: string): LoginResult {
   const expected = process.env.VISA_FAMILY_PASSWORD;
   const s = signer();
-  if (!loginLimit.take(clientIp(request.headers))) return { ok: false, reason: 'busy' };
-  if (!expected || !s || !sameSecret(password, expected)) return { ok: false, reason: 'wrong' };
+  if (loginFailsAll.full('*') || !loginLimit.take(clientIp(request.headers))) {
+    return { ok: false, reason: 'busy' };
+  }
+  if (!expected || !s || !sameSecret(password, expected)) {
+    loginFailsAll.take('*');
+    return { ok: false, reason: 'wrong' };
+  }
   const value = s.sign(`family.${Date.now() + MAX_AGE * 1000}`);
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   return {
