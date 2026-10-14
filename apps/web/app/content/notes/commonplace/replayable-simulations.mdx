@@ -1,0 +1,73 @@
+export const frontmatter = {
+  title: 'Rewind, replay and loop in a deterministic simulation',
+  date: '2026-10-13',
+  summary:
+    'How the Kafka and RabbitMQ labs go back in time without snapshots: a fixed-step clock, a log of outside actions, and replay from the start. Then the same trick turned into a looping, scrubbable step player.',
+  topics: ['architecture', 'design', 'kafka', 'rabbitmq'],
+};
+
+Both [the Kafka lab](/kafka) and [the RabbitMQ lab](/rabbitmq) can rewind to any moment, and a guided step can be watched again like a short video. Both come from one small idea in the shared package `@shiqi/sim`.
+
+## Determinism first
+
+A simulation is **deterministic** when the same start plus the same inputs always gives the same history. Three rules make it so:
+
+- **A fixed step.** Time moves in equal simulated ticks, never by how long the browser took to draw a frame.
+- **No hidden randomness.** Any "random" choice comes from a seeded generator that is part of the world.
+- **Every outside change is an action.** Crashing a broker, publishing a message or binding a queue goes through a named method, not by poking at state.
+
+## Rewind without snapshots
+
+The `Timeline` records each action with the simulated time it happened at:
+
+```ts
+{ at: 4200, action: 'crash', args: ['broker-2'] }
+```
+
+Going **forward** just runs the clock. Going **back** to time `t` builds the starting world again and runs it to `t`, applying the recorded actions at their times. Because the simulation is deterministic, the result is the same world, bit for bit, that existed at `t` the first time.
+
+| Approach            | Memory                   | Cost of going back       | Risk                                   |
+| ------------------- | ------------------------ | ------------------------ | -------------------------------------- |
+| Snapshot every tick | grows with every tick    | instant                  | deep copies of a big world             |
+| Replay from start   | only the list of actions | re-run from zero to `t`  | breaks if anything is nondeterministic |
+| Both (checkpoints)  | a snapshot every N ticks | re-run from the last one | more code                              |
+
+The views never call the recorder themselves. They get `timeline.sim`, a JavaScript `Proxy` around the world: a call to a method on the list of actions is recorded and then applied; every other property passes straight through. So a view cannot forget to record one.
+
+For small worlds like these labs, replay is fast enough and much simpler. A lab can also **branch**: rewind, then take a different action, and the timeline drops the actions that came after.
+
+The same idea runs much bigger things: game engines use it for replays and lockstep multiplayer, and event sourcing rebuilds state by replaying a log of events, which is also how [a Kafka log](/notes/commonplace/kafka/build-kafka-0-why-a-log) is meant to be used.
+
+## Turning rewind into a loop
+
+Once a story step has played, its span `[start, end]` of simulated time is known. A step player then needs only four operations from whatever runs the simulation:
+
+```ts
+interface LoopDriver<S> {
+  now: () => number; // simulated now
+  run: (stop: (s: S) => boolean, then: () => void) => void;
+  stop: () => void;
+  seek: (time: number) => void; // back by rewinding
+}
+```
+
+The `useLoop` hook builds on them:
+
+- **Play**: if at the end, seek to `start`; run until `now >= end`.
+- **At the end**: hold the last frame for a moment (1.5 s), then seek to `start` and play again, or stop if looping is off.
+- **Drag the bar**: seek to the dragged time, clamped to the span; keep playing if it was.
+- **Event marks**: the story already knows the time of each event it explained, so a numbered mark per event is just a `seek` to that time.
+
+Nothing in it knows about Kafka or RabbitMQ, so both labs got the player from one place.
+
+## Locking controls while a story plays
+
+A loop only teaches if the world in it stays the same, so while a story is open, every control that **changes** the simulation is turned off: crash and power buttons, forms, the terminal, the toolbar clock. Controls that only **look** (selecting, inspecting, speed) stay on, so the step can be slowed to 0.25×.
+
+In React this is one context provider, `LabLock`, and three small wrappers: a button, a `fieldset disabled` around forms (which disables every input inside at once), and the toolbar. Each lab wraps its page once instead of passing a `disabled` prop to every control.
+
+## Limits
+
+A step that takes no simulated time, such as an instant restart, has an empty span, so there is nothing to loop and no bar is shown.
+
+Related: [RabbitMQ lab: a second broker on shared parts](/notes/journal/2026-10-13-rabbitmq-lab).

@@ -1,0 +1,94 @@
+export const frontmatter = {
+  title: 'RabbitMQ lab: a second broker on shared parts',
+  date: '2026-10-13',
+  summary:
+    'A RabbitMQ lab at /rabbitmq built like the Kafka one, after first pulling the clock, rewind, story mode and toolbar out of Kafka into shared packages; a real RabbitMQ on the server with certificate login; and guided steps that loop with a draggable bar.',
+  topics: ['rabbitmq', 'kafka', 'messaging', 'architecture', 'security', 'deployment'],
+};
+
+All times are UTC. The first part ran from 09:00 to 10:09 (02:00 to 03:09 in Fremont), the second from 21:12 to 21:37 (14:12 to 14:37). It covers PRs #40, #45 and #46.
+
+## The ask (09:00)
+
+"同理做一个 RabbitMQ，就像 Kafka 一样": the same thing for RabbitMQ as for Kafka. Two minutes later: the domain is `rabbitmq`, meaning `rabbitmq.shiqi.si`.
+
+## Shared parts first (09:00 to 09:22)
+
+The obvious way to build a second lab is to copy the first and change the nouns. That would have broken my rule that code is reused, not duplicated, and every later fix would have needed doing twice. So the first half hour moved code **out** of Kafka before writing any RabbitMQ:
+
+- **`@shiqi/sim`**: the fixed-step `Simulation` base class with its event log, the record-and-replay `Timeline` behind rewind, the story `BeatFilter`, CLI helpers (`tokenize`, `table`) and the React hooks.
+- **`@shiqi/lab`**: the frame around any lab: toolbar (play, step, speed, rewind), scenario player and menu, story panel, event list, tabbed panels, forms with the admin guard, glossary text.
+- **`@shiqi/ui`** got `Shell` (the terminal) and `FlowLayer` (things flying between cards).
+
+Kafka was moved onto them first, and all its tests still passed (266 at that point) before RabbitMQ was started. How rewind works is written up in [Rewind, replay and loop in a deterministic simulation](/notes/commonplace/replayable-simulations).
+
+## The broker model and ten stories (09:08 to 09:35)
+
+`@shiqi/rabbitmq` models an AMQP 0-9-1 broker: the four exchange types plus the default and alternate exchanges, exchange-to-exchange bindings, `mandatory` and publisher confirms, prefetch, manual and auto ack, nack and reject, redelivery on crash, dead-letter exchanges with `x-death`, TTL that expires only at the head of a queue, `x-max-length` with `drop-head` or `reject-publish`, quorum queues with a delivery limit, and single active consumer. A terminal emulates `rabbitmqctl` and `rabbitmqadmin`.
+
+Ten guided stories follow the RabbitMQ tutorials and then the failure cases: hello, work queue, crash, fanout, direct, topic, unroutable, dead letters, TTL, max length. As in the Kafka lab, each step states what should happen, and `scenarios.test.ts` checks that the simulation really does it. A story whose text says "the message goes back to the queue" fails the build if it doesn't.
+
+The stage reads left to right: publishers → exchanges → queues → consumers, with bindings drawn as labelled lines and dead-letter routes as red dashed ones.
+
+PR #40 merged at 09:50 with the page, Chinese text, a home-page window and four notes: [exchanges and routing](/notes/commonplace/rabbitmq/rabbitmq-exchanges-routing), [acks and prefetch](/notes/commonplace/rabbitmq/rabbitmq-acks-prefetch), [dead letters, TTL and limits](/notes/commonplace/rabbitmq/rabbitmq-dead-letters-ttl) and [RabbitMQ vs Kafka](/notes/commonplace/rabbitmq/rabbitmq-vs-kafka). One fix-up commit on the way was only Prettier: `Format Panels and FlowLayer`.
+
+## A real RabbitMQ (09:52 to 10:09)
+
+PR #45 put a real broker on shiqi-1, following the Kafka pattern:
+
+- Compose profile `rabbitmq`, one node of `rabbitmq:4.3.5-management`, `mem_limit: 512m`. `deploy.sh` turns it on together with Kafka, only when the machine has at least 3.5 GB of RAM.
+- AMQPS on 5671 **requires** a client certificate from the same private CA, and the certificate's name is the user (EXTERNAL login, no password). AMQPS and the management UI on 15672 listen on the server's `127.0.0.1` only, for the SSH tunnel.
+- `certs.sh` writes `definitions.json` the way it writes MySQL's `init.sql`: one user per issued certificate, `admin` for the UI, a monitoring-only `web` user for the site, and the lab topology (`lab.orders`, four queues, `lab.dlx`).
+- The two passwords are generated on the server by `ensure-env.sh` and never leave it, except that `connect.sh rabbitmq` copies the admin one into `~/.shiqi/rabbitmq-admin` with `umask 077`.
+- `/rabbitmq?mode=real` polls `/api/rabbitmq/snapshot` and draws the real exchanges and queues with the simulation's cards.
+
+It was tested against the real image locally before merging: a certificate login could publish and read, and a TLS connection without a certificate was refused.
+
+While doing this, three more pieces that Kafka's real view had to itself became shared: the JSON and rate-limit helpers (`lib/api.server.ts`), the polling hook (`lib/usePolled.ts`) and the Simulation / Real switch (`components/LabMode.tsx`).
+
+The subdomain was one Caddy block answering `rabbitmq.shiqi.si` with `/rabbitmq` as its home page, plus a Caddy reload in `deploy.sh` so a changed Caddyfile takes effect. Caddy gets the HTTPS certificate by itself once DNS points there (see [DNS A records](/notes/commonplace/dns-a-records) and [HTTPS with Caddy](/notes/commonplace/caddy-https)).
+
+The deploy log showed the container starting, but the sandbox could not reach shiqi.si to confirm the broker was up, so the check was left to me: open `/rabbitmq?mode=real` and look for `lab.orders` and four queues.
+
+Left for me:
+
+1. A DNS A record for `rabbitmq` pointing at the server.
+2. On the Mac: `git pull`, then two more forwards in the `shiqi-tunnel` SSH config entry, or just use `connect.sh tunnel`, which already has them:
+
+```
+LocalForward 5671 127.0.0.1:5671
+LocalForward 15672 127.0.0.1:15672
+```
+
+My existing certificate already works for RabbitMQ; nothing needs re-signing. The whole setup is in [RabbitMQ: running one in a container, with certificate login](/notes/commonplace/rabbitmq/rabbitmq-in-docker-certificates).
+
+## Watching a step again (21:12 to 21:37)
+
+In the afternoon I asked for something in both labs: when a story step has nothing to click, let it **loop**, with a progress bar I can drag; turn off crash, power and the other controls while a story is open so I can focus; and allow more playback steps, without hurting the reuse of the components. I added that this was the need, not the design.
+
+What PR #46 built, all in the shared packages:
+
+- **Loop.** After a step plays, "watch this step again" plays it on repeat, holding the last moment for 1.5 s each round. A switch turns looping off.
+- **A draggable bar** over the step's span of simulated time, with **numbered marks** for each event the story explained. Clicking a mark jumps to that event; previous/next buttons walk through them. The story highlights the event the replay has reached. This is how "more playback steps" was read: finer steps inside one step, not more story steps.
+- **Lock.** While a story is open, crash, power, pause, the terminal, the forms and the toolbar clock are off. Speed and Reset stay on, so a step can be watched at 0.25×. A line under the toolbar says to leave the story to experiment.
+- **Reuse.** `useLoop` in `@shiqi/sim`; `useLabClock`, `LabLock`, `LabAction`, `LabLockable` and `StepScrubber` in `@shiqi/lab`. The run logic both labs had duplicated was merged into `useLabClock` on the way.
+
+It was clicked through in a browser in both labs before the PR, and merged at 21:36.
+
+One limit: a few Kafka steps, such as a restart, take no simulated time, so they have no bar.
+
+## What I learned
+
+- **Extract before you copy.** Moving the shared parts out of Kafka first, and keeping Kafka's tests green while doing it, made the second lab mostly new domain code. The loop feature later landed in both labs with one change.
+- **A lab's pieces split cleanly by question.** "How does time move?" (`@shiqi/sim`), "what frames a lab?" (`@shiqi/lab`), "what is this system?" (`@shiqi/kafka`, `@shiqi/rabbitmq`), "how is it drawn?" (`*-viz`).
+- **Determinism pays twice.** The replay that gives rewind also gives a looping step player almost for free.
+- **Lock what changes the world, not what looks at it.** A loop teaches only if nothing changes between rounds; inspecting and slowing down should still work.
+- **One CA, many services.** A private CA plus EXTERNAL login made RabbitMQ the third service my one laptop certificate opens.
+- **Definitions files make a broker reproducible**, and unlike a database init script they are applied on every start.
+- **Give the least privilege that does the job.** The site's RabbitMQ user can read everything and publish nothing.
+- **Tell a broker its real memory.** Inside a container, RabbitMQ should be told its budget so it throttles publishers before the kernel kills it.
+
+## General notes from today
+
+- New: [RabbitMQ: running one in a container, with certificate login](/notes/commonplace/rabbitmq/rabbitmq-in-docker-certificates), [Rewind, replay and loop in a deterministic simulation](/notes/commonplace/replayable-simulations)
+- Written during the day: [exchanges and routing](/notes/commonplace/rabbitmq/rabbitmq-exchanges-routing), [acks and prefetch](/notes/commonplace/rabbitmq/rabbitmq-acks-prefetch), [dead letters, TTL and limits](/notes/commonplace/rabbitmq/rabbitmq-dead-letters-ttl), [RabbitMQ vs Kafka](/notes/commonplace/rabbitmq/rabbitmq-vs-kafka)
