@@ -1206,3 +1206,10 @@ ul.topic-tags {
     display: none;
   }
 }
+.visa__detail {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
