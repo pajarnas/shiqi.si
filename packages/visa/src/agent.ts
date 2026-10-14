@@ -31,6 +31,22 @@ export function anthropicCaller(apiKey?: string): CreateMessage {
   const client = new Anthropic({ apiKey });
   return (params) => client.beta.messages.create(params);
 }
+/**
+ * A short, secret-free description of why a call to the API failed, for the
+ * person at the keyboard to pass on: the HTTP status and the API's own message.
+ */
+export function describeError(err: unknown): string {
+  if (err instanceof Anthropic.APIError) {
+    const body = err.error as { error?: { type?: string; message?: string } } | undefined;
+    const detail = body?.error?.message ?? err.message;
+    return `${err.status ?? 'network'} ${body?.error?.type ?? ''} ${detail}`
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 300);
+  }
+  return (err instanceof Error ? err.message : String(err)).slice(0, 300);
+}
+
 const MAX_STEPS = 8;
 
 /** Every key any applicant may save; save_answers then checks it against the person's visa. */

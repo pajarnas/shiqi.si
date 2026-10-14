@@ -10,7 +10,13 @@ import {
   SheetView,
   useLang,
 } from '~/features/visa/components';
-import { chatLimit, loadPerson, PRIVATE_HEADERS, runTurn } from '~/features/visa/visa.server';
+import {
+  chatLimit,
+  describeError,
+  loadPerson,
+  PRIVATE_HEADERS,
+  runTurn,
+} from '~/features/visa/visa.server';
 import type { Route } from './+types/chat';
 
 export const meta = () => [{ title: '美签助手' }, { name: 'robots', content: 'noindex, nofollow' }];
@@ -59,8 +65,9 @@ export async function action({ request, params }: Route.ActionArgs) {
       await visa.store.saveApplicant({ id: a.id, ...out });
       return null;
     } catch (err) {
-      console.warn('[visa] chat turn failed:', err instanceof Error ? err.message : err);
-      return { problem: 'failed' as Problem };
+      const detail = describeError(err);
+      console.warn('[visa] chat turn failed:', detail);
+      return { problem: 'failed' as Problem, detail };
     }
   }
   if (intent === 'edit') {
@@ -87,6 +94,7 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
   const pendingText = sending ? String(fetcher.formData?.get('text') ?? '') : '';
   const [lang, t, setLang] = useLang();
   const problem = fetcher.data && 'problem' in fetcher.data ? fetcher.data.problem : null;
+  const detail = fetcher.data && 'detail' in fetcher.data ? fetcher.data.detail : null;
   const own = sectionsFor(d.visa).filter((s) => s.scope === 'applicant');
   const errors = actionData && 'errors' in actionData ? actionData.errors : [];
 
@@ -132,7 +140,12 @@ export default function VisaChat({ loaderData: d, actionData }: Route.ComponentP
             {sending && (
               <p className="visa__bubble visa__bubble--assistant visa__typing">{t.thinking}</p>
             )}
-            {problem && <p className="visa__error">{t[problem]}</p>}
+            {problem && (
+              <p className="visa__error">
+                {t[problem]}
+                {detail && <small className="visa__detail">{detail}</small>}
+              </p>
+            )}
             <div ref={end} />
           </Card>
           {d.chatOn && (

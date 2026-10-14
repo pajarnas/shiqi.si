@@ -19,7 +19,7 @@ import { clientIp } from '~/features/visits/visits';
 import { getDb } from '~/lib/db.server';
 import { rateLimiter } from '~/lib/rate-limit.server';
 
-export { runTurn } from '@shiqi/visa';
+export { describeError, runTurn } from '@shiqi/visa';
 
 export interface Visa {
   store: VisaStore;

@@ -1,6 +1,6 @@
-import type { Anthropic } from '@anthropic-ai/sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
-import { runTurn, type CreateMessage } from './agent';
+import { describeError, runTurn, type CreateMessage } from './agent';
 import { transcript } from './transcript';
 import { createSealer, createSigner } from './crypto';
 import { parseFamily } from './family';
@@ -221,5 +221,18 @@ describe('buildSheet', () => {
     const trip = sheet.sections.find((s) => s.id === 'trip')!;
     expect(trip.rows.find((r) => r.key === 'arrivalDate')?.value).toBe('2027-05-01');
     expect(sheet.missing).toBeGreaterThan(10);
+  });
+});
+
+describe('describeError', () => {
+  it('names the status and the API message without the key', () => {
+    const err = Anthropic.APIError.generate(
+      401,
+      { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } },
+      undefined,
+      new Headers(),
+    );
+    expect(describeError(err)).toBe('401 authentication_error invalid x-api-key');
+    expect(describeError(new Error('boom'))).toBe('boom');
   });
 });
