@@ -1,0 +1,103 @@
+export const frontmatter = {
+  title: 'RabbitMQ: running one in a container, with certificate login',
+  date: '2026-10-13',
+  summary:
+    'How the real broker behind /rabbitmq?mode=real is set up: config in conf.d, users and queues from definitions.json, password hashes made with openssl, EXTERNAL login by certificate name, a memory cap, and ports only on localhost.',
+  topics: ['rabbitmq', 'docker-compose', 'security', 'tls'],
+};
+
+The real broker behind [/rabbitmq?mode=real](/rabbitmq?mode=real) is one RabbitMQ 4.3 node in the same Compose stack as the site. It reuses the private CA from [the Kafka and MySQL certificate setup](/notes/commonplace/kafka/kafka-mysql-client-certificates), so the same laptop certificate logs in to all three.
+
+## The pieces
+
+| File                               | What it does                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------ |
+| `rabbitmq.conf` → `conf.d/`        | listeners, TLS, login methods, memory, where to read definitions         |
+| `enabled_plugins`                  | `[rabbitmq_management,rabbitmq_auth_mechanism_ssl].`                     |
+| `definitions.json` (from a script) | users, permissions, exchanges, queues, bindings; imported on every start |
+| certificates in `/certs`           | CA, server certificate and key                                           |
+
+Mounting the config into `/etc/rabbitmq/conf.d/20-shiqi.conf` adds to the image's defaults instead of replacing them.
+
+## Users and topology as a file
+
+RabbitMQ can load a **definitions** file at boot:
+
+```ini
+definitions.import_backend = local_filesystem
+definitions.local.path = /certs/definitions.json
+```
+
+The file is the same JSON the management UI exports: `users`, `vhosts`, `permissions`, `exchanges`, `queues`, `bindings`. Generating it from a script makes the broker's whole setup reproducible, the way an `init.sql` does for MySQL (see [MySQL in a container](/notes/commonplace/mysql-in-docker)). One difference matters: MySQL's init runs only on an empty volume, while definitions are imported on **every** start, so adding a user means rewriting the file and restarting.
+
+Passwords in the file are hashes, not plain text. RabbitMQ's default `rabbit_password_hashing_sha256` is base64 of a 4-byte salt followed by SHA-256(salt + password), which a shell can make with no RabbitMQ tools:
+
+```bash
+salt="$(mktemp)"; head -c 4 /dev/urandom >"$salt"
+{ cat "$salt"; { cat "$salt"; printf '%s' "$PASSWORD"; } | openssl dgst -sha256 -binary; } | base64
+```
+
+The passwords themselves are generated on the server and stay in its `.env`; nothing is committed.
+
+## Three kinds of user
+
+| User                | Tag             | Permissions          | Logs in with                    |
+| ------------------- | --------------- | -------------------- | ------------------------------- |
+| `admin`             | `administrator` | everything           | password, management UI only    |
+| `web` (the site)    | `monitoring`    | none on any resource | password, management API, read  |
+| one per certificate | `management`    | everything on `/`    | client certificate, no password |
+
+The site only needs to **read** queue depths and bindings, so its user has the `monitoring` tag and empty permission patterns (`'^$'`): it can see everything in the API and publish or consume nothing.
+
+## Logging in with a certificate (EXTERNAL)
+
+```ini
+listeners.ssl.default = 5671
+ssl_options.cacertfile = /certs/ca.crt
+ssl_options.certfile = /certs/server.crt
+ssl_options.keyfile = /certs/server.key
+ssl_options.verify = verify_peer
+ssl_options.fail_if_no_peer_cert = true
+ssl_cert_login_from = common_name
+auth_mechanisms.1 = EXTERNAL
+auth_mechanisms.2 = PLAIN
+```
+
+- `verify_peer` plus `fail_if_no_peer_cert` makes the TLS handshake fail for a client without a certificate signed by the CA.
+- The `rabbitmq_auth_mechanism_ssl` plugin adds the **EXTERNAL** mechanism: the user name is taken from the certificate (here its common name, `CN=saige`), and no password is sent.
+- A certificate user is written into definitions with an empty password hash, so the certificate is the only way in.
+
+From Python with `pika`, the client side is an SSL context with the CA and the client certificate, and `ExternalCredentials()` instead of a user name and password.
+
+## Only on localhost
+
+```yaml
+ports: ['127.0.0.1:5671:5671', '127.0.0.1:15672:15672']
+networks: [rabbitmq, default]
+```
+
+AMQPS and the management UI listen on the server's loopback only and are reached through the SSH tunnel; nothing new is open to the internet. The site talks to the management API over a Compose network marked `internal: true`, which has no route out. See [Why Kafka can't use DataGrip's tunnel](/notes/commonplace/kafka/kafka-mysql-client-certificates) for the tunnel itself: RabbitMQ is easier than Kafka here, because it does not hand clients a list of other addresses to connect to.
+
+## Fitting in 512 MB
+
+```ini
+total_memory_available_override_value = 512MB
+vm_memory_high_watermark.relative = 0.6
+```
+
+RabbitMQ sizes its memory alarm from what it thinks the machine has, and inside a container it may see the whole VM. Telling it the real budget (the container's `mem_limit: 512m`) makes the alarm fire at about 300 MB, where it **blocks publishers** until consumers drain the queues, instead of the kernel killing the container. Like the Kafka cluster, the broker runs only when the VM has at least 3.5 GB of RAM (see [Docker Compose on a small VM](/notes/commonplace/docker-compose-small-vm)).
+
+## The lab topology
+
+`lab.orders` is a topic exchange with three queues, and `lab.dlx` is a fanout dead-letter exchange into `lab.dead`:
+
+| Queue          | Type    | Bound with       | Arguments                                   |
+| -------------- | ------- | ---------------- | ------------------------------------------- |
+| `lab.billing`  | quorum  | `order.created`  | dead letters to `lab.dlx`, delivery limit 5 |
+| `lab.shipping` | classic | `order.paid`     | dead letters to `lab.dlx`                   |
+| `lab.audit`    | classic | `#`              | max length 1000                             |
+| `lab.dead`     | classic | (from `lab.dlx`) | max length 1000                             |
+
+Each argument is explained in [exchanges and routing](/notes/commonplace/rabbitmq/rabbitmq-exchanges-routing) and [dead letters, TTL and limits](/notes/commonplace/rabbitmq/rabbitmq-dead-letters-ttl).
+
+Related: the day this was built, [RabbitMQ lab: a second broker on shared parts](/notes/journal/2026-10-13-rabbitmq-lab).
