@@ -34,7 +34,7 @@ k8s 清单和 `infra/k8s/bootstrap-k3s.sh` 留着，等有 2 GB 以上的机器�
    ```
 
 3. 等 Actions 里的 **CI** 跑完：会生成镜像 `ghcr.io/<你的用户名>/shiqi.si`。
-4. 如果仓库是私有的：在 GitHub 的 Packages 页面把 `shiqi.si` 包改成 Public，或者在服务器上 `docker login ghcr.io`。
+4. 如果仓库是私有的：在 GitHub 的 Packages 页面把 `shiqi.si` 包改成 Public，或者在服务器上 `docker login ghcr.io`。另外每次部署服务器都会 `git pull`，私有仓库要给服务器加一个只读的 Deploy key，并把 `~/shiqi.si` 的 remote 改成 `git@github.com:...` 地址，不然部署会失败。
 
 ## 3. 初始化服务器（只做一次）
 

@@ -1,7 +1,7 @@
 /**
  * A fixed-window request counter per key (usually the client IP), in process
  * memory: fine for one web container. `take` returns false once a key has used
- * `limit` requests in the current window.
+ * `limit` requests in the current window; `full` asks the same without counting.
  */
 export function rateLimiter(limit: number, windowMs: number, now = Date.now) {
   const MAX_KEYS = 10_000;
@@ -17,6 +17,10 @@ export function rateLimiter(limit: number, windowMs: number, now = Date.now) {
       }
       w.count += 1;
       return w.count <= limit;
+    },
+    full(key: string): boolean {
+      const w = windows.get(key);
+      return w !== undefined && now() - w.start < windowMs && w.count >= limit;
     },
   };
 }

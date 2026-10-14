@@ -69,6 +69,8 @@ export function createSigner(secret: string) {
 
 /** Compares two secrets in constant time. */
 export function sameSecret(a: string, b: string): boolean {
-  const digest = (s: string) => createHash('sha256').update(s).digest();
+  // Phones add stray spaces and Chinese keyboards type full-width letters and
+  // digits (ａ１); NFKC turns those back into the plain ones.
+  const digest = (s: string) => createHash('sha256').update(s.normalize('NFKC').trim()).digest();
   return timingSafeEqual(digest(a), digest(b));
 }

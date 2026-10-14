@@ -99,6 +99,9 @@ function LoginCard({ reason }: { reason?: 'wrong' | 'busy' }) {
                 {...c}
                 name="password"
                 type="password"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
                 required
                 autoComplete="current-password"
               />

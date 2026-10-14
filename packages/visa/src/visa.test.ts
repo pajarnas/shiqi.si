@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
 import { describeError, runTurn, type CreateMessage } from './agent';
 import { transcript } from './transcript';
-import { createSealer, createSigner } from './crypto';
+import { createSealer, createSigner, sameSecret } from './crypto';
 import { parseFamily } from './family';
 import { activeFields, applicantKeys, missingFields, progress, withShared } from './schema';
 import { buildSheet } from './sheet';
@@ -234,5 +234,13 @@ describe('describeError', () => {
     );
     expect(describeError(err)).toBe('401 authentication_error invalid x-api-key');
     expect(describeError(new Error('boom'))).toBe('boom');
+  });
+});
+
+describe('sameSecret', () => {
+  it('ignores stray spaces and full-width characters but not case', () => {
+    expect(sameSecret(' ａｂｃ１２３ ', 'abc123')).toBe(true);
+    expect(sameSecret('abc123', 'abc124')).toBe(false);
+    expect(sameSecret('ABC123', 'abc123')).toBe(false);
   });
 });
