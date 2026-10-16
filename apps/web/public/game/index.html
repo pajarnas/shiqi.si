@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <title>极限刹车 · 空翻版 — shiqi.si</title>
+    <meta
+      name="description"
+      content="A 3D brake challenge with real launch figures: 0–60 mph in 0.81 s, 230 mph top speed. Brake as hard as you dare; if you overdo it, the car flips instead of crashing."
+    />
+    <meta name="theme-color" content="#140d1f" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.min.js",
+          "three/addons/": "./vendor/addons/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div id="loading">
+      <div class="loading__bar"><span></span></div>
+      <p data-i18n="loading">正在生成场景…</p>
+    </div>
+
+    <!-- In-run HUD -->
+    <div id="hud" class="hidden" aria-live="off">
+      <div class="hud-chip hud-chip--left">
+        <span class="hud-chip__label" data-i18n="brakeTimer">刹车计时</span>
+        <span class="hud-chip__value num" id="hudTimer">0.000s</span>
+      </div>
+      <div class="hud-chip hud-chip--right">
+        <span class="hud-chip__label" id="hudDistanceLabel" data-i18n="toBarrier">距路障</span>
+        <span class="hud-chip__value num" id="hudDistance">2597m</span>
+      </div>
+
+      <div class="force" id="force">
+        <span class="force__label" data-i18n="pedal">踏板力</span>
+        <div class="force__track">
+          <div class="force__limit"><span class="num">1612</span></div>
+          <div class="force__fill" id="forceFill"></div>
+        </div>
+        <span class="force__value num" id="forceValue">0 N</span>
+      </div>
+
+      <div class="flips hidden" id="flipBadge">
+        <span class="num" id="flipCount">×1</span>
+        <span data-i18n="flipsLabel">空翻</span>
+      </div>
+
+      <div class="speedo">
+        <svg viewBox="0 0 200 120" aria-hidden="true">
+          <path class="speedo__track" d="M 18 110 A 82 82 0 0 1 182 110" />
+          <path class="speedo__arc" id="speedoArc" d="M 18 110 A 82 82 0 0 1 182 110" />
+          <line class="speedo__mark" id="speedoMark" />
+        </svg>
+        <div class="speedo__readout">
+          <span class="num" id="hudSpeed">0</span>
+          <span class="speedo__unit">km/h</span>
+        </div>
+      </div>
+
+      <button class="brake-btn" id="brakeBtn" type="button" disabled>
+        <span class="brake-btn__ring"></span>
+        <span id="brakeText" data-i18n="brake">刹车</span>
+      </button>
+
+      <div id="countdown" class="countdown hidden"></div>
+      <div id="toast" class="toast hidden"></div>
+    </div>
+
+    <!-- Start menu -->
+    <section id="menu" class="panel hidden" aria-labelledby="menuTitle">
+      <a class="back" href="/">← shiqi.si</a>
+      <p class="eyebrow" data-i18n="eyebrow">0–60 MPH · 0.81 S</p>
+      <h1 id="menuTitle" data-i18n="title">极限刹车 · 空翻版</h1>
+      <p class="tagline" data-i18n="tagline">踩得越狠停得越快。踩过头也不会翻车，它会飞起来。</p>
+
+      <dl class="specs">
+        <div>
+          <dt>0–60 mph</dt>
+          <dd class="num">0.81 s</dd>
+        </div>
+        <div>
+          <dt data-i18n="specTop">极速</dt>
+          <dd class="num">370 km/h</dd>
+        </div>
+        <div>
+          <dt data-i18n="specBrake">最大制动</dt>
+          <dd class="num">≈3 g</dd>
+        </div>
+        <div>
+          <dt data-i18n="specBarrier">路障</dt>
+          <dd class="num">2600 m</dd>
+        </div>
+      </dl>
+
+      <ol class="rules">
+        <li data-i18n-html="rule1"></li>
+        <li data-i18n-html="rule2"></li>
+        <li data-i18n-html="rule3"></li>
+        <li data-i18n-html="rule4"></li>
+        <li data-i18n-html="rule5"></li>
+      </ol>
+
+      <button class="primary" id="startBtn" type="button" data-i18n="start">开始挑战</button>
+      <p class="best" id="menuBest"></p>
+
+      <div class="menu-row">
+        <button class="ghost" id="muteBtn" type="button"></button>
+        <div class="lang" role="group" aria-label="Language">
+          <button type="button" data-lang="zh">中文</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </div>
+      <p class="hint" id="keyHint"></p>
+      <div class="foot">
+        <p class="footnote" data-i18n="footnote"></p>
+        <button class="tip" type="button" data-open-donate data-i18n="tip">☕ 请我喝杯咖啡</button>
+      </div>
+    </section>
+
+    <!-- Result -->
+    <section id="result" class="panel panel--result hidden" aria-labelledby="resultTitle">
+      <h2 id="resultTitle"></h2>
+      <p class="result-sub" id="resultSub"></p>
+      <div class="stats">
+        <div><span data-i18n="statV0">初速度</span><b class="num" id="statV0">-</b></div>
+        <div><span data-i18n="statTime">刹停用时</span><b class="num" id="statTime">-</b></div>
+        <div><span data-i18n="statDist">制动距离</span><b class="num" id="statDist">-</b></div>
+        <div><span data-i18n="statForce">最大踏板力</span><b class="num" id="statForce">-</b></div>
+        <div><span data-i18n="statFlips">空翻</span><b class="num" id="statFlips">-</b></div>
+        <div>
+          <span id="statGapLabel" data-i18n="statGap">离路障</span><b class="num" id="statGap">-</b>
+        </div>
+      </div>
+      <div class="chart">
+        <div class="chart__head">
+          <span data-i18n="chartTitle">制动过程</span>
+          <span class="chart__legend">
+            <i class="lg lg--speed"></i><span data-i18n="chartSpeed">车速</span>
+            <i class="lg lg--force"></i><span data-i18n="chartForce">踏板力</span>
+            <i class="lg lg--air"></i><span data-i18n="chartAir">空中</span>
+          </span>
+        </div>
+        <canvas id="chart"></canvas>
+      </div>
+      <div class="score">
+        <span data-i18n="score">得分</span>
+        <b class="num" id="statScore">0</b>
+        <span class="score__best" id="resultBest"></span>
+      </div>
+      <button class="primary" id="retryBtn" type="button" data-i18n="again">再来一次</button>
+      <div class="foot foot--result">
+        <button class="ghost ghost--small" id="menuBtn" type="button" data-i18n="rules">
+          规则
+        </button>
+        <button class="tip" type="button" data-open-donate data-i18n="tip">☕ 请我喝杯咖啡</button>
+      </div>
+    </section>
+
+    <!-- Donation -->
+    <div
+      id="donate"
+      class="donate hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="donateTitle"
+    >
+      <div class="donate__card">
+        <h3 id="donateTitle" data-i18n="donateTitle">觉得好玩的话</h3>
+        <p data-i18n="donateBody">完全随意，谢谢你玩到这里。</p>
+        <div class="donate__codes">
+          <figure>
+            <img src="./img/paypal.png" alt="PayPal QR code" width="210" height="210" />
+            <figcaption>PayPal</figcaption>
+          </figure>
+          <figure>
+            <img
+              class="alipay"
+              src="./img/alipay.jpg"
+              alt="Alipay QR code"
+              width="210"
+              height="233"
+            />
+            <figcaption data-i18n="alipay">支付宝</figcaption>
+          </figure>
+        </div>
+        <button class="ghost ghost--small" type="button" id="donateClose" data-i18n="close">
+          关闭
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="./game.js"></script>
+  </body>
+</html>
