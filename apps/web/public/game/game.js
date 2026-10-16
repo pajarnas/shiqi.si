@@ -22,7 +22,7 @@ const STRINGS = {
     rule1:
       '车会自己全力加速：<b>0–60 mph 只要 0.81 秒</b>，光靠电机极速 <b>250 mph</b>（402 km/h）。车速过 100 km/h 才能刹车。',
     rule2:
-      '<b class="cool">按住喷气</b>点燃车尾 4 个喷口，多 2 g 推力，极速冲到 <b>383 mph</b>（616 km/h）。气罐只够 <b>7 秒</b>，松开后风阻会把车拖慢，什么时候喷自己算。',
+      '<b class="cool">按住喷气</b>点燃车尾 4 个喷口，多 2 g 推力，极速冲到 <b>383 mph</b>（616 km/h）。<b>不限时</b>，想喷多久喷多久；松开后风阻会把车速拖下来。',
     rule3: '一踩刹车就切断动力和喷气。<b>按得越久，力度越大。</b>',
     rule4:
       '力度到 <b class="hot">1612 N</b> 也不会翻车：推进器把车托起来，<b class="cool">侧滚一圈</b>再落地，但在空中没法刹车。',
@@ -36,9 +36,8 @@ const STRINGS = {
     hintDesktop: '按住空格刹车 · 按住 Shift 或 ↑ 喷气',
     hintTouch: '左下按钮喷气 · 右下按钮或屏幕任意位置刹车',
     footnote:
-      '0–60 mph 0.81 秒来自 2026 年 10 月新款 Roadster 发布会。383 mph（约音速的一半）是 Musk 提过的目标，发布会只确认超过 230 mph；电机极速用的是 2017 年承诺的 250 mph。喷气推力、气罐和制动力是游戏设定。',
+      '0–60 mph 0.81 秒来自 2026 年 10 月新款 Roadster 发布会。383 mph（约音速的一半）是 Musk 提过的目标，发布会只确认超过 230 mph；电机极速用的是 2017 年承诺的 250 mph。喷气推力（游戏里不限时）和制动力是游戏设定。',
     jet: '喷气',
-    jetEmpty: '气罐空了',
     tip: '☕ 请我喝杯咖啡',
     best: '最佳成绩 {n}',
     newBest: '新纪录！',
@@ -93,7 +92,7 @@ const STRINGS = {
     rule1:
       'The car launches on its own: <b>0–60 mph in 0.81 s</b>, and the motors alone top out at <b>250 mph</b> (402 km/h). Braking unlocks at 100 km/h.',
     rule2:
-      '<b class="cool">Hold JET</b> to light the four rear nozzles: 2 g of extra push, up to <b>383 mph</b> (616 km/h). The tank lasts <b>7 seconds</b>, and drag pulls you back once you let go, so pick your moment.',
+      '<b class="cool">Hold JET</b> to light the four rear nozzles: 2 g of extra push, up to <b>383 mph</b> (616 km/h). <b>No limit</b>: fire as long as you like. Let go and drag slows you back down.',
     rule3:
       'Braking cuts the motors and the jets. <b>The longer you hold, the harder it brakes.</b>',
     rule4:
@@ -109,9 +108,8 @@ const STRINGS = {
     hintDesktop: 'Hold Space to brake · hold Shift or ↑ for the jets',
     hintTouch: 'Bottom-left: jets · bottom-right or anywhere: brake',
     footnote:
-      '0–60 mph in 0.81 s is from the new Roadster reveal (October 2026). 383 mph, about half the speed of sound, is a target Musk has named; the reveal only confirmed over 230 mph. The 250 mph motor limit is the 2017 promise. Jet thrust, tank size and braking are game settings.',
+      '0–60 mph in 0.81 s is from the new Roadster reveal (October 2026). 383 mph, about half the speed of sound, is a target Musk has named; the reveal only confirmed over 230 mph. The 250 mph motor limit is the 2017 promise. Jet thrust (unlimited here) and braking are game settings.',
     jet: 'JET',
-    jetEmpty: 'Tank empty',
     tip: '☕ Buy me a coffee',
     best: 'Best {n}',
     newBest: 'New best!',
@@ -1689,9 +1687,6 @@ function handle(events) {
         vibrate(25);
         shake = Math.max(shake, 0.15);
         break;
-      case 'jetEmpty':
-        toast(t('jetEmpty'), 'alert', 1300);
-        break;
       case 'tooEarly':
         toast(t('tooEarly'), 'alert', 1200);
         sound.warn();
@@ -2311,13 +2306,13 @@ function updateHud() {
   if (mode !== 'run') return;
   ui.speed.textContent = String(Math.round(sim.speedKmh));
   ui.mph.textContent = `${Math.round(sim.v / 0.44704)} mph`;
-  const gas = sim.gas / SPEC.jet.tankS;
-  const jetLive = sim.phase === 'accelerating' && sim.gas > 0;
-  ui.jetBtn.style.setProperty('--gas', gas.toFixed(3));
+  const jetLive = sim.phase === 'accelerating';
+  // the ring shows how close the jets have pushed you to 383 mph
+  ui.jetBtn.style.setProperty('--gas', Math.min(1, sim.speedKmh / SPEC.car.topSpeedKmh).toFixed(3));
   ui.jetBtn.disabled = !jetLive;
   ui.jetBtn.classList.toggle('ready', jetLive);
   ui.jetBtn.classList.toggle('firing', sim.jetting);
-  ui.jetGas.textContent = `${sim.gas.toFixed(1)}s`;
+  ui.jetGas.textContent = sim.jetting ? `${sim.jetTime.toFixed(1)}s` : '∞';
   const n = Math.min(1, sim.speedKmh / SPEEDO_MAX);
   ui.arc.style.strokeDashoffset = `${arcLen * (1 - n)}`;
   ui.arc.classList.toggle('ready', sim.speedKmh >= SPEC.brake.minSpeedKmh);
