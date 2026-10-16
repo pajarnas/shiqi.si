@@ -356,6 +356,20 @@ export class Sim {
     this.phase = 'braking';
     this.hold = 0;
     events.push({ type: 'land', kind });
+    if (kind === 'leap') {
+      // The run ends on touchdown. The clock still counts the self-stop the car
+      // would need, worked out here at once, so a leap never beats a clean stop.
+      const landX = this.x;
+      while (this.v > B.stopSpeed) {
+        this.stepGround(1 / 120, false, []);
+        if (this.phase !== 'braking') break;
+      }
+      this.x = landX;
+      this.v = 0;
+      this.phase = 'braking';
+      this.finish(events);
+      return;
+    }
     if (this.v <= B.stopSpeed) {
       this.v = 0;
       this.finish(events);
