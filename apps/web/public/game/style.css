@@ -334,7 +334,7 @@ a:focus-visible {
   text-shadow: none;
 }
 
-/* jet button: the ring is the gas left in the tank */
+/* jet button: the ring fills as the jets push you towards 383 mph */
 .jet-btn {
   --gas: 1;
   position: absolute;

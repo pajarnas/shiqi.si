@@ -19,11 +19,10 @@ export const SPEC = {
     length: 4.6,
   },
   jet: {
-    // Four rear cold-gas nozzles: about 2 g of extra push, fading only near 383 mph.
+    // Four rear nozzles: about 2 g of extra push, fading only near 383 mph.
+    // No tank limit: hold them as long as you like.
     accel: 2 * G,
     exp: 10,
-    // Compressed-air tank, in seconds of full thrust.
-    tankS: 7,
     spool: 6,
   },
   brake: {
@@ -88,7 +87,7 @@ export class Sim {
     this.pitch = 0;
     this.side = 0;
     this.accel = 0;
-    this.gas = J.tankS;
+    this.jetTime = 0;
     this.jet = 0;
     this.jetting = false;
     this.force = 0;
@@ -198,13 +197,13 @@ export class Sim {
   }
 
   stepJet(dt, want, events) {
-    const on = want && this.gas > 0;
+    const on = Boolean(want);
     if (on && !this.jetting) events.push({ type: 'jetStart' });
-    if (!on && this.jetting) events.push({ type: this.gas <= 0 ? 'jetEmpty' : 'jetStop' });
+    if (!on && this.jetting) events.push({ type: 'jetStop' });
     this.jetting = on;
     this.jet += ((on ? 1 : 0) - this.jet) * Math.min(1, dt * J.spool);
     if (this.jet < 0.002) this.jet = 0;
-    if (on) this.gas = Math.max(0, this.gas - dt);
+    if (on) this.jetTime += dt;
   }
 
   beginBraking(events) {
@@ -375,7 +374,7 @@ export class Sim {
       peakForce: this.peakForce,
       flips: this.flips,
       leapt: this.leapt,
-      gasUsed: J.tankS - this.gas,
+      jetTime: this.jetTime,
       gap: this.distanceToBarrier,
       score: score(v0, t),
       samples: this.samples.slice(),
