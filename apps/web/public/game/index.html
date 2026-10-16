@@ -9,7 +9,7 @@
     <title>极限刹车 · 空翻版 — shiqi.si</title>
     <meta
       name="description"
-      content="A 3D brake challenge with real launch figures: 0–60 mph in 0.81 s, 230 mph top speed. Brake as hard as you dare; if you overdo it, the car flips instead of crashing."
+      content="A 3D brake challenge: 0–60 mph in 0.81 s, jets to 383 mph. Brake as hard as you dare; overdo it and the car rolls through the air instead of crashing."
     />
     <meta name="theme-color" content="#140d1f" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -65,8 +65,14 @@
         <div class="speedo__readout">
           <span class="num" id="hudSpeed">0</span>
           <span class="speedo__unit">km/h</span>
+          <span class="speedo__mph num" id="hudMph">0 mph</span>
         </div>
       </div>
+
+      <button class="jet-btn" id="jetBtn" type="button" disabled>
+        <span class="jet-btn__label" data-i18n="jet">喷气</span>
+        <span class="jet-btn__gas num" id="jetGas">7.0s</span>
+      </button>
 
       <button class="brake-btn" id="brakeBtn" type="button" disabled>
         <span class="brake-btn__ring"></span>
@@ -91,7 +97,7 @@
         </div>
         <div>
           <dt data-i18n="specTop">极速</dt>
-          <dd class="num">370 km/h</dd>
+          <dd class="num">383 mph</dd>
         </div>
         <div>
           <dt data-i18n="specBrake">最大制动</dt>
@@ -109,6 +115,7 @@
         <li data-i18n-html="rule3"></li>
         <li data-i18n-html="rule4"></li>
         <li data-i18n-html="rule5"></li>
+        <li data-i18n-html="rule6"></li>
       </ol>
 
       <button class="primary" id="startBtn" type="button" data-i18n="start">开始挑战</button>

@@ -268,7 +268,7 @@ a:focus-visible {
   position: absolute;
   left: 50%;
   bottom: calc(14px + var(--safe-b));
-  width: min(240px, 56vw);
+  width: min(240px, calc(100vw - 236px - var(--safe-l) - var(--safe-r)));
   transform: translateX(-50%);
 }
 
@@ -325,6 +325,84 @@ a:focus-visible {
   font-size: 11px;
   color: var(--muted);
   letter-spacing: 0.12em;
+}
+
+.speedo__readout .speedo__mph {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--cyan);
+  text-shadow: none;
+}
+
+/* jet button: the ring is the gas left in the tank */
+.jet-btn {
+  --gas: 1;
+  position: absolute;
+  left: calc(18px + var(--safe-l));
+  bottom: calc(22px + var(--safe-b));
+  width: 92px;
+  height: 92px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--cyan) calc(var(--gas) * 360deg), rgba(255, 255, 255, 0.1) 0);
+  color: var(--muted);
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition:
+    transform 0.08s,
+    box-shadow 0.2s,
+    color 0.2s;
+}
+
+.jet-btn::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: background 0.15s;
+}
+
+.jet-btn > span {
+  position: relative;
+}
+
+.jet-btn__label {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.jet-btn__gas {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.jet-btn.ready {
+  color: #fff;
+  box-shadow: 0 0 22px rgba(159, 227, 255, 0.3);
+}
+
+.jet-btn.firing {
+  transform: scale(0.93);
+  box-shadow: 0 0 36px rgba(120, 160, 255, 0.85);
+}
+
+.jet-btn.firing::before {
+  background: rgba(52, 78, 190, 0.7);
+}
+
+.jet-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 /* brake button */
@@ -922,9 +1000,10 @@ h1 {
   .hud-chip__value {
     font-size: 18px;
   }
-  .brake-btn {
-    width: 84px;
-    height: 84px;
+  .brake-btn,
+  .jet-btn {
+    width: 80px;
+    height: 80px;
   }
   .donate__codes img {
     width: 150px;

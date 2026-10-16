@@ -9,12 +9,22 @@ export const SPEC = {
   car: {
     // Tesla's claimed 0–60 mph for the new Roadster (reveal, October 2026).
     zeroToSixtyS: 0.81,
-    // "Over 230 mph", the top speed Tesla quoted at the reveal.
-    topSpeedKmh: 230 * MPH * 3.6,
-    // a(v) = launchAccel · (1 − (v / vmax)^accelExp), fitted so 0–60 mph takes 0.81 s.
-    launchAccel: 33.26,
+    // Motors alone: the 250 mph Tesla promised in 2017.
+    motorTopKmh: 250 * MPH * 3.6,
+    // With the jets lit: 383 mph, Musk's "half the speed of sound".
+    topSpeedKmh: 383 * MPH * 3.6,
+    // a(v) = launchAccel · (1 − (v / vMotor)^accelExp), fitted so 0–60 mph takes 0.81 s.
+    launchAccel: 33.3,
     accelExp: 3,
     length: 4.6,
+  },
+  jet: {
+    // Four rear cold-gas nozzles: about 2 g of extra push, fading only near 383 mph.
+    accel: 2 * G,
+    exp: 10,
+    // Compressed-air tank, in seconds of full thrust.
+    tankS: 7,
+    spool: 6,
   },
   brake: {
     minSpeedKmh: 100,
@@ -38,16 +48,19 @@ export const SPEC = {
     startFront: 2.7,
     barrierDepth: 1,
     barrierHeight: 1.2,
-    runoff: 900,
+    runoff: 1900,
   },
-  flip: { launchVz: 7 },
-  leap: { minHeight: 3.4, minAir: 1.15, maxAir: 2.6 },
+  // Thrusters lift the car, it rolls sideways and drifts a lane over and back.
+  flip: { launchVz: 7.5, sideways: 3.4 },
+  leap: { minHeight: 3.8, minAir: 1.3, maxAir: 2.8, sideways: 4.2 },
 };
 
 const B = SPEC.brake;
 const C = SPEC.car;
 const T = SPEC.track;
-const VMAX = C.topSpeedKmh / 3.6;
+const V_MOTOR = C.motorTopKmh / 3.6;
+const V_TOP = C.topSpeedKmh / 3.6;
+const J = SPEC.jet;
 const DECEL_PER_N = B.maxDecel / B.breakForceN;
 const SAMPLE_EVERY = 0.04;
 
@@ -73,7 +86,11 @@ export class Sim {
     this.vz = 0;
     this.roll = 0;
     this.pitch = 0;
+    this.side = 0;
     this.accel = 0;
+    this.gas = J.tankS;
+    this.jet = 0;
+    this.jetting = false;
     this.force = 0;
     this.hold = 0;
     this.powerCut = false;
@@ -115,8 +132,18 @@ export class Sim {
     return this.phase === 'air';
   }
 
+  /** Forward push on the ground while the motors are still powered. */
+  driveAccel(v, jet) {
+    const motor =
+      v < V_MOTOR
+        ? C.launchAccel * (1 - (v / V_MOTOR) ** C.accelExp)
+        : -(B.rollingDecel + B.dragCoeff * (v * v - V_MOTOR * V_MOTOR));
+    if (jet <= 0) return motor;
+    return Math.max(motor, 0) + jet * J.accel * (1 - Math.min(v / V_TOP, 1) ** J.exp);
+  }
+
   /** Advance one fixed step. Returns a list of events for sound, camera and UI. */
-  step(dt, pressed) {
+  step(dt, pressed, jetInput = false) {
     const events = [];
     this.earlyCooldown = Math.max(0, this.earlyCooldown - dt);
     switch (this.phase) {
@@ -145,7 +172,8 @@ export class Sim {
             events.push({ type: 'tooEarly' });
           }
         }
-        const a = C.launchAccel * (1 - Math.min(this.v / VMAX, 1) ** C.accelExp);
+        this.stepJet(dt, jetInput, events);
+        const a = this.driveAccel(this.v, this.jet);
         this.accel = a;
         this.v = Math.max(0, this.v + a * dt);
         this.x += this.v * dt;
@@ -169,7 +197,20 @@ export class Sim {
     return events;
   }
 
+  stepJet(dt, want, events) {
+    const on = want && this.gas > 0;
+    if (on && !this.jetting) events.push({ type: 'jetStart' });
+    if (!on && this.jetting) events.push({ type: this.gas <= 0 ? 'jetEmpty' : 'jetStop' });
+    this.jetting = on;
+    this.jet += ((on ? 1 : 0) - this.jet) * Math.min(1, dt * J.spool);
+    if (this.jet < 0.002) this.jet = 0;
+    if (on) this.gas = Math.max(0, this.gas - dt);
+  }
+
   beginBraking(events) {
+    if (this.jetting) events.push({ type: 'jetStop' });
+    this.jetting = false;
+    this.jet = 0;
     this.phase = 'braking';
     this.powerCut = true;
     this.v0Kmh = this.speedKmh;
@@ -257,18 +298,18 @@ export class Sim {
 
   startLeap(events) {
     const x0 = this.x;
-    const x1 =
-      T.barrierDistance + T.barrierDepth + C.length + Math.max(10, Math.min(60, this.v * 0.5));
-    const span = x1 - x0;
+    // Clear the blocks with room to spare, and keep the car's ground speed through the air.
+    const need = T.barrierDistance + T.barrierDepth + C.length + 10 - x0;
     const airTime = Math.min(
       SPEC.leap.maxAir,
-      Math.max(SPEC.leap.minAir, span / Math.max(this.v, 0.1)),
+      Math.max(SPEC.leap.minAir, need / Math.max(this.v, 0.1)),
     );
+    const x1 = x0 + Math.max(need, this.v * airTime);
     const height = Math.max(SPEC.leap.minHeight, (G * airTime * airTime) / 8);
     this.force = 0;
     this.hold = 0;
     this.phase = 'air';
-    this.air = { kind: 'leap', t: 0, T: airTime, x0, x1, height, vKeep: this.v };
+    this.air = { kind: 'leap', t: 0, T: airTime, x0, x1, height, vKeep: this.v, dir: 1 };
     events.push({ type: 'leap' });
   }
 
@@ -284,11 +325,13 @@ export class Sim {
       this.vz -= G * dt;
       this.z = Math.max(0, this.z + this.vz * dt);
       this.roll = air.dir * 2 * Math.PI * easeInOut(s);
+      this.side = air.dir * SPEC.flip.sideways * Math.sin(Math.PI * s);
     } else {
       const prevX = this.x;
       this.x = air.x0 + (air.x1 - air.x0) * s;
       this.z = 4 * air.height * s * (1 - s);
-      this.pitch = 2 * Math.PI * easeInOut(s);
+      this.roll = air.dir * 2 * Math.PI * easeInOut(s);
+      this.side = air.dir * SPEC.leap.sideways * Math.sin(Math.PI * s);
       this.accel = 0;
       // Speedometer shows how fast the car really crosses the ground.
       this.v = Math.max(air.vKeep, (this.x - prevX) / dt) || air.vKeep;
@@ -309,6 +352,7 @@ export class Sim {
     this.vz = 0;
     this.roll = 0;
     this.pitch = 0;
+    this.side = 0;
     this.air = null;
     this.phase = 'braking';
     this.hold = 0;
@@ -331,6 +375,7 @@ export class Sim {
       peakForce: this.peakForce,
       flips: this.flips,
       leapt: this.leapt,
+      gasUsed: J.tankS - this.gas,
       gap: this.distanceToBarrier,
       score: score(v0, t),
       samples: this.samples.slice(),

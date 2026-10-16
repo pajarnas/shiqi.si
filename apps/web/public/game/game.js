@@ -20,21 +20,25 @@ const STRINGS = {
     specBrake: '最大制动',
     specBarrier: '路障',
     rule1:
-      '车会自己全力加速：<b>0–60 mph 只要 0.81 秒</b>，极速 <b>370 km/h</b>。车速过 100 km/h 才能刹车。',
-    rule2: '一踩刹车就切断动力。<b>按得越久，力度越大。</b>',
-    rule3:
-      '力度到 <b class="hot">1612 N</b> 也不会翻车：车会<b class="cool">弹起来空翻一圈</b>再落地，但在空中没法刹车。',
-    rule4: '来不及停？它会<b class="cool">翻过路障稳稳落地</b>，再自己慢慢刹停，用时会变长。',
-    rule5: '得分 = 初速度² ÷ 刹停用时。力度贴着 1612 N 又不碰到它，停得最快。',
+      '车会自己全力加速：<b>0–60 mph 只要 0.81 秒</b>，光靠电机极速 <b>250 mph</b>（402 km/h）。车速过 100 km/h 才能刹车。',
+    rule2:
+      '<b class="cool">按住喷气</b>点燃车尾 4 个喷口，多 2 g 推力，极速冲到 <b>383 mph</b>（616 km/h）。气罐只够 <b>7 秒</b>，松开后风阻会把车拖慢，什么时候喷自己算。',
+    rule3: '一踩刹车就切断动力和喷气。<b>按得越久，力度越大。</b>',
+    rule4:
+      '力度到 <b class="hot">1612 N</b> 也不会翻车：推进器把车托起来，<b class="cool">侧滚一圈</b>再落地，但在空中没法刹车。',
+    rule5: '来不及停？它会<b class="cool">侧翻飞过路障</b>稳稳落地，再自己烧着胎刹停，用时会变长。',
+    rule6: '得分 = 初速度² ÷ 刹停用时。力度贴着 1612 N 又不碰到它，停得最快。',
     start: '开始挑战',
     again: '再来一次',
     rules: '规则',
     soundOn: '音效：开',
     soundOff: '音效：关',
-    hintDesktop: '按住空格或鼠标左键刹车',
-    hintTouch: '按住屏幕任意位置或右下角按钮刹车',
+    hintDesktop: '按住空格刹车 · 按住 Shift 或 ↑ 喷气',
+    hintTouch: '左下按钮喷气 · 右下按钮或屏幕任意位置刹车',
     footnote:
-      '加速和极速取自 2026 年 10 月新款 Roadster 发布会公布的数据；制动力是按 2 g 吸地风扇推算的游戏设定。',
+      '0–60 mph 0.81 秒来自 2026 年 10 月新款 Roadster 发布会。383 mph（约音速的一半）是 Musk 提过的目标，发布会只确认超过 230 mph；电机极速用的是 2017 年承诺的 250 mph。喷气推力、气罐和制动力是游戏设定。',
+    jet: '喷气',
+    jetEmpty: '气罐空了',
     tip: '☕ 请我喝杯咖啡',
     best: '最佳成绩 {n}',
     newBest: '新纪录！',
@@ -87,22 +91,27 @@ const STRINGS = {
     specBrake: 'Max braking',
     specBarrier: 'Barrier',
     rule1:
-      'The car launches on its own: <b>0–60 mph in 0.81 s</b>, top speed <b>370 km/h</b> (230 mph). Braking unlocks at 100 km/h.',
-    rule2: 'Braking cuts the power. <b>The longer you hold, the harder it brakes.</b>',
+      'The car launches on its own: <b>0–60 mph in 0.81 s</b>, and the motors alone top out at <b>250 mph</b> (402 km/h). Braking unlocks at 100 km/h.',
+    rule2:
+      '<b class="cool">Hold JET</b> to light the four rear nozzles: 2 g of extra push, up to <b>383 mph</b> (616 km/h). The tank lasts <b>7 seconds</b>, and drag pulls you back once you let go, so pick your moment.',
     rule3:
-      'Hit <b class="hot">1612 N</b> and nothing breaks: the car <b class="cool">jumps, rolls a full turn</b> and lands. It can\'t brake in the air.',
+      'Braking cuts the motors and the jets. <b>The longer you hold, the harder it brakes.</b>',
     rule4:
-      'Can\'t stop in time? It <b class="cool">flips over the barrier and lands clean</b>, then stops itself, slowly. That costs time.',
-    rule5: 'Score = initial speed² ÷ stopping time. Ride just under 1612 N to stop fastest.',
+      'Hit <b class="hot">1612 N</b> and nothing breaks: the thrusters lift the car, it <b class="cool">rolls sideways</b> and lands. It can\'t brake in the air.',
+    rule5:
+      'Can\'t stop in time? It <b class="cool">rolls sideways over the barrier</b>, lands, then burns its tyres to a stop. That costs time.',
+    rule6: 'Score = initial speed² ÷ stopping time. Ride just under 1612 N to stop fastest.',
     start: 'Start',
     again: 'Again',
     rules: 'Rules',
     soundOn: 'Sound: on',
     soundOff: 'Sound: off',
-    hintDesktop: 'Hold Space or the mouse button to brake',
-    hintTouch: 'Hold anywhere on screen, or the button, to brake',
+    hintDesktop: 'Hold Space to brake · hold Shift or ↑ for the jets',
+    hintTouch: 'Bottom-left: jets · bottom-right or anywhere: brake',
     footnote:
-      'Launch and top speed are the figures quoted at the new Roadster reveal (October 2026). Braking is a game estimate based on its 2 g suction fans.',
+      '0–60 mph in 0.81 s is from the new Roadster reveal (October 2026). 383 mph, about half the speed of sound, is a target Musk has named; the reveal only confirmed over 230 mph. The 250 mph motor limit is the 2017 promise. Jet thrust, tank size and braking are game settings.',
+    jet: 'JET',
+    jetEmpty: 'Tank empty',
     tip: '☕ Buy me a coffee',
     best: 'Best {n}',
     newBest: 'New best!',
@@ -860,6 +869,61 @@ function plateTexture() {
   return tex;
 }
 
+/* Rocket-style plume: a hot core that thins out, with bright shock diamonds
+   ("Mach rings") spaced along it. Drawn additively on an open cone. */
+const plumeTime = { value: 0 };
+
+function plumeMesh(length, r0, r1) {
+  const geo = new THREE.CylinderGeometry(r0, r1, length, 24, 24, true);
+  geo.translate(0, -length / 2, 0); // nozzle at the origin, plume along −y
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uTime: plumeTime,
+      uPower: { value: 0 },
+      uSeed: { value: Math.random() * 10 },
+      uCore: { value: new THREE.Color('#f4fbff') },
+      uEdge: { value: new THREE.Color('#3f6dff') },
+      uRing: { value: new THREE.Color('#fff0c2') },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main() {
+        vUv = uv;
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vN = normalize(mat3(modelMatrix) * normal);
+        vV = normalize(cameraPosition - wp.xyz);
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform float uTime, uPower, uSeed; uniform vec3 uCore, uEdge, uRing;
+      varying vec2 vUv; varying vec3 vN; varying vec3 vV;
+      void main() {
+        float u = 1.0 - vUv.y;                       // 0 at the nozzle, 1 at the tail
+        float facing = abs(dot(normalize(vN), normalize(vV)));
+        float core = pow(facing, 1.6);
+        float fade = pow(1.0 - u, 1.35) * smoothstep(0.0, 0.03, u);
+        // shock diamonds: tight bright bands that weaken downstream
+        float spacing = 6.5;
+        float ring = pow(max(0.0, cos(u * 3.14159 * spacing - 1.2)), 14.0);
+        ring *= smoothstep(0.02, 0.1, u) * (1.0 - smoothstep(0.35, 0.8, u));
+        float flick = 0.86 + 0.14 * sin(uTime * 71.0 + uSeed + u * 30.0) * sin(uTime * 37.0 + uSeed * 2.0);
+        float a = (core * fade * 0.85 + ring * core * 2.2) * uPower * flick;
+        vec3 col = mix(uEdge, uCore, clamp(core * 0.9, 0.0, 1.0));
+        col = mix(col, uRing, clamp(ring * 1.4, 0.0, 1.0));
+        gl_FragColor = vec4(col * a * 1.9, a);
+      }`,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.frustumCulled = false;
+  mesh.visible = false;
+  mesh.renderOrder = 5;
+  return mesh;
+}
+
 const car = (() => {
   const root = new THREE.Group();
   const pivot = new THREE.Group();
@@ -988,20 +1052,29 @@ const car = (() => {
     emissiveIntensity: 0,
   });
   const nozzles = [];
+  const plumes = [];
   for (const x of [-0.55, -0.25, 0.25, 0.55]) {
     const n = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.065, 0.08, 14), nozzleMat);
     n.rotation.x = Math.PI / 2;
     n.position.set(x, 0.21, 2.37);
     model.add(n);
-    nozzles.push({ pos: V(x, 0.21, 2.42), dir: V(0, -0.2, 1) });
+    nozzles.push({ pos: V(x, 0.21, 2.42), dir: V(0, -0.05, 1) });
+    const plume = plumeMesh(4.6, 0.06, 0.3);
+    plume.rotation.x = -Math.PI / 2; // −y → +z, straight out of the back
+    plume.position.set(x, 0.21, 2.41);
+    model.add(plume);
+    plumes.push(plume);
   }
+  const jetLight = new THREE.PointLight('#8fb3ff', 0, 16, 1.6);
+  jetLight.position.set(0, 0.5, 3.6);
+  model.add(jetLight);
   for (const [x, z] of [
     [-0.95, -1.95],
     [0.95, -1.95],
     [-0.95, 1.95],
     [0.95, 1.95],
   ]) {
-    nozzles.push({ pos: V(x, 0.12, z), dir: V(Math.sign(x) * 0.3, -1, 0) });
+    nozzles.push({ pos: V(x, 0.14, z), dir: V(Math.sign(x) * 0.45, -1, Math.sign(z) * 0.2) });
   }
 
   // active rear wing (airbrake while braking)
@@ -1094,53 +1167,103 @@ const car = (() => {
   scene.add(blob);
 
   scene.add(root);
-  return { root, pivot, model, wheels, wingPivot, tailMat, nozzleMat, nozzles, blob, headMat };
+  return {
+    root,
+    pivot,
+    model,
+    wheels,
+    wingPivot,
+    tailMat,
+    nozzleMat,
+    nozzles,
+    plumes,
+    jetLight,
+    blob,
+    headMat,
+  };
 })();
 
 /* ============================================================
    Particles
    ============================================================ */
 
+function cloudTexture(seed) {
+  const [c, g] = canvas(128, 128);
+  const rand = mulberry32(seed);
+  for (let i = 0; i < 18; i++) {
+    const a = rand() * Math.PI * 2;
+    const r = rand() * 28;
+    const x = 64 + Math.cos(a) * r;
+    const y = 64 + Math.sin(a) * r;
+    const rad = 18 + rand() * 26;
+    const grad = g.createRadialGradient(x, y, 0, x, y, rad);
+    grad.addColorStop(0, 'rgba(255,255,255,0.32)');
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+  }
+  // keep the edge of the sprite clean
+  g.globalCompositeOperation = 'destination-in';
+  const mask = g.createRadialGradient(64, 64, 30, 64, 64, 64);
+  mask.addColorStop(0, 'rgba(0,0,0,1)');
+  mask.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = mask;
+  g.fillRect(0, 0, 128, 128);
+  return texFrom(c, { srgb: false });
+}
+
+const cloudTex = cloudTexture(3);
+const WHITE = new THREE.Color('#f2edf0');
+
 class Particles {
-  constructor(capacity, color, blending) {
+  constructor(capacity, { blending = THREE.NormalBlending, map = cloudTex, spin = true } = {}) {
     this.cap = capacity;
     this.pos = new Float32Array(capacity * 3);
     this.vel = new Float32Array(capacity * 3);
+    this.col = new Float32Array(capacity * 3);
     this.size = new Float32Array(capacity);
     this.alpha = new Float32Array(capacity);
+    this.rot = new Float32Array(capacity);
     this.life = new Float32Array(capacity);
     this.max = new Float32Array(capacity);
     this.base = new Float32Array(capacity);
+    this.grow = new Float32Array(capacity);
     this.cursor = 0;
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(this.col, 3));
     g.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1));
     g.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1));
+    g.setAttribute('aRot', new THREE.BufferAttribute(this.rot, 1));
     this.geo = g;
     this.mat = new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
       blending,
       uniforms: {
-        uColor: { value: new THREE.Color(color) },
         uScale: { value: window.innerHeight * Q.pixelRatio },
-        uMap: { value: glowTex },
+        uMap: { value: map },
+        uSpin: { value: spin ? 1 : 0 },
       },
       vertexShader: /* glsl */ `
-        attribute float aSize; attribute float aAlpha;
-        uniform float uScale; varying float vA;
+        attribute float aSize; attribute float aAlpha; attribute float aRot; attribute vec3 aColor;
+        uniform float uScale; varying float vA; varying float vR; varying vec3 vC;
         void main() {
-          vA = aAlpha;
+          vR = aRot; vC = aColor;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = aSize * uScale / -mv.z;
+          vA = aAlpha * smoothstep(0.6 + aSize * 0.5, 2.5 + aSize * 1.5, -mv.z);
+          gl_PointSize = min(aSize * uScale / -mv.z, 900.0);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: /* glsl */ `
-        uniform vec3 uColor; uniform sampler2D uMap; varying float vA;
+        uniform sampler2D uMap; uniform float uSpin; varying float vA; varying float vR; varying vec3 vC;
         void main() {
-          float a = texture2D(uMap, gl_PointCoord).a * vA;
-          if (a < 0.01) discard;
-          gl_FragColor = vec4(uColor, a);
+          vec2 p = gl_PointCoord - 0.5;
+          float c = cos(vR * uSpin), s = sin(vR * uSpin);
+          p = mat2(c, -s, s, c) * p + 0.5;
+          float a = texture2D(uMap, p).a * vA;
+          if (a < 0.008) discard;
+          gl_FragColor = vec4(vC, a);
         }`,
     });
     this.points = new THREE.Points(g, this.mat);
@@ -1148,16 +1271,19 @@ class Particles {
     scene.add(this.points);
   }
 
-  emit(p, v, size, life, alpha = 1) {
+  emit(p, v, size, life, alpha = 1, color = WHITE, grow = 1) {
     const i = this.cursor;
     this.cursor = (this.cursor + 1) % this.cap;
     this.pos.set([p.x, p.y, p.z], i * 3);
     this.vel.set([v.x, v.y, v.z], i * 3);
+    this.col.set([color.r, color.g, color.b], i * 3);
     this.size[i] = size;
     this.life[i] = life;
     this.max[i] = life;
     this.base[i] = alpha;
     this.alpha[i] = alpha;
+    this.rot[i] = Math.random() * 6.28;
+    this.grow[i] = grow;
   }
 
   update(dt, { gravity = 0, drag = 1, growth = 1 }) {
@@ -1173,12 +1299,18 @@ class Particles {
       this.pos[o] += this.vel[o] * dt;
       this.pos[o + 1] = Math.max(0.05, this.pos[o + 1] + this.vel[o + 1] * dt);
       this.pos[o + 2] += this.vel[o + 2] * dt;
-      this.size[i] += growth * dt;
-      this.alpha[i] = this.life[i] <= 0 ? 0 : this.base[i] * (this.life[i] / this.max[i]);
+      this.size[i] += growth * this.grow[i] * dt;
+      this.rot[i] += dt * 0.3;
+      const f = this.life[i] / this.max[i];
+      // fade in fast, linger, fade out
+      this.alpha[i] =
+        this.life[i] <= 0 ? 0 : this.base[i] * Math.min(1, (1 - f) * 8) * Math.min(1, f * 2.2);
     }
     this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.aColor.needsUpdate = true;
     this.geo.attributes.aSize.needsUpdate = true;
     this.geo.attributes.aAlpha.needsUpdate = true;
+    this.geo.attributes.aRot.needsUpdate = true;
   }
 
   clear() {
@@ -1192,8 +1324,11 @@ class Particles {
   }
 }
 
-const smoke = new Particles(500, '#d8d0d6', THREE.NormalBlending);
-const gas = new Particles(900, '#cfeeff', THREE.AdditiveBlending);
+// ground clouds (landing, burnouts) and thruster vapour (white jets that hang in the air)
+const smoke = new Particles(isSmall ? 900 : 1600);
+const vapor = new Particles(isSmall ? 1100 : 2000);
+const PINK = new THREE.Color('#ff9aa6');
+const WARM = new THREE.Color('#f7d9d6');
 
 /* ============================================================
    Sound (all synthesised, nothing to download)
@@ -1261,6 +1396,20 @@ class Sound {
     this.squealGain = ctx.createGain();
     this.squealGain.gain.value = 0;
     loopNoise().connect(this.squealFilter).connect(this.squealGain).connect(this.master);
+
+    // jets: a low roar for the rear plumes, a hiss for the corner thrusters
+    this.jetFilter = ctx.createBiquadFilter();
+    this.jetFilter.type = 'lowpass';
+    this.jetFilter.frequency.value = 700;
+    this.jetGain = ctx.createGain();
+    this.jetGain.gain.value = 0;
+    loopNoise().connect(this.jetFilter).connect(this.jetGain).connect(this.master);
+    this.hissFilter = ctx.createBiquadFilter();
+    this.hissFilter.type = 'highpass';
+    this.hissFilter.frequency.value = 1500;
+    this.hissGain = ctx.createGain();
+    this.hissGain.gain.value = 0;
+    loopNoise().connect(this.hissFilter).connect(this.hissGain).connect(this.master);
   }
 
   setMuted(m) {
@@ -1269,7 +1418,7 @@ class Sound {
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.8, this.ctx.currentTime, 0.05);
   }
 
-  update({ v, powered, force, active, airborne }) {
+  update({ v, powered, force, active, airborne, jet = 0, lift = false }) {
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
     const on = active ? 1 : 0;
@@ -1284,6 +1433,16 @@ class Sound {
     const sq =
       !airborne && force > 1050 && v > 2 ? ((force - 1050) / 560) * Math.min(1, v / 30) : 0;
     this.squealGain.gain.setTargetAtTime(on * sq * 0.07, now, 0.05);
+    this.jetGain.gain.setTargetAtTime(on * jet * 0.55, now, 0.06);
+    this.jetFilter.frequency.setTargetAtTime(500 + jet * 900, now, 0.08);
+    this.hissGain.gain.setTargetAtTime(on * (lift ? 0.28 : 0), now, 0.04);
+  }
+
+  ignite() {
+    if (!this.ctx) return;
+    const at = this.ctx.currentTime;
+    this.tone('sine', 70, 40, at, 0.45, 0.45);
+    this.burst(at, 0.5, 0.45, 'lowpass', 900, 0.7);
   }
 
   tone(type, f0, f1, at, dur, vol) {
@@ -1393,9 +1552,12 @@ const ui = {
   flipCount: $('flipCount'),
   mute: $('muteBtn'),
   best: $('menuBest'),
+  jetBtn: $('jetBtn'),
+  jetGas: $('jetGas'),
+  mph: $('hudMph'),
 };
 
-const SPEEDO_MAX = 400;
+const SPEEDO_MAX = 650;
 const arcLen = ui.arc.getTotalLength();
 ui.arc.style.strokeDasharray = `${arcLen}`;
 ui.arc.style.strokeDashoffset = `${arcLen}`;
@@ -1467,12 +1629,13 @@ let lastResult = null;
 let thrusterTime = 0;
 let shake = 0;
 let elapsed = 0;
+let landCam = 0;
 
 function resetWorld() {
   sim.reset();
   clearSkids();
   smoke.clear();
-  gas.clear();
+  vapor.clear();
   skidLastX = 0;
   thrusterTime = 0;
   timeScale = 1;
@@ -1521,6 +1684,14 @@ function handle(events) {
         sound.beep(true);
         setTimeout(() => showCountdown(null), 650);
         break;
+      case 'jetStart':
+        sound.ignite();
+        vibrate(25);
+        shake = Math.max(shake, 0.15);
+        break;
+      case 'jetEmpty':
+        toast(t('jetEmpty'), 'alert', 1300);
+        break;
       case 'tooEarly':
         toast(t('tooEarly'), 'alert', 1200);
         sound.warn();
@@ -1540,7 +1711,7 @@ function handle(events) {
         show(ui.flipBadge, true);
         sound.thrust();
         vibrate([30, 30, 60]);
-        burstGas(26);
+        liftBurst();
         break;
       case 'leap':
         camMode = 'air';
@@ -1549,19 +1720,21 @@ function handle(events) {
         toast(t('leap'), 'air', 1800);
         sound.thrust();
         vibrate([40, 30, 80]);
-        burstGas(40);
+        liftBurst();
         break;
       case 'land':
-        slowTarget = 1;
-        camMode = 'brake';
+        slowTarget = reduceMotion ? 1 : 0.55;
+        // swing in front of the car and look back at the touchdown cloud
+        camMode = 'landed';
+        landCam = 1.1;
         shake = Math.max(shake, 0.35);
         toast(e.kind === 'leap' ? t('landLeap') : t('land'), 'air', 1400);
         sound.land();
         vibrate(40);
-        landDust();
+        landingCloud();
         break;
       case 'stopped':
-        camMode = 'finish';
+        if (camMode !== 'landed') camMode = 'finish';
         finishOrbit = 0;
         toast(t('stopped'), '', 1500);
         sound.success();
@@ -1762,6 +1935,28 @@ function setPressed(on) {
   if (on) pulse = true;
 }
 
+let jetHeld = false;
+let jetPointer = null;
+function setJet(on) {
+  if (jetHeld === on) return;
+  jetHeld = on;
+  if (on) sound.unlock();
+}
+ui.jetBtn.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  jetPointer = e.pointerId;
+  setJet(true);
+});
+window.addEventListener('pointerup', (e) => {
+  if (e.pointerId === jetPointer) {
+    jetPointer = null;
+    setJet(false);
+  }
+});
+window.addEventListener('pointercancel', () => setJet(false));
+window.addEventListener('blur', () => setJet(false));
+const JET_KEYS = new Set(['ShiftLeft', 'ShiftRight', 'ArrowUp', 'KeyW', 'KeyJ']);
+
 const canBrakeNow = () =>
   mode === 'run' && (sim.phase === 'accelerating' || sim.phase === 'braking');
 
@@ -1776,13 +1971,26 @@ app.addEventListener('pointerdown', (e) => {
   setPressed(true);
 });
 for (const ev of ['pointerup', 'pointercancel', 'blur'])
-  window.addEventListener(ev, () => setPressed(false));
+  window.addEventListener(ev, (e) => {
+    if (e.pointerId !== undefined && e.pointerId === jetPointer) return;
+    setPressed(false);
+  });
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) setPressed(false);
+  if (document.hidden) {
+    setPressed(false);
+    setJet(false);
+  }
 });
 window.addEventListener('keydown', (e) => {
   if (e.code === 'Escape' && !ui.donate.classList.contains('hidden')) {
     show(ui.donate, false);
+    return;
+  }
+  if (JET_KEYS.has(e.code)) {
+    if (mode === 'run') {
+      e.preventDefault();
+      setJet(true);
+    }
     return;
   }
   if (e.code !== 'Space') return;
@@ -1796,6 +2004,7 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keyup', (e) => {
   if (e.code === 'Space') setPressed(false);
+  if (JET_KEYS.has(e.code)) setJet(false);
 });
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -1816,44 +2025,85 @@ const carPos = new THREE.Vector3();
 
 function placeCar(dx) {
   const zc = toZ(sim.x - CAR_HALF);
-  car.root.position.set(0, sim.z, zc);
-  carPos.set(0, sim.z + 0.55, zc);
+  car.root.position.set(sim.side, sim.z, zc);
+  carPos.set(sim.side, sim.z + 0.55, zc);
   for (const w of car.wheels) w.rotation.x -= dx / 0.36;
 }
 
-function burstGas(n) {
+const tmpA = new THREE.Vector3();
+const tmpC = new THREE.Color();
+let liftFiring = false;
+
+/** White cold-gas jet out of one nozzle (0–3 rear, 4–7 corners). */
+function vaporJet(index, count, speed, size, alpha = 0.6) {
   const m = car.model.matrixWorld;
-  for (let i = 0; i < n; i++) {
-    const nz = car.nozzles[i % car.nozzles.length];
-    const p = nz.pos.clone().applyMatrix4(m);
-    const d = nz.dir.clone().transformDirection(m);
-    gas.emit(
+  const n = car.nozzles[index];
+  const p = tmpA.copy(n.pos).applyMatrix4(m);
+  const d = tmpV.copy(n.dir).normalize().transformDirection(m);
+  for (let i = 0; i < count; i++) {
+    const sp = speed * (0.7 + Math.random() * 0.6);
+    vapor.emit(
       p,
-      d
-        .multiplyScalar(6 + Math.random() * 6)
-        .add(
-          tmpV
-            .set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)
-            .multiplyScalar(2.5),
-        ),
-      0.22 + Math.random() * 0.25,
-      0.4 + Math.random() * 0.45,
-      0.5,
+      tmpL.set(
+        d.x * sp + (Math.random() - 0.5) * 2,
+        d.y * sp + (Math.random() - 0.5) * 2,
+        d.z * sp - sim.v * 0.93 + (Math.random() - 0.5) * 2,
+      ),
+      size * (0.7 + Math.random() * 0.6),
+      1.3 + Math.random() * 1.6,
+      alpha,
+      WHITE,
+      1,
     );
   }
 }
 
-function landDust() {
-  for (let i = 0; i < 26; i++) {
-    const side = i % 2 ? 1 : -1;
+/** Gas hitting the road under the car and rolling outwards. */
+function groundBlast(count) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 0.5 + Math.random() * 1.6;
+    const out = 3 + Math.random() * 7;
     smoke.emit(
-      tmpV.set(side * (0.9 + Math.random() * 0.4), 0.15, carPos.z + (Math.random() - 0.5) * 4),
-      tmpL.set(side * (1 + Math.random() * 3), 0.6 + Math.random(), (Math.random() - 0.3) * 6),
-      0.9 + Math.random() * 0.8,
-      1.2 + Math.random(),
-      0.4,
+      tmpA.set(
+        carPos.x + Math.cos(a) * r,
+        0.25 + Math.random() * 0.6,
+        carPos.z + Math.sin(a) * r * 1.6,
+      ),
+      tmpL.set(Math.cos(a) * out, 0.6 + Math.random() * 2.2, Math.sin(a) * out - sim.v * 0.85),
+      1.4 + Math.random() * 1.4,
+      2.4 + Math.random() * 1.8,
+      0.42,
+      tmpC.copy(WHITE).lerp(WARM, Math.random() * 0.6),
+      1.3,
     );
   }
+}
+
+/** The big touchdown cloud, lit pink from below by the tail lights. */
+function landingCloud() {
+  const n = isSmall ? 90 : 150;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * 2.4;
+    const y = 0.2 + Math.random() * 2.6;
+    const low = y < 1.3;
+    const out = 1.5 + Math.random() * 6;
+    smoke.emit(
+      tmpA.set(carPos.x + Math.cos(a) * r, y, carPos.z + Math.sin(a) * r * 1.4),
+      tmpL.set(Math.cos(a) * out, 1 + Math.random() * 5, Math.sin(a) * out - sim.v * 0.9),
+      2 + Math.random() * 2.6,
+      3.2 + Math.random() * 3,
+      low ? 0.55 : 0.45,
+      tmpC.copy(WHITE).lerp(PINK, low ? 0.35 + Math.random() * 0.45 : Math.random() * 0.15),
+      1.6,
+    );
+  }
+}
+
+function liftBurst() {
+  for (let k = 4; k < 8; k++) vaporJet(k, 10, 18, 0.7, 0.7);
+  groundBlast(isSmall ? 24 : 40);
 }
 
 function afterStep(dt) {
@@ -1865,35 +2115,48 @@ function afterStep(dt) {
       addSkid(-0.88, rz);
       addSkid(0.88, rz);
     }
-    const heavy = (sim.force - 900) / 712;
-    if (Math.random() < heavy * 0.5 && sim.v > 6) {
-      for (const side of [-1, 1]) {
-        smoke.emit(
-          tmpV.set(side * 0.95, 0.25, carPos.z + 1.6),
-          tmpL.set(side * Math.random() * 1.5, 0.6 + Math.random() * 0.8, sim.v * 0.15),
-          0.6 + Math.random() * 0.5,
-          0.9 + Math.random() * 0.8,
-          0.28 * heavy,
-        );
-      }
-    }
   } else {
     skidLastX = sim.x;
   }
-  if (thrusterTime > 0) {
-    thrusterTime -= dt;
-    if (Math.random() < 0.9) burstGas(2);
+  // burnout smoke from the rear tyres: hard braking, and the self-stop after a leap
+  const heavy = sim.auto ? 0.7 : (sim.force - 800) / 812;
+  if (!sim.airborne && sim.powerCut && heavy > 0 && sim.v > 4) {
+    for (const side of [-1, 1]) {
+      if (Math.random() > 0.35 + heavy * 0.6) continue;
+      smoke.emit(
+        tmpA.set(carPos.x + side * 0.95, 0.3, carPos.z + 1.5),
+        tmpL.set(side * Math.random() * 1.6, 0.4 + Math.random() * 1.1, -sim.v * 0.18),
+        0.9 + Math.random() * 0.9,
+        2.2 + Math.random() * 1.8,
+        0.3 * Math.min(1, heavy + 0.25),
+        tmpC.copy(WHITE).lerp(PINK, Math.random() * 0.3),
+        1.1,
+      );
+    }
   }
-  // fire the thrusters again just before touchdown to settle the car
-  if (sim.air && !sim.air.settled && sim.air.T - sim.air.t < 0.28) {
-    sim.air.settled = true;
-    thrusterTime = Math.max(thrusterTime, 0.25);
+  // corner thrusters in the air: firing hard on take-off and touchdown,
+  // pulsing in between to drive the roll; the vapour corkscrews as the car turns
+  liftFiring = false;
+  if (sim.air) {
+    const s = sim.air.t / sim.air.T;
+    liftFiring = s < 0.36 || s > 0.74 || Math.sin(sim.air.t * 21) > 0.4;
+    if (liftFiring) {
+      for (let k = 4; k < 8; k++) if (Math.random() < 0.8) vaporJet(k, 2, 18, 0.8, 0.75);
+      if (sim.air.kind === 'leap' && s < 0.5) vaporJet((Math.random() * 4) | 0, 1, 12, 0.45);
+      if (sim.z < 4.5 && Math.random() < 0.7) groundBlast(2);
+      thrusterTime = 0.05;
+    }
+  }
+  if (thrusterTime > 0) thrusterTime -= dt;
+  // rear jets leave a thin vapour trail behind the plumes
+  if (sim.jet > 0.05 && Math.random() < sim.jet * 0.7) {
+    vaporJet((Math.random() * 4) | 0, 1, 22, 0.32, 0.28 * sim.jet);
   }
 }
 
 function updateCamera(dt) {
   const v = sim.v;
-  const sf = Math.min(1, v / 100);
+  const sf = Math.min(1, v / 110);
   let off;
   let look;
   let f;
@@ -1911,9 +2174,13 @@ function updateCamera(dt) {
       k = 2;
       break;
     case 'chase':
-      off = tmpV.set(0.55 - sf * 0.3, 1.85 - sf * 0.35, 7.2 - sf * 1.3);
+      off = tmpV.set(
+        0.55 - sf * 0.3 + sim.jet * 0.9,
+        1.85 - sf * 0.35 + sim.jet * 0.7,
+        7.2 - sf * 1.3 + sim.jet * 1.6,
+      );
       look = tmpL.set(0, 0.15, -9);
-      f = 52 + sf * 22;
+      f = 52 + sf * 20 + sim.jet * 9;
       break;
     case 'brake':
       off = tmpV.set(2.1, 1.25, 6.6 - sf);
@@ -1925,6 +2192,17 @@ function updateCamera(dt) {
       look = tmpL.set(0, 0.1, -1.2);
       f = 46;
       k = 4.5;
+      break;
+    case 'landed':
+      landCam -= dt;
+      if (landCam <= 0) {
+        camMode = sim.phase === 'stopped' ? 'finish' : 'brake';
+        slowTarget = 1;
+      }
+      off = tmpV.set(4.2, 1.7, -10.5);
+      look = tmpL.set(0, 0.4, 6);
+      f = 54;
+      k = 5;
       break;
     case 'finish':
       finishOrbit += dt * 0.32;
@@ -1962,7 +2240,9 @@ function updateCamera(dt) {
     shake = Math.max(0, shake - dt * 1.6);
   }
   if (mode === 'run' && sim.v > 60 && !reduceMotion && !sim.airborne) {
-    camera.position.y += (Math.random() - 0.5) * 0.012 * sf;
+    const buzz = 0.012 * sf + 0.03 * sim.jet;
+    camera.position.x += (Math.random() - 0.5) * buzz;
+    camera.position.y += (Math.random() - 0.5) * buzz;
   }
   camera.lookAt(target);
   if (Math.abs(camera.fov - fov) > 0.01) {
@@ -1989,18 +2269,29 @@ function updateCar(dt, simDt) {
   car.tailMat.emissiveIntensity +=
     ((braking ? 9 : 2.2) - car.tailMat.emissiveIntensity) * Math.min(1, dt * 12);
   car.nozzleMat.emissiveIntensity =
-    thrusterTime > 0
-      ? 6 + Math.random() * 3
+    thrusterTime > 0 || sim.jet > 0.05
+      ? 4 + Math.random() * 3 + sim.jet * 4
       : Math.max(0, car.nozzleMat.emissiveIntensity - dt * 20);
 
+  // four rear plumes with shock diamonds while the jets are lit
+  plumeTime.value = elapsed;
+  const jp = sim.jet;
+  car.plumes.forEach((p, i) => {
+    const pw = jp * (0.88 + 0.12 * Math.sin(elapsed * 53 + i * 1.7));
+    p.visible = pw > 0.01;
+    p.material.uniforms.uPower.value = pw;
+    p.scale.set(1 + jp * 0.15, 0.35 + 0.8 * jp + 0.06 * Math.sin(elapsed * 41 + i), 1 + jp * 0.15);
+  });
+  car.jetLight.intensity = jp * 28;
+
   // contact shadow stays on the road and fades with height
-  car.blob.position.set(0, 0.012, car.root.position.z);
+  car.blob.position.set(sim.side, 0.012, car.root.position.z);
   const h = Math.min(1, sim.z / 4);
   car.blob.material.opacity = 1 - h * 0.85;
   car.blob.scale.setScalar(1 + h * 0.5);
 
-  smoke.update(simDt, { gravity: -0.4, drag: 1.6, growth: 2.4 });
-  gas.update(simDt, { gravity: -0.2, drag: 2.2, growth: 3.2 });
+  smoke.update(simDt, { gravity: -0.5, drag: 0.7, growth: 1.6 });
+  vapor.update(simDt, { gravity: -0.25, drag: 1.4, growth: 2.2 });
 }
 
 function updateWorld() {
@@ -2019,6 +2310,14 @@ function updateWorld() {
 function updateHud() {
   if (mode !== 'run') return;
   ui.speed.textContent = String(Math.round(sim.speedKmh));
+  ui.mph.textContent = `${Math.round(sim.v / 0.44704)} mph`;
+  const gas = sim.gas / SPEC.jet.tankS;
+  const jetLive = sim.phase === 'accelerating' && sim.gas > 0;
+  ui.jetBtn.style.setProperty('--gas', gas.toFixed(3));
+  ui.jetBtn.disabled = !jetLive;
+  ui.jetBtn.classList.toggle('ready', jetLive);
+  ui.jetBtn.classList.toggle('firing', sim.jetting);
+  ui.jetGas.textContent = `${sim.gas.toFixed(1)}s`;
   const n = Math.min(1, sim.speedKmh / SPEEDO_MAX);
   ui.arc.style.strokeDashoffset = `${arcLen * (1 - n)}`;
   ui.arc.classList.toggle('ready', sim.speedKmh >= SPEC.brake.minSpeedKmh);
@@ -2076,7 +2375,7 @@ function resize() {
   camera.updateProjectionMatrix();
   if (composer) composer.setSize(w, h);
   smoke.resize();
-  gas.resize();
+  vapor.resize();
   if (lastResult && mode === 'result') drawChart(lastResult);
 }
 window.addEventListener('resize', resize);
@@ -2084,7 +2383,7 @@ window.visualViewport?.addEventListener('resize', resize);
 
 let last = performance.now();
 let maxDt = 0.05;
-const api = { policy: null };
+const api = { policy: null, jetPolicy: null };
 
 function frame(now) {
   const dt = Math.min(maxDt, (now - last) / 1000);
@@ -2103,7 +2402,8 @@ function frame(now) {
       acc -= STEP;
       const prevX = sim.x;
       const input = api.policy ? api.policy(sim) : pressed || pulse;
-      const events = sim.step(STEP, input);
+      const jetIn = api.jetPolicy ? api.jetPolicy(sim) : jetHeld;
+      const events = sim.step(STEP, input, jetIn);
       pulse = false;
       placeCar(sim.x - prevX);
       handle(events);
@@ -2126,6 +2426,8 @@ function frame(now) {
     force: sim.force,
     active: mode === 'run' && sim.phase !== 'countdown' && sim.phase !== 'stopped',
     airborne: sim.airborne,
+    jet: sim.jet,
+    lift: liftFiring,
   });
 
   if (composer) composer.render();
