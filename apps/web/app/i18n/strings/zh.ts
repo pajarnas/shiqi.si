@@ -1,6 +1,7 @@
 // 中文。形状和 en.ts 一样；这里缺的键会由翻译服务补上，再缺就显示英文。
 import type { DeepPartial } from '../merge';
 import type { Strings } from './en';
+import { SIAM_ZH } from '~/features/siam/strings';
 
 /** The shared lab frame's words (@shiqi/lab), used by every lab below. */
 const LAB_ZH = {
@@ -448,6 +449,7 @@ export const zh: DeepPartial<Strings> = {
     unavailable: '翻译暂时不可用，下面是英文原文。',
     pending: '翻译还在生成，过一会儿刷新就有了；先看英文原文。',
   },
+  siam: SIAM_ZH,
   rabbitmq: {
     title: 'RabbitMQ 现场',
     description:

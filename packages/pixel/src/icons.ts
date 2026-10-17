@@ -533,6 +533,110 @@ export const ICONS = {
     .....####....
   `,
   ),
+  tortoise: icon(
+    'tortoise',
+    `
+    ...######......
+    ..#:o:o:o#.....
+    .#:o:o:o:o#.###
+    #:o:o:o:o:o##o#
+    ###############
+    .#o#.....#o#...
+    ..##.....##....
+  `,
+  ),
+  hare: icon(
+    'hare',
+    `
+    ...##...##...
+    ..#o:#.#:o#..
+    ..#o:#.#:o#..
+    ..#o:#.#:o#..
+    ..#oo###oo#..
+    .#ooooooooo#.
+    .#oo#ooo#oo#.
+    .#ooooooooo#.
+    .#oooo#oooo#.
+    ..#oo#:#oo#..
+    ...#######...
+  `,
+  ),
+  cat: icon(
+    'cat',
+    `
+    ..#.......#..
+    ..##.....##..
+    ..#o#####o#..
+    .#ooooooooo#.
+    .#oo#ooo#oo#.
+    .#ooooooooo#.
+    ##ooo#:#ooo##
+    .#oooo#oooo#.
+    ..#ooooooo#..
+    ...#######...
+  `,
+  ),
+  dog: icon(
+    'dog',
+    `
+    ...#######...
+    ..#ooooooo#..
+    .##o#ooo#o##.
+    #::#ooooo#::#
+    #::#oo#oo#::#
+    #::#o###o#::#
+    .##ooo#ooo##.
+    ...#ooooo#...
+    ....#####....
+  `,
+  ),
+  bird: icon(
+    'bird',
+    `
+    ....####.....
+    ...#oooo#....
+    ..#oo#ooo#...
+    ..#ooooooo###
+    ..#oooooo#oo#
+    .#ooooooo####
+    #o::::ooo#...
+    #:::::ooo#...
+    .#::::oo#....
+    ..#######....
+    ....#..#.....
+  `,
+  ),
+  bear: icon(
+    'bear',
+    `
+    .###.....###.
+    #:::#####:::#
+    #:#ooooooo#:#
+    .#ooooooooo#.
+    .#oo#ooo#oo#.
+    .#ooo:::ooo#.
+    .#oo:#:#:oo#.
+    .#ooo:::ooo#.
+    ..#ooooooo#..
+    ...#######...
+  `,
+  ),
+  gavel: icon(
+    'gavel',
+    `
+    ....#####....
+    ...#ooooo#...
+    ..#ooooooo#..
+    ...#ooooo#...
+    ....##o##....
+    .....#o#.....
+    .....#o#.....
+    .....#o#.....
+    ...#######...
+    ..#:::::::#..
+    ..#########..
+  `,
+  ),
 } as const satisfies Record<string, Icon>;
 
 export type IconName = keyof typeof ICONS;
