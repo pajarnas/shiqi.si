@@ -13,6 +13,9 @@ type Check = {
   links?: { href: string; label: string; download?: string }[];
 };
 
+/** Where the page mentions on-chain notarization at all. */
+const ON_CHAIN = { en: true, zh: false } as const;
+
 const isJudge = (id: string): id is JudgeId => (JUDGE_IDS as readonly string[]).includes(id);
 
 export function VerifyVerdict() {
@@ -43,19 +46,24 @@ export function VerifyVerdict() {
         sig === null
           ? { ok: null, text: v.sigUnsupported }
           : { ok: sig, text: sig ? v.sigOk : v.sigBad },
-        !anchor
-          ? { ok: null, text: v.anchorSoon }
-          : intact
-            ? {
-                ok: true,
-                text: format(v.anchorOk, { height: anchor.blockHeight }),
-                links: [
-                  { href: `https://mempool.space/block/${anchor.blockHeight}`, label: v.block },
-                  { href: anchor.ots, label: v.proof, download: `siam-${sample.code}.ots` },
-                ],
-              }
-            : { ok: false, text: v.anchorBad },
       ];
+      // On-chain notarization is overseas only; the Chinese page shows the fingerprint and signature.
+      if (ON_CHAIN[lang]) {
+        out.push(
+          !anchor
+            ? { ok: null, text: v.anchorSoon }
+            : intact
+              ? {
+                  ok: true,
+                  text: format(v.anchorOk, { height: anchor.blockHeight }),
+                  links: [
+                    { href: `https://mempool.space/block/${anchor.blockHeight}`, label: v.block },
+                    { href: anchor.ots, label: v.proof, download: `siam-${sample.code}.ots` },
+                  ],
+                }
+              : { ok: false, text: v.anchorBad },
+        );
+      }
       setChecks(out);
     } finally {
       setBusy(false);

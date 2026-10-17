@@ -100,5 +100,6 @@ export const SAMPLE_ANCHORS: Record<
   { blockHeight: number; merkleRoot: string; ots: string } | null
 > = {
   en: null,
+  /** Never shown: the Chinese page has no on-chain step. */
   zh: null,
 };
