@@ -1494,15 +1494,28 @@ ul.topic-tags {
 
 .siam-seal {
   flex: none;
-  width: 6.5rem;
-  height: 6.5rem;
-  transform: rotate(-10deg);
+  width: 7.5rem;
+  height: 7.5rem;
   animation: siam-stamp 0.35s steps(3) both;
+}
+
+/* The seal SVGs carry their own -10° tilt; the text fallback gets it here. */
+.siam-seal--text {
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border: 3px double var(--danger);
+  border-radius: 50%;
+  color: var(--danger);
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  rotate: -14deg;
 }
 
 @keyframes siam-stamp {
   from {
-    transform: rotate(-10deg) scale(2);
+    transform: scale(2);
     opacity: 0;
   }
 }

@@ -42,7 +42,22 @@ import {
  * '-color' the set in each judge's own color; Saige hasn't picked one yet.
  */
 const SEAL_INK: '' | '-color' = '';
-const sealSrc = (judge: JudgeId) => `/siam/seals/seal-${judge}${SEAL_INK}.svg`;
+export const sealSrc = (judge: JudgeId) => `/siam/seals/seal-${judge}${SEAL_INK}.svg`;
+
+/** The judge's seal image, or the plain text stamp if the image fails to load. */
+function Seal({ judge, label, alt }: { judge: JudgeId; label: string; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <span className="siam-seal siam-seal--text" aria-hidden="true">
+        {label}
+      </span>
+    );
+  }
+  return (
+    <img className="siam-seal" src={sealSrc(judge)} alt={alt} onError={() => setFailed(true)} />
+  );
+}
 
 /** How long each of the seven hearing stages stays on screen. */
 const STAGE_MS = 600;
@@ -467,7 +482,12 @@ function Judgment({
           <code className="siam-judgment__hash">{hash}</code>
           <p className="siam-judgment__note">{v.hashNote}</p>
         </div>
-        <img className="siam-seal" src={sealSrc(verdict.judge)} alt={v.seal} />
+        <Seal
+          key={verdict.judge}
+          judge={verdict.judge}
+          label={v.seal}
+          alt={`${s.judges.items[verdict.judge].name} · ${v.seal}`}
+        />
       </footer>
     </article>
   );
