@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { JUDGE_IDS } from '~/features/siam/court';
 import { Courtroom, EMPTY_DRAFT, type Draft } from '~/features/siam/Courtroom';
-import { useI18n, type Strings } from '~/i18n';
+import { AUTO_REVERSE } from '~/features/siam/jury';
+import { format, useI18n, type Strings } from '~/i18n';
 import type { Route } from './+types/siam';
 
 export const meta: Route.MetaFunction = ({ matches }) => pageMeta(matches, (t) => t.siam);
@@ -17,6 +18,7 @@ const FEATURE_ICONS: readonly IconName[] = [
   'swap',
   'magnifier',
   'star',
+  'face',
 ];
 
 const MEDALS = [
@@ -134,7 +136,9 @@ export default function Siam() {
               <Card key={f.title} padded className="siam-feature">
                 <PixelIcon name={FEATURE_ICONS[i] ?? 'star'} size={32} />
                 <strong>{f.title}</strong>
-                <span>{f.text}</span>
+                <span>
+                  {format(f.text, { outcome: s.jury.outcome[AUTO_REVERSE ? 'reverse' : 'flag'] })}
+                </span>
               </Card>
             ))}
           </Grid>
