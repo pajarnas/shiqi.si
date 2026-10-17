@@ -10,6 +10,7 @@ export function loader() {
     '/kafka',
     '/kafka/build',
     '/rabbitmq',
+    '/siam',
     ...chapters().map(chapterPath),
     '/ui',
     ...TOYS.map((t) => t.path),

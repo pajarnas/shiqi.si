@@ -28,6 +28,7 @@ export default [
     route('kafka/build', 'routes/kafka/build.tsx'),
     route('kafka/build/:chapter', 'routes/kafka/chapter.tsx'),
     route('ui', 'routes/ui.tsx'),
+    route('siam', 'routes/siam.tsx'),
     route('admin/visits', 'routes/admin/visits.tsx'),
     ...prefix('visa', [index('routes/visa/home.tsx'), route(':id', 'routes/visa/person.tsx')]),
     ...prefix('chat/visa', [

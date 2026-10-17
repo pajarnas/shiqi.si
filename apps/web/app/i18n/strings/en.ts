@@ -5,6 +5,7 @@ import { KAFKA_STRINGS } from '@shiqi/kafka-viz/strings';
 import { RABBIT_STRINGS } from '@shiqi/rabbitmq-viz/strings';
 import { UI_STRINGS } from '@shiqi/ui';
 import { CODE_STRINGS } from '@shiqi/code';
+import { SIAM_EN } from '~/features/siam/strings';
 
 export const en = {
   site: {
@@ -423,6 +424,7 @@ export const en = {
     pending:
       'The translation is still being written. Refresh in a minute; here is the English original for now.',
   },
+  siam: SIAM_EN,
   rabbitmq: {
     title: 'RabbitMQ, live',
     description:
