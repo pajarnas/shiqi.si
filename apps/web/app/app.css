@@ -1422,6 +1422,33 @@ ul.topic-tags {
   white-space: nowrap;
 }
 
+.siam-blame__legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}
+
+.siam-blame__key--a::before,
+.siam-blame__key--b::before {
+  content: '';
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.4em;
+  border: 1px solid var(--border);
+}
+
+.siam-blame__key--a::before {
+  background: #2563eb;
+}
+
+.siam-blame__key--b::before {
+  background: #db2777;
+}
+
 .siam-blame__a {
   background: #2563eb;
 }
@@ -1433,6 +1460,7 @@ ul.topic-tags {
 
 .siam-judgment__foot {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
   align-items: center;
   margin-top: var(--space-5);
@@ -1441,7 +1469,7 @@ ul.topic-tags {
 }
 
 .siam-judgment__foot > div {
-  flex: 1;
+  flex: 1 1 12rem;
   display: grid;
   gap: var(--space-1);
   min-width: 0;

@@ -175,7 +175,7 @@ export const SIAM_EN = {
   },
   judges: {
     title: 'The bench',
-    lede: 'Six animal judges. Each rules on their own and never sees another judge’s verdict; on appeal they read only the first judgment. They differ in tone and in what they weigh most.',
+    lede: 'Six animal judges. Each rules on their own and never sees another judge’s verdict; on appeal they read only the first judgment. They differ in tone and in what they weigh most. Judge Slowpoke and Judge Hop are free; the other four are a one-time unlock.',
     items: {
       tortoise: {
         name: 'Judge Slowpoke',
@@ -426,7 +426,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
   },
   judges: {
     title: '法官席',
-    lede: '六位动物法官。每位都独立判案，不会看到别的法官的判决；二审只看一审判决书。他们的区别在语气，和最看重什么。',
+    lede: '六位动物法官。每位都独立判案，不会看到别的法官的判决；二审只看一审判决书。他们的区别在语气，和最看重什么。龟慢慢和兔跳跳免费，另外四位一次买断。',
     items: {
       tortoise: {
         name: '龟慢慢',

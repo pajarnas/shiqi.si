@@ -19,11 +19,11 @@ export async function sha256Hex(text: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** First 12 hex digits, upper case, in groups of four: "3F2A-91C0-7B44". */
+/** First 16 hex digits, upper case, in groups of four, as the server's displayCode. */
 export function antiForgeryCode(hex: string): string {
   return (
     hex
-      .slice(0, 12)
+      .slice(0, 16)
       .toUpperCase()
       .match(/.{1,4}/g)
       ?.join('-') ?? ''

@@ -96,6 +96,6 @@ describe('fingerprint', () => {
   it('hashes with SHA-256 and shortens to an anti-forgery code', async () => {
     const hex = await sha256Hex('abc');
     expect(hex).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
-    expect(antiForgeryCode(hex)).toBe('BA78-16BF-8F01');
+    expect(antiForgeryCode(hex)).toBe('BA78-16BF-8F01-CFEA');
   });
 });

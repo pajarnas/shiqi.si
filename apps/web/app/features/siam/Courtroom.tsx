@@ -41,8 +41,20 @@ export const EMPTY_DRAFT: Draft = { title: '', a: '', aEvidence: '', b: '', bEvi
 
 const toFiling = (statement: string, evidence: string): Filing => ({
   statement,
-  evidence: evidence.split('\n').filter((e) => e.trim()),
+  evidence: evidence
+    .split('\n')
+    .filter((e) => e.trim())
+    .slice(0, MAX_EVIDENCE),
 });
+
+/** Keep the evidence box to MAX_EVIDENCE filled lines, as the app allows. */
+const capEvidence = (text: string) => {
+  let filled = 0;
+  return text
+    .split('\n')
+    .filter((line) => !line.trim() || ++filled <= MAX_EVIDENCE)
+    .join('\n');
+};
 
 const caseCodeOf = (hash: string) =>
   `SIAM-${hash.slice(52, 56).toUpperCase()}-${hash.slice(56, 60).toUpperCase()}`;
@@ -185,7 +197,9 @@ export function Courtroom({
                   value={side === 'A' ? draft.aEvidence : draft.bEvidence}
                   onChange={(e) =>
                     edit(
-                      side === 'A' ? { aEvidence: e.target.value } : { bEvidence: e.target.value },
+                      side === 'A'
+                        ? { aEvidence: capEvidence(e.target.value) }
+                        : { bEvidence: capEvidence(e.target.value) },
                     )
                   }
                 />
@@ -362,12 +376,20 @@ function Judgment({
         aria-label={`${s.plaintiff} ${verdict.respA}%, ${s.defendant} ${100 - verdict.respA}%`}
       >
         <span className="siam-blame__a" style={{ flexGrow: verdict.respA }}>
-          {format(v.blameRow, { side: s.plaintiff, pct: verdict.respA })}
+          {verdict.respA}%
         </span>
         <span className="siam-blame__b" style={{ flexGrow: 100 - verdict.respA }}>
-          {format(v.blameRow, { side: s.defendant, pct: 100 - verdict.respA })}
+          {100 - verdict.respA}%
         </span>
       </div>
+      <p className="siam-blame__legend" aria-hidden="true">
+        <span className="siam-blame__key--a">
+          {format(v.blameRow, { side: s.plaintiff, pct: verdict.respA })}
+        </span>
+        <span className="siam-blame__key--b">
+          {format(v.blameRow, { side: s.defendant, pct: 100 - verdict.respA })}
+        </span>
+      </p>
       <h4>{v.makeup}</h4>
       <p>{makeup ?? v.makeupOwn}</p>
       <footer className="siam-judgment__foot">
