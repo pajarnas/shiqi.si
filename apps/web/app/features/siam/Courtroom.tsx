@@ -27,6 +27,7 @@ import {
 } from './court';
 import { antiForgeryCode, canonicalJSON, sha256Hex } from './fingerprint';
 import {
+  AUTO_REVERSE,
   JURY_SIZE,
   opinionsFor,
   OVERRULE_PCT,
@@ -172,6 +173,7 @@ export function Courtroom({
     );
     const sealed = await seal(draft, v, 2);
     setSecond({ ...sealed, outcome: appealOutcome(first.verdict, v) });
+    setJury(null);
   };
 
   const hearing = stage !== null;
@@ -478,7 +480,7 @@ const round5 = (n: number) => Math.round(n / 5) * 5;
 
 /** The jury's ruling: its majority wins, and blame follows the vote shares. */
 function juryVerdict(effective: Verdict, t: Tally): Verdict {
-  const ranked = (['A', 'B', 'draw'] as const).toSorted((x, y) => t[y] - t[x]);
+  const ranked = [...(['A', 'B', 'draw'] as const)].sort((x, y) => t[y] - t[x]);
   const top = ranked[0]!;
   const winner: Winner = t[top] === t[ranked[1]!] ? 'draw' : top;
   const respA =
@@ -521,7 +523,7 @@ function JuryPanel({
     let live = true;
     const tl = tally(all, effective.verdict.winner);
     const opinions = opinionsFor(all, s.jury.pool, effective.hash);
-    if (!tl.overruled) onResult({ votes: all, tally: tl, opinions });
+    if (!tl.overruled || !AUTO_REVERSE) onResult({ votes: all, tally: tl, opinions });
     else
       void seal(draft, juryVerdict(effective.verdict, tl), 'jury').then(
         (ruling) => live && onResult({ votes: all, tally: tl, opinions, ruling }),
@@ -562,7 +564,17 @@ function JuryPanel({
               </span>
             ))}
           </p>
-          {result && !result.ruling && <p className="siam-jury__verdict">{s.jury.upheld}</p>}
+          {result && !result.tally.overruled && (
+            <p className="siam-jury__verdict">{s.jury.upheld}</p>
+          )}
+          {result?.tally.overruled && !result.ruling && (
+            <Callout>
+              {format(s.jury.flagged, {
+                pct: 100 - result.tally.agreePct,
+                n: result.tally.votes,
+              })}
+            </Callout>
+          )}
           {result?.ruling && <Callout>{s.jury.superseded}</Callout>}
           {result && result.opinions.length > 0 && (
             <div>

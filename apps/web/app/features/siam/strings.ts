@@ -162,18 +162,20 @@ export const SIAM_EN = {
     },
   },
   jury: {
-    title: 'The public jury',
-    text: 'In the app, both sides can let anonymous strangers review the case. Jurors are picked at random, read the judgment, vote and may leave a short opinion. From {quorum} votes the tally counts, and if {pct}% or more disagree, the judge admits error and the ruling is reversed.',
+    title: 'The public jury (planned)',
+    text: 'Coming to the app: only if both sides agree, the case goes anonymously to strangers picked at random. Even a final ruling can be reviewed this way, once. Jurors read the judgment, vote and may leave a short opinion. From {quorum} votes the tally counts, and if {pct}% or more disagree, the judge admits error and the ruling is reversed.',
     button: 'Send to the jury',
     simulated: 'Simulated: these {n} jurors live in your browser.',
     counting: 'Jurors voting: {n} of {total}',
     draw: 'Draw',
     agree: '{pct}% of {n} jurors agree with the court.',
     upheld: 'The jury backs the court. The ruling stands.',
+    flagged:
+      '{pct}% of {n} jurors disagreed. The ruling stands, and the case is flagged for the court to review.',
     admits:
       '{judge}: “The court got this one wrong. {pct}% of {n} jurors disagreed, so the ruling is reversed.”',
     opinions: 'What jurors said',
-    instance: 'Public jury review (final)',
+    instance: 'Public jury review',
     superseded: 'Reversed by the public jury. The ruling below replaces it.',
     pool: {
       A: [
@@ -277,8 +279,8 @@ export const SIAM_EN = {
         text: 'Metal medals in the style of fitness awards, earned from real cases: first win, comeback on appeal, handshake draw.',
       },
       {
-        title: 'A public jury',
-        text: 'Let anonymous strangers review the case at random. If 90% of at least 20 jurors disagree, the judge admits error and the ruling is reversed.',
+        title: 'A public jury (planned)',
+        text: 'If both sides agree, let anonymous strangers review the case at random. If 90% of at least 20 jurors disagree, the judge admits error and the ruling is reversed.',
       },
     ],
   },
@@ -451,17 +453,18 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
     },
   },
   jury: {
-    title: '网友陪审团',
-    text: 'App 里，双方都同意的话，案子会匿名交给随机挑选的网友复核。陪审员看完判决书投票，还可以留一句意见。满 {quorum} 票才算数；{pct}% 以上不同意判决，法官就认错并改判。',
+    title: '网友陪审团（规划中）',
+    text: 'App 之后会加：双方都同意的话，案子会匿名交给随机挑选的网友复核，终审判决也可以复核一次。陪审员看完判决书投票，还可以留一句意见。满 {quorum} 票才算数；{pct}% 以上不同意判决，法官就认错并改判。',
     button: '交给网友陪审',
     simulated: '模拟：这 {n} 位陪审员都在你的浏览器里。',
     counting: '陪审员投票中：{n} / {total}',
     draw: '平局',
     agree: '{n} 位陪审员里，{pct}% 同意本庭判决。',
     upheld: '陪审团支持本庭，原判维持。',
+    flagged: '{n} 位陪审员里 {pct}% 不同意。原判暂时有效，案子已标记，交本庭复查。',
     admits: '{judge}：“这次是本庭判错了。{n} 位陪审员里 {pct}% 不同意，现在改判。”',
     opinions: '陪审员说',
-    instance: '网友复核（终审）',
+    instance: '网友复核',
     superseded: '已被网友陪审团改判，以下面的判决为准。',
     pool: {
       A: [
@@ -561,8 +564,8 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
         text: '仿健身奖章的金属勋章，按真实记录颁发：首次胜诉、二审翻盘、握手言和。',
       },
       {
-        title: '网友陪审团',
-        text: '案子可以匿名交给随机的网友复核。至少 20 人投票、90% 以上不同意时，法官认错并改判。',
+        title: '网友陪审团（规划中）',
+        text: '双方同意后，案子可以匿名交给随机的网友复核。至少 20 人投票、90% 以上不同意时，法官认错并改判。',
       },
     ],
   },

@@ -44,4 +44,10 @@ describe('opinionsFor', () => {
     for (const o of out) expect(pool[o.vote]).toContain(o.text);
     expect(new Set(out.map((o) => o.text)).size).toBe(out.length);
   });
+
+  it('quotes the majority first, even when the minority voted first', () => {
+    const pool = { A: ['a1'], B: ['b1', 'b2', 'b3'], draw: ['d1'] };
+    const out = opinionsFor(['A', 'draw', 'B', 'B', 'B', 'B', 'B', 'B'], pool, 's');
+    expect(out[0]?.vote).toBe('B');
+  });
 });

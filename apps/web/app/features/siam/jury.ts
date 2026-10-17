@@ -7,6 +7,12 @@ import { jurorLean, type Filing, type Winner } from './court';
 export const JURY_SIZE = 25;
 export const QUORUM = 20;
 export const OVERRULE_PCT = 90;
+/**
+ * What an overruling does. true: the judge admits error and a new jury ruling replaces the old one.
+ * false: the ruling stands and the case is only flagged for review. Still an open call for Saige
+ * (see siam-server#13), so the demo keeps it to this one switch.
+ */
+export const AUTO_REVERSE = true;
 
 export interface Tally {
   votes: number;
@@ -45,7 +51,7 @@ export function tally(votes: readonly Winner[], ruling: Winner): Tally {
   };
 }
 
-/** A few juror opinions to show, picked to match how they voted. */
+/** A few juror opinions to show, picked to match how they voted, the majority's first. */
 export function opinionsFor(
   votes: readonly Winner[],
   pool: Record<Winner, readonly string[]>,
@@ -55,7 +61,10 @@ export function opinionsFor(
   const r = rng(hash(`${seed}:opinions`));
   const seen = new Set<string>();
   const out: { vote: Winner; text: string }[] = [];
-  for (const vote of votes) {
+  // Majority first, so a reversal quotes the jurors who carried it.
+  const count = (w: Winner) => votes.filter((v) => v === w).length;
+  const ordered = [...votes].sort((x, y) => count(y) - count(x));
+  for (const vote of ordered) {
     if (out.length >= max) break;
     const options = pool[vote];
     const text = options[Math.floor(r() * options.length)];
