@@ -1,0 +1,89 @@
+export const frontmatter = {
+  title: 'Making game sounds with the Web Audio API',
+  date: '2026-10-16',
+  summary:
+    'No audio files: an electric motor, wind, tyre squeal, jets and one-shot effects built from oscillators, a buffer of noise, filters and gain envelopes, plus the autoplay rule that makes you wait for a tap.',
+  topics: ['games', 'web'],
+};
+
+Every sound in [the brake game](/game) is synthesised in the browser. There are no audio files to download, and every sound follows the simulation exactly, because its pitch and volume are computed from the car's speed every frame.
+
+## The graph
+
+Web Audio is a graph of nodes. Sources (oscillators, buffers) flow through processors (filters, gains) into `ctx.destination`, the speakers. The game puts one master gain in front of the speakers so mute is a single fade:
+
+```js
+const ctx = new AudioContext();
+const master = ctx.createGain();
+master.connect(ctx.destination);
+```
+
+`connect()` returns the node it connected to, so chains read left to right: `osc.connect(filter).connect(gain).connect(master)`.
+
+## Autoplay: start on a gesture
+
+Browsers keep an `AudioContext` suspended until the user interacts with the page. So the game creates (or `resume()`s) the context inside the first tap or key press, in an `unlock()` method, and every sound method returns early while there is no context yet. Creating it at page load gives a silent, suspended context and a console warning.
+
+## Two raw materials
+
+**Oscillators** give pitched tones: `sine` (pure), `square` (hollow, beepy), `sawtooth` (buzzy, rich in harmonics), `triangle`.
+
+**Noise** gives everything without a pitch: wind, hiss, roar, squeal. Make two seconds of white noise once and reuse it:
+
+```js
+const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+const d = noise.getChannelData(0);
+for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+```
+
+A `BufferSource` plays it, with `loop = true` for continuous sounds. Each source can only be started once, so one-shots create a new source on the shared buffer each time (and start at a random offset so repeats don't sound identical).
+
+## Filters shape noise into things
+
+A `BiquadFilter` keeps part of the spectrum:
+
+| Sound          | Recipe                                                                              |
+| -------------- | ----------------------------------------------------------------------------------- |
+| Electric motor | low `sawtooth` through a `lowpass`, plus a quiet high `sine` for the inverter whine |
+| Wind           | noise through a wide `bandpass` (Q 0.6) whose centre rises with speed               |
+| Tyre squeal    | noise through a narrow `bandpass` at 2600 Hz (Q 9)                                  |
+| Jet roar       | noise through a `lowpass` at 500 to 1400 Hz                                         |
+| Thruster hiss  | noise through a `highpass` at 1500 Hz                                               |
+
+**Q** is how narrow a bandpass is. Low Q is a broad whoosh; high Q is close to a whistle, which is why the same noise can become both wind and squeal.
+
+## Continuous sounds: drive the parameters
+
+Continuous layers start once at gain 0 and are then steered every frame from the simulation:
+
+```js
+motor.frequency.setTargetAtTime(38 + v * 1.4, now, 0.05);
+windGain.gain.setTargetAtTime(on * w * w * 0.2, now, 0.12);
+```
+
+`setTargetAtTime(value, start, timeConstant)` glides toward the value exponentially; after one time constant it is about 63% of the way there. Setting `.value` directly every frame instead produces audible clicks and zipper noise.
+
+Mapping game state to sound is where the character comes from: wind volume grows with the square of speed (like drag), squeal only starts above a pedal force and fades in with speed, the motor quietens the instant the power is cut.
+
+## One-shots: envelopes
+
+A short sound is a source plus a gain envelope scheduled ahead on the audio clock:
+
+```js
+g.gain.setValueAtTime(0.0001, at);
+g.gain.exponentialRampToValueAtTime(vol, at + 0.01); // attack
+g.gain.exponentialRampToValueAtTime(0.0001, at + dur); // decay
+osc.start(at);
+osc.stop(at + dur + 0.05);
+```
+
+- Exponential ramps sound natural for loudness, but they can't reach 0, so they start and end at `0.0001`.
+- A falling pitch ramp (`frequency` from 140 to 50 Hz) on a sine turns a click into a thump.
+- Layer a filtered noise burst with a tone for impacts: the game's thrust is a highpass burst, a lowpass burst and a falling sine together.
+- Always `stop()` a one-shot so its nodes can be garbage collected.
+
+## Scheduling on the audio clock
+
+`ctx.currentTime` is the audio hardware's clock, separate from `performance.now()`. Scheduling with it (`at = ctx.currentTime`) is sample-accurate, while doing the same with `setTimeout` drifts by whole milliseconds.
+
+Related: [the day the game was built](/notes/journal/2026-10-16-brake-game), [a fixed-step game loop](/notes/commonplace/fixed-step-game-loop).

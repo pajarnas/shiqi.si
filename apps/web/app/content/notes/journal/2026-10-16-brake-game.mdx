@@ -1,0 +1,73 @@
+export const frontmatter = {
+  title: 'A brake game at /game',
+  date: '2026-10-16',
+  summary:
+    'A 3D brake-or-flip game added as a plain static page with vendored three.js, then three quick rounds of changes: jets to 383 mph, no limit on the jets, and a barrier leap that ends the run on touchdown without changing any score.',
+  topics: ['games', 'web', 'architecture'],
+};
+
+All times are UTC: 06:53 to 09:19, which was 23:53 on 2026-10-15 to 02:19 on 2026-10-16 in Fremont. It covers PRs #53 to #56.
+
+## The game (06:53, PR #53)
+
+[/game](/game) is a 3D brake challenge. A car accelerates down a 2600 m road toward a barrier, using the launch figures quoted for the new Tesla Roadster: 0 to 60 mph in 0.81 s and a 250 mph motor top speed. Press and hold to brake. The rules that make it a game:
+
+- **Pedal force ramps** the longer you hold. Its rate of growth is 200 + 800·t N/s, so held from zero the force after `t` seconds is 200t + 400t² N.
+- **At 1612 N the car doesn't break, it jumps**: thrusters lift it and it rolls sideways through the air. Held from zero, that is about 1.77 s of pedal, so hard braking means pumping it.
+- **If it can't stop in time**, it leaps the barrier and lands on the other side.
+- **Score = initial speed² ÷ stopping time.** With roughly constant deceleration `a`, stopping time is `v/a`, so the score works out to about speed × deceleration (my own derivation, not from the code): brake later and harder, but not too hard.
+
+How it is built:
+
+- **A plain static page** in `apps/web/public/game/`, served as-is next to the React site: `index.html`, `game.js`, `style.css` and `physics.js`.
+- **three.js r170 vendored** into `public/game/vendor/` with its licence, plus the postprocessing add-ons for bloom. An **import map** in `index.html` maps the bare specifiers so the code can write `import * as THREE from 'three'`, as it would with a bundler:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.min.js",
+      "three/addons/": "./vendor/addons/"
+    }
+  }
+</script>
+```
+
+- **Tooling had to learn about it.** The vendored code is ignored by Prettier (`.prettierignore`) and ESLint (`ignores`), and an ESLint block gives `apps/web/public/game/**/*.js` browser globals, since it isn't TypeScript and isn't bundled.
+- **Physics in its own module** with no DOM or three.js, stepped at a fixed 1/120 s and returning events for sound, camera and HUD. See [A fixed-step game loop](/notes/commonplace/fixed-step-game-loop).
+- **Synthesised sound** with Web Audio, no audio files. See [Making game sounds with the Web Audio API](/notes/commonplace/web-audio-synthesis).
+- Chinese and English, keyboard and touch input with vibration on phones, and a small optional tip dialog.
+
+## Jets, rolls and smoke (08:51, PR #54)
+
+- **JET** (Shift, ↑, or a button at the bottom left) lights four rear nozzles: about 2 g of extra push and a 383 mph (616 km/h) top speed, against 250 mph on the motors alone. The plumes are a shader with Mach diamonds.
+- Flips and leaps now lift on corner thrusters, roll a full turn sideways and drift a lane over and back.
+- White vapour while airborne, a lit touchdown cloud with a reverse camera shot, and burnout smoke while braking.
+- **Particles fade near the camera**, so smoke never covers the result panel. The first version limited the jets to 7 s of gas.
+
+In the physics, the jet's push fades out near top speed with a steep curve, `2g · (1 − (v/v_top)^10)`, so it is almost full strength until the very end, and its strength spools up and down smoothly instead of switching on and off.
+
+## No limit on the jets (09:02, PR #55)
+
+The 7-second tank was removed: hold JET as long as you like. The button's ring now shows how close the car is to 383 mph instead of how much gas is left, and its label reads ∞ with the seconds fired.
+
+## A leap ends the run on touchdown (09:16, PR #56)
+
+After clearing the barrier, the car used to brake itself gently (about 1.2 g) while the player waited for it to stop. Now the run ends the moment it lands. The self-stop still counts: on landing, the physics runs the remaining steps instantly in a loop with the same `step` function, and adds that time to the clock. So:
+
+- scores are exactly what they were before the change, and
+- a leap still never beats a clean stop, because it always pays for a slow, gentle stop it didn't have to watch.
+
+## What I learned
+
+- **Not everything has to be React.** A self-contained game is simpler as a static page in `public/`; the site just links to it. The cost is telling Prettier and ESLint what it is.
+- **Import maps make vendored ES modules feel bundled**, with no build step.
+- **Keep physics free of the DOM.** It can be stepped in Node, driven by a script, and run ahead instantly when the game needs a result it doesn't want to show.
+- **Fixed steps make a game fair.** The same input gives the same score on every screen.
+- **A rule change can keep old scores valid** if the time it skips is still computed, just not shown.
+- **Sound can be code.** Oscillators, a buffer of noise and filters cover motors, wind, squeal and jets.
+
+## General notes from today
+
+- New: [A fixed-step game loop](/notes/commonplace/fixed-step-game-loop), [Making game sounds with the Web Audio API](/notes/commonplace/web-audio-synthesis)
+- Related: [Rewind, replay and loop in a deterministic simulation](/notes/commonplace/replayable-simulations)
