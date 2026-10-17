@@ -10,7 +10,7 @@ import {
   TextArea,
   TextInput,
 } from '@shiqi/ui';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { format, useI18n } from '~/i18n';
 import {
   appealJudges,
@@ -23,11 +23,23 @@ import {
   type JudgeId,
   type Side,
   type Verdict,
+  type Winner,
 } from './court';
 import { antiForgeryCode, canonicalJSON, sha256Hex } from './fingerprint';
+import {
+  JURY_SIZE,
+  opinionsFor,
+  OVERRULE_PCT,
+  QUORUM,
+  simulateJury,
+  tally,
+  type Tally,
+} from './jury';
 
 /** How long each of the seven hearing stages stays on screen. */
 const STAGE_MS = 600;
+/** How fast simulated jurors cast their votes. */
+const VOTE_MS = 90;
 
 export interface Draft {
   title: string;
@@ -65,7 +77,9 @@ interface Sealed {
 }
 
 /** Hash exactly what the judgment says, the way the app fingerprints a ruling. */
-async function seal(draft: Draft, verdict: Verdict, instance: 1 | 2): Promise<Sealed> {
+type Instance = 1 | 2 | 'jury';
+
+async function seal(draft: Draft, verdict: Verdict, instance: Instance): Promise<Sealed> {
   const doc = {
     court: 'Couple Court',
     instance,
@@ -95,6 +109,7 @@ export function Courtroom({
   const [second, setSecond] = useState<(Sealed & { outcome: AppealOutcome }) | null>(null);
   const [appealJudge, setAppealJudge] = useState<JudgeId>('bear');
   const [missing, setMissing] = useState(false);
+  const [jury, setJury] = useState<JuryResult | null>(null);
   const verdictRef = useRef<HTMLDivElement>(null);
 
   // Any edit reopens the case.
@@ -102,6 +117,7 @@ export function Courtroom({
     onDraftChange({ ...draft, ...patch });
     setFirst(null);
     setSecond(null);
+    setJury(null);
   };
 
   useEffect(() => {
@@ -143,6 +159,7 @@ export function Courtroom({
     setMissing(false);
     setFirst(null);
     setSecond(null);
+    setJury(null);
     setStage(0);
   };
 
@@ -219,6 +236,7 @@ export function Courtroom({
                 setJudge(e.target.value as JudgeId);
                 setFirst(null);
                 setSecond(null);
+                setJury(null);
               }}
             >
               {JUDGE_IDS.map((id) => (
@@ -261,7 +279,7 @@ export function Courtroom({
               instance={1}
               makeup={makeup}
             />
-            {!second && (
+            {!second && !jury?.ruling && (
               <Card padded className="siam-appeal">
                 <h3>{s.appeal.title}</h3>
                 {first.verdict.winner === 'draw' ? (
@@ -303,11 +321,33 @@ export function Courtroom({
                 outcome={s.appeal.outcome[second.outcome]}
               />
             )}
+            <JuryPanel
+              key={(second ?? first).hash}
+              draft={draft}
+              effective={second ?? first}
+              result={jury}
+              onResult={setJury}
+            />
+            {jury?.ruling && (
+              <Judgment
+                draft={draft}
+                sealed={jury.ruling}
+                caseCode={caseCodeOf(first.hash)}
+                instance="jury"
+                opinions={jury.opinions}
+                outcome={format(s.jury.admits, {
+                  judge: s.judges.items[jury.ruling.verdict.judge].name,
+                  pct: 100 - jury.tally.agreePct,
+                  n: jury.tally.votes,
+                })}
+              />
+            )}
             <Button
               variant="ghost"
               onClick={() => {
                 setFirst(null);
                 setSecond(null);
+                setJury(null);
               }}
             >
               {s.demo.again}
@@ -326,14 +366,17 @@ function Judgment({
   instance,
   makeup,
   outcome,
+  opinions,
 }: {
   draft: Draft;
   sealed: Sealed;
   /** Both instances carry the first instance's case number. */
   caseCode: string;
-  instance: 1 | 2;
+  instance: Instance;
   makeup?: string;
   outcome?: string;
+  /** A jury ruling rests on the jurors' words instead of the court's findings. */
+  opinions?: readonly { vote: Winner; text: string }[];
 }) {
   const { t } = useI18n();
   const s = t.siam;
@@ -344,7 +387,9 @@ function Judgment({
     <article className="siam-judgment" data-winner={verdict.winner}>
       <header className="siam-judgment__head">
         <span className="siam-judgment__eyebrow">
-          {format(v.court, { instance: instance === 1 ? v.first : v.second })}
+          {format(v.court, {
+            instance: instance === 1 ? v.first : instance === 2 ? v.second : s.jury.instance,
+          })}
         </span>
         <h3>{v.heading}</h3>
         <p className="siam-judgment__meta">
@@ -360,14 +405,27 @@ function Judgment({
         </div>
       </div>
       {outcome && <p className="siam-judgment__outcome">{outcome}</p>}
-      <h4>{v.findings}</h4>
-      <ol className="siam-findings">
-        {verdict.findings.map((f) => (
-          <li key={`${f.side}-${f.key}`}>
-            {format(v.finding[f.key], { side: sideName(f.side), n: f.n })}
-          </li>
-        ))}
-      </ol>
+      {opinions ? (
+        <>
+          <h4>{s.jury.opinions}</h4>
+          <ul className="siam-findings">
+            {opinions.map((o) => (
+              <li key={o.text}>“{o.text}”</li>
+            ))}
+          </ul>
+        </>
+      ) : (
+        <>
+          <h4>{v.findings}</h4>
+          <ol className="siam-findings">
+            {verdict.findings.map((f) => (
+              <li key={`${f.side}-${f.key}`}>
+                {format(v.finding[f.key], { side: sideName(f.side), n: f.n })}
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
       <p className="siam-judgment__ruling">{v.ruling[verdict.winner]}</p>
       <h4>{v.blame}</h4>
       <div
@@ -405,5 +463,122 @@ function Judgment({
         </span>
       </footer>
     </article>
+  );
+}
+
+interface JuryResult {
+  votes: Winner[];
+  tally: Tally;
+  opinions: { vote: Winner; text: string }[];
+  /** The reversed ruling, when the jury overrules the court. */
+  ruling?: Sealed;
+}
+
+const round5 = (n: number) => Math.round(n / 5) * 5;
+
+/** The jury's ruling: its majority wins, and blame follows the vote shares. */
+function juryVerdict(effective: Verdict, t: Tally): Verdict {
+  const ranked = (['A', 'B', 'draw'] as const).toSorted((x, y) => t[y] - t[x]);
+  const top = ranked[0]!;
+  const winner: Winner = t[top] === t[ranked[1]!] ? 'draw' : top;
+  const respA =
+    winner === 'draw'
+      ? 50
+      : Math.min(90, Math.max(10, round5(((t.B + t.draw / 2) / t.votes) * 100)));
+  return { ...effective, winner, respA };
+}
+
+function JuryPanel({
+  draft,
+  effective,
+  result,
+  onResult,
+}: {
+  draft: Draft;
+  effective: Sealed;
+  result: JuryResult | null;
+  onResult: (r: JuryResult) => void;
+}) {
+  const { t } = useI18n();
+  const s = t.siam;
+  const [cast, setCast] = useState<Winner[] | null>(null);
+  const all = useMemo(
+    () =>
+      simulateJury(
+        toFiling(draft.a, draft.aEvidence),
+        toFiling(draft.b, draft.bEvidence),
+        effective.hash,
+      ),
+    [draft, effective.hash],
+  );
+
+  useEffect(() => {
+    if (!cast || result) return;
+    if (cast.length < all.length) {
+      const id = setTimeout(() => setCast(all.slice(0, cast.length + 1)), VOTE_MS);
+      return () => clearTimeout(id);
+    }
+    let live = true;
+    const tl = tally(all, effective.verdict.winner);
+    const opinions = opinionsFor(all, s.jury.pool, effective.hash);
+    if (!tl.overruled) onResult({ votes: all, tally: tl, opinions });
+    else
+      void seal(draft, juryVerdict(effective.verdict, tl), 'jury').then(
+        (ruling) => live && onResult({ votes: all, tally: tl, opinions, ruling }),
+      );
+    return () => {
+      live = false;
+    };
+  }, [cast, all, result, effective, draft, onResult, s.jury.pool]);
+
+  const shown = result?.votes ?? cast ?? [];
+  const live = tally(shown, effective.verdict.winner);
+  const side = (w: Winner) => (w === 'A' ? s.plaintiff : w === 'B' ? s.defendant : s.jury.draw);
+
+  return (
+    <Card padded className="siam-jury">
+      <h3>{s.jury.title}</h3>
+      <p>{format(s.jury.text, { quorum: QUORUM, pct: OVERRULE_PCT })}</p>
+      {!cast && !result ? (
+        <Button variant="secondary" onClick={() => setCast([])}>
+          <PixelIcon name="face" size={16} /> {s.jury.button}
+        </Button>
+      ) : (
+        <Stack gap={3}>
+          <div className="siam-jury__seats" aria-hidden="true">
+            {all.map((_, i) => (
+              <span key={i} data-vote={shown[i] ?? 'none'} />
+            ))}
+          </div>
+          <p className="siam-jury__count" aria-live="polite">
+            {result
+              ? format(s.jury.agree, { pct: result.tally.agreePct, n: result.tally.votes })
+              : format(s.jury.counting, { n: shown.length, total: JURY_SIZE })}
+          </p>
+          <p className="siam-jury__legend">
+            {(['A', 'B', 'draw'] as const).map((w) => (
+              <span key={w} data-vote={w}>
+                {side(w)} {live[w]}
+              </span>
+            ))}
+          </p>
+          {result && !result.ruling && <p className="siam-jury__verdict">{s.jury.upheld}</p>}
+          {result?.ruling && <Callout>{s.jury.superseded}</Callout>}
+          {result && result.opinions.length > 0 && (
+            <div>
+              <h4>{s.jury.opinions}</h4>
+              <ul className="siam-jury__opinions">
+                {result.opinions.map((o) => (
+                  <li key={o.text} data-vote={o.vote}>
+                    “{o.text}” <span>· {side(o.vote)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="siam-jury__note">{format(s.jury.simulated, { n: JURY_SIZE })}</p>
+        </Stack>
+      )}
+    </Card>
   );
 }

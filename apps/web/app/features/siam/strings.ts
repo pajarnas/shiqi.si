@@ -161,6 +161,40 @@ export const SIAM_EN = {
       agreement: '{side} pointed to an agreement both sides had made.',
     },
   },
+  jury: {
+    title: 'The public jury',
+    text: 'In the app, both sides can let anonymous strangers review the case. Jurors are picked at random, read the judgment, vote and may leave a short opinion. From {quorum} votes the tally counts, and if {pct}% or more disagree, the judge admits error and the ruling is reversed.',
+    button: 'Send to the jury',
+    simulated: 'Simulated: these {n} jurors live in your browser.',
+    counting: 'Jurors voting: {n} of {total}',
+    draw: 'Draw',
+    agree: '{pct}% of {n} jurors agree with the court.',
+    upheld: 'The jury backs the court. The ruling stands.',
+    admits:
+      '{judge}: “The court got this one wrong. {pct}% of {n} jurors disagreed, so the ruling is reversed.”',
+    opinions: 'What jurors said',
+    instance: 'Public jury review (final)',
+    superseded: 'Reversed by the public jury. The ruling below replaces it.',
+    pool: {
+      A: [
+        'The plaintiff came with receipts. Case closed.',
+        'An agreement is an agreement.',
+        'Defendant, just say sorry and move on.',
+        'Clear story, clear evidence. Plaintiff.',
+      ],
+      B: [
+        'The defendant had a fair point here.',
+        'Plaintiff is overreacting a little.',
+        'Honestly I would have done what the defendant did.',
+        'Not enough to blame the defendant for this one.',
+      ],
+      draw: [
+        'Both of you, go hug it out.',
+        'Six of one, half a dozen of the other.',
+        'Nobody wins this one, and that is fine.',
+      ],
+    },
+  },
   appeal: {
     title: 'Not happy? Appeal.',
     text: 'The losing side has 24 hours to appeal. The second instance must be a different judge, and its verdict is final.',
@@ -241,6 +275,10 @@ export const SIAM_EN = {
       {
         title: 'Medals for good conduct',
         text: 'Metal medals in the style of fitness awards, earned from real cases: first win, comeback on appeal, handshake draw.',
+      },
+      {
+        title: 'A public jury',
+        text: 'Let anonymous strangers review the case at random. If 90% of at least 20 jurors disagree, the judge admits error and the ruling is reversed.',
       },
     ],
   },
@@ -412,6 +450,35 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
       agreement: '{side}指出了双方事先的约定。',
     },
   },
+  jury: {
+    title: '网友陪审团',
+    text: 'App 里，双方都同意的话，案子会匿名交给随机挑选的网友复核。陪审员看完判决书投票，还可以留一句意见。满 {quorum} 票才算数；{pct}% 以上不同意判决，法官就认错并改判。',
+    button: '交给网友陪审',
+    simulated: '模拟：这 {n} 位陪审员都在你的浏览器里。',
+    counting: '陪审员投票中：{n} / {total}',
+    draw: '平局',
+    agree: '{n} 位陪审员里，{pct}% 同意本庭判决。',
+    upheld: '陪审团支持本庭，原判维持。',
+    admits: '{judge}：“这次是本庭判错了。{n} 位陪审员里 {pct}% 不同意，现在改判。”',
+    opinions: '陪审员说',
+    instance: '网友复核（终审）',
+    superseded: '已被网友陪审团改判，以下面的判决为准。',
+    pool: {
+      A: [
+        '原告证据都摆出来了，没什么好说的。',
+        '说好的事就得算数。',
+        '被告，道个歉就过去了。',
+        '原告说得清楚，证据也有，判原告。',
+      ],
+      B: [
+        '被告说得也有道理。',
+        '原告有点小题大做了。',
+        '换我也会像被告那样做。',
+        '这事怪不到被告头上。',
+      ],
+      draw: ['你俩抱一下就好了。', '半斤八两。', '这事没有赢家，也挺好。'],
+    },
+  },
   appeal: {
     title: '不服？上诉。',
     text: '败诉方可以在 24 小时内上诉。二审必须换一位法官，二审判决是终审。',
@@ -492,6 +559,10 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
       {
         title: '好好表现有勋章',
         text: '仿健身奖章的金属勋章，按真实记录颁发：首次胜诉、二审翻盘、握手言和。',
+      },
+      {
+        title: '网友陪审团',
+        text: '案子可以匿名交给随机的网友复核。至少 20 人投票、90% 以上不同意时，法官认错并改判。',
       },
     ],
   },

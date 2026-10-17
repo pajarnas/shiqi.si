@@ -17,6 +17,7 @@ const FEATURE_ICONS: readonly IconName[] = [
   'swap',
   'magnifier',
   'star',
+  'face',
 ];
 
 const MEDALS = [
