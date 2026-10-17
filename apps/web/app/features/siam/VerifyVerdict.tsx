@@ -13,6 +13,9 @@ type Check = {
   links?: { href: string; label: string; download?: string }[];
 };
 
+/** Where the page mentions on-chain notarization at all. */
+const ON_CHAIN = { en: true, zh: false } as const;
+
 const isJudge = (id: string): id is JudgeId => (JUDGE_IDS as readonly string[]).includes(id);
 
 export function VerifyVerdict() {
@@ -56,7 +59,8 @@ export function VerifyVerdict() {
               }
             : { ok: false, text: v.anchorBad },
       ];
-      setChecks(out);
+      // On-chain notarization is overseas only; the Chinese page shows the fingerprint and signature.
+      setChecks(ON_CHAIN[lang] ? out : out.slice(0, 2));
     } finally {
       setBusy(false);
     }
