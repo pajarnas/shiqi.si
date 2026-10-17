@@ -655,7 +655,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
     anchorOk: '独立时间戳已确认（#{height}）。',
     anchorBad: '时间戳对应的是原文的指纹，不是现在这份内容。',
     anchorSoon: '更多查验方式之后会加入。',
-    block: '查看区块',
+    block: '查看时间戳记录',
     proof: '下载时间戳文件（.ots）',
     demoKey: '示例用的是演示密钥，不是法庭的密钥。查验全程在你的浏览器里完成。',
     legal: '防伪指纹只证明判决书出自哪里、有没有被改过，不代表任何法律效力。',

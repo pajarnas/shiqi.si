@@ -46,21 +46,25 @@ export function VerifyVerdict() {
         sig === null
           ? { ok: null, text: v.sigUnsupported }
           : { ok: sig, text: sig ? v.sigOk : v.sigBad },
-        !anchor
-          ? { ok: null, text: v.anchorSoon }
-          : intact
-            ? {
-                ok: true,
-                text: format(v.anchorOk, { height: anchor.blockHeight }),
-                links: [
-                  { href: `https://mempool.space/block/${anchor.blockHeight}`, label: v.block },
-                  { href: anchor.ots, label: v.proof, download: `siam-${sample.code}.ots` },
-                ],
-              }
-            : { ok: false, text: v.anchorBad },
       ];
       // On-chain notarization is overseas only; the Chinese page shows the fingerprint and signature.
-      setChecks(ON_CHAIN[lang] ? out : out.slice(0, 2));
+      if (ON_CHAIN[lang]) {
+        out.push(
+          !anchor
+            ? { ok: null, text: v.anchorSoon }
+            : intact
+              ? {
+                  ok: true,
+                  text: format(v.anchorOk, { height: anchor.blockHeight }),
+                  links: [
+                    { href: `https://mempool.space/block/${anchor.blockHeight}`, label: v.block },
+                    { href: anchor.ots, label: v.proof, download: `siam-${sample.code}.ots` },
+                  ],
+                }
+              : { ok: false, text: v.anchorBad },
+        );
+      }
+      setChecks(out);
     } finally {
       setBusy(false);
     }
