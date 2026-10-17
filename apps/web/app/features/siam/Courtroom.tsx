@@ -37,6 +37,13 @@ import {
   type Tally,
 } from './jury';
 
+/**
+ * Each judge's paw-print seal, served from public/siam/seals/. '' is the red-ink set,
+ * '-color' the set in each judge's own color; Saige hasn't picked one yet.
+ */
+const SEAL_INK: '' | '-color' = '';
+const sealSrc = (judge: JudgeId) => `/siam/seals/seal-${judge}${SEAL_INK}.svg`;
+
 /** How long each of the seven hearing stages stays on screen. */
 const STAGE_MS = 600;
 /** How fast simulated jurors cast their votes. */
@@ -460,9 +467,7 @@ function Judgment({
           <code className="siam-judgment__hash">{hash}</code>
           <p className="siam-judgment__note">{v.hashNote}</p>
         </div>
-        <span className="siam-seal" aria-hidden="true">
-          {v.seal}
-        </span>
+        <img className="siam-seal" src={sealSrc(verdict.judge)} alt={v.seal} />
       </footer>
     </article>
   );

@@ -1494,22 +1494,15 @@ ul.topic-tags {
 
 .siam-seal {
   flex: none;
-  display: grid;
-  place-items: center;
-  width: 5.5rem;
-  height: 5.5rem;
-  border: 3px double var(--danger);
-  border-radius: 50%;
-  color: var(--danger);
-  font-family: var(--font-pixel);
-  font-size: var(--text-xs);
-  transform: rotate(-14deg);
+  width: 6.5rem;
+  height: 6.5rem;
+  transform: rotate(-10deg);
   animation: siam-stamp 0.35s steps(3) both;
 }
 
 @keyframes siam-stamp {
   from {
-    transform: rotate(-14deg) scale(2);
+    transform: rotate(-10deg) scale(2);
     opacity: 0;
   }
 }
