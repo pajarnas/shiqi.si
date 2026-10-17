@@ -119,12 +119,27 @@ function findingsFor(side: Side, s: Signals, w: Weights): Finding[] {
 const round5 = (n: number) => Math.round(n / 5) * 5;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
-export function judgeCase(judge: JudgeId, a: Filing, b: Filing): Verdict {
-  const w = WEIGHTS[judge];
+/**
+ * Ordinary people on the public jury read the same signals, but forgive an honest
+ * admission instead of counting it against you, which is where they part ways with the bench.
+ */
+const JUROR: Weights = { ...BASE, detail: 0.5, admits: -1.5 };
+
+function weigh(judge: JudgeId | 'juror', a: Filing, b: Filing) {
+  const w = judge === 'juror' ? JUROR : WEIGHTS[judge];
   const all = [...findingsFor('A', readFiling(a), w), ...findingsFor('B', readFiling(b), w)];
   const score = (side: Side) =>
     all.filter((f) => f.side === side).reduce((sum, f) => sum + f.weight, 0);
-  const gap = score('A') - score('B');
+  return { w, all, gap: score('A') - score('B') };
+}
+
+/** How far a typical juror leans to the plaintiff: positive for A, negative for B. */
+export function jurorLean(a: Filing, b: Filing): number {
+  return weigh('juror', a, b).gap;
+}
+
+export function judgeCase(judge: JudgeId, a: Filing, b: Filing): Verdict {
+  const { w, all, gap } = weigh(judge, a, b);
   const winner: Winner = Math.abs(gap) <= w.drawBand ? 'draw' : gap > 0 ? 'A' : 'B';
   const respA = winner === 'draw' ? 50 : clamp(round5(50 - gap * 8), 10, 90);
   // Weak "no evidence" notes only matter when the other side had some.
