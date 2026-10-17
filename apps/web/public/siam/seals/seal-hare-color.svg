@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" style="--paper:#FFFBF2" xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <filter id="ink-hare" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="28" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.7 1.45" result="speckle"/>
+      <feComposite in="SourceGraphic" in2="speckle" operator="in" result="inked"/>
+      <feDisplacementMap in="inked" in2="n" scale="1.6"/>
+    </filter>
+    <path id="top-hare" d="M30,100 A70,70 0 0 1 170,100"/>
+    <path id="bot-hare" d="M36,104 A64,64 0 0 0 164,104"/>
+  </defs>
+  <g filter="url(#ink-hare)" fill="#FF8A3D" stroke="#FF8A3D" transform="rotate(-10 100 100)">
+    <circle cx="100" cy="100" r="92" fill="none" stroke-width="6"/>
+    <circle cx="100" cy="100" r="83" fill="none" stroke-width="1.8"/>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="19" stroke="none" letter-spacing="6">
+      <textPath href="#top-hare" startOffset="50%" text-anchor="middle">情侣法庭</textPath></text>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="15" stroke="none" letter-spacing="3">
+      <textPath href="#bot-hare" startOffset="50%" text-anchor="middle">兔跳跳之印</textPath></text>
+    <text x="38" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <text x="162" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <g stroke="#FF8A3D" transform="translate(100 108) scale(1.12) translate(-100 -108)"><ellipse cx="100" cy="120" rx="14" ry="24" transform="rotate(0 100 120)"/><ellipse cx="85" cy="88" rx="5.5" ry="8" transform="rotate(-20 85 88)"/><ellipse cx="95" cy="80" rx="5.5" ry="8" transform="rotate(-6 95 80)"/><ellipse cx="105" cy="80" rx="5.5" ry="8" transform="rotate(6 105 80)"/><ellipse cx="115" cy="88" rx="5.5" ry="8" transform="rotate(20 115 88)"/></g>
+  </g>
+</svg>

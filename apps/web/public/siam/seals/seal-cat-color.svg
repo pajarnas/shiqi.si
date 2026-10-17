@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" style="--paper:#FFFBF2" xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <filter id="ink-cat" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="21" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.7 1.45" result="speckle"/>
+      <feComposite in="SourceGraphic" in2="speckle" operator="in" result="inked"/>
+      <feDisplacementMap in="inked" in2="n" scale="1.6"/>
+    </filter>
+    <path id="top-cat" d="M30,100 A70,70 0 0 1 170,100"/>
+    <path id="bot-cat" d="M36,104 A64,64 0 0 0 164,104"/>
+  </defs>
+  <g filter="url(#ink-cat)" fill="#8B5CF6" stroke="#8B5CF6" transform="rotate(-10 100 100)">
+    <circle cx="100" cy="100" r="92" fill="none" stroke-width="6"/>
+    <circle cx="100" cy="100" r="83" fill="none" stroke-width="1.8"/>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="19" stroke="none" letter-spacing="6">
+      <textPath href="#top-cat" startOffset="50%" text-anchor="middle">情侣法庭</textPath></text>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="15" stroke="none" letter-spacing="3">
+      <textPath href="#bot-cat" startOffset="50%" text-anchor="middle">喵大人之印</textPath></text>
+    <text x="38" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <text x="162" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <g stroke="#8B5CF6" transform="translate(100 108) scale(1.12) translate(-100 -108)"><path d="M76,120 C76,104 90,98 100,98 C110,98 124,104 124,120 C124,131 113,134 100,129 C87,134 76,131 76,120Z"/>
+    <ellipse cx="75" cy="92" rx="8.5" ry="10.5" transform="rotate(-25 75 92)"/><ellipse cx="91" cy="80" rx="8.5" ry="11" transform="rotate(0 91 80)"/><ellipse cx="109" cy="80" rx="8.5" ry="11" transform="rotate(0 109 80)"/><ellipse cx="125" cy="92" rx="8.5" ry="10.5" transform="rotate(25 125 92)"/></g>
+  </g>
+</svg>

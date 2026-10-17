@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" style="--paper:#FFFBF2" xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <filter id="ink-dog" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="21" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.7 1.45" result="speckle"/>
+      <feComposite in="SourceGraphic" in2="speckle" operator="in" result="inked"/>
+      <feDisplacementMap in="inked" in2="n" scale="1.6"/>
+    </filter>
+    <path id="top-dog" d="M30,100 A70,70 0 0 1 170,100"/>
+    <path id="bot-dog" d="M36,104 A64,64 0 0 0 164,104"/>
+  </defs>
+  <g filter="url(#ink-dog)" fill="#D7263D" stroke="#D7263D" transform="rotate(-10 100 100)">
+    <circle cx="100" cy="100" r="92" fill="none" stroke-width="6"/>
+    <circle cx="100" cy="100" r="83" fill="none" stroke-width="1.8"/>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="19" stroke="none" letter-spacing="6">
+      <textPath href="#top-dog" startOffset="50%" text-anchor="middle">情侣法庭</textPath></text>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="15" stroke="none" letter-spacing="3">
+      <textPath href="#bot-dog" startOffset="50%" text-anchor="middle">旺法官之印</textPath></text>
+    <text x="38" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <text x="162" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <g stroke="#D7263D" transform="translate(100 108) scale(1.12) translate(-100 -108)"><path d="M78,122 C78,106 90,100 100,100 C110,100 122,106 122,122 C122,132 115,134 110,131 C106,135 94,135 90,131 C85,134 78,132 78,122Z"/>
+    <ellipse cx="78" cy="92" rx="7.5" ry="11" transform="rotate(-22 78 92)"/><ellipse cx="93" cy="80" rx="7.5" ry="11.5" transform="rotate(-6 93 80)"/><ellipse cx="107" cy="80" rx="7.5" ry="11.5" transform="rotate(6 107 80)"/><ellipse cx="122" cy="92" rx="7.5" ry="11" transform="rotate(22 122 92)"/>
+    <line x1="74" y1="80" x2="72" y2="75" stroke-width="3.5" stroke-linecap="round"/><line x1="91" y1="67" x2="90" y2="62" stroke-width="3.5" stroke-linecap="round"/><line x1="109" y1="67" x2="110" y2="62" stroke-width="3.5" stroke-linecap="round"/><line x1="126" y1="80" x2="128" y2="75" stroke-width="3.5" stroke-linecap="round"/></g>
+  </g>
+</svg>

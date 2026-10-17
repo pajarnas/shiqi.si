@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" style="--paper:#FFFBF2" xmlns:c2pa="http://c2pa.org/manifest">
+  <defs>
+    <filter id="ink-tortoise" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="56" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.7 1.45" result="speckle"/>
+      <feComposite in="SourceGraphic" in2="speckle" operator="in" result="inked"/>
+      <feDisplacementMap in="inked" in2="n" scale="1.6"/>
+    </filter>
+    <path id="top-tortoise" d="M30,100 A70,70 0 0 1 170,100"/>
+    <path id="bot-tortoise" d="M36,104 A64,64 0 0 0 164,104"/>
+  </defs>
+  <g filter="url(#ink-tortoise)" fill="#D7263D" stroke="#D7263D" transform="rotate(-10 100 100)">
+    <circle cx="100" cy="100" r="92" fill="none" stroke-width="6"/>
+    <circle cx="100" cy="100" r="83" fill="none" stroke-width="1.8"/>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="19" stroke="none" letter-spacing="6">
+      <textPath href="#top-tortoise" startOffset="50%" text-anchor="middle">情侣法庭</textPath></text>
+    <text font-family="WenQuanYi Zen Hei, PingFang SC, sans-serif" font-weight="900" font-size="15" stroke="none" letter-spacing="3">
+      <textPath href="#bot-tortoise" startOffset="50%" text-anchor="middle">龟慢慢之印</textPath></text>
+    <text x="38" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <text x="162" y="114" font-size="12" stroke="none" text-anchor="middle">★</text>
+    <g stroke="#D7263D" transform="translate(100 108) scale(1.12) translate(-100 -108)"><path d="M78,118 C78,100 122,100 122,118 C122,134 108,140 100,140 C92,140 78,134 78,118Z"/>
+    <line x1="83" y1="106" x2="77" y2="96" stroke-width="7" stroke-linecap="round"/><line x1="91" y1="101" x2="88" y2="91" stroke-width="7" stroke-linecap="round"/><line x1="100" y1="100" x2="100" y2="90" stroke-width="7" stroke-linecap="round"/><line x1="109" y1="101" x2="112" y2="91" stroke-width="7" stroke-linecap="round"/><line x1="117" y1="106" x2="123" y2="96" stroke-width="7" stroke-linecap="round"/>
+    <path d="M100,110 l8,5 v9 l-8,5 l-8,-5 v-9z" fill="none" stroke="var(--paper)" stroke-width="2.5"/></g>
+  </g>
+</svg>
