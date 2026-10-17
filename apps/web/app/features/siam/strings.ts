@@ -150,7 +150,7 @@ export const SIAM_EN = {
     code: 'Anti-forgery code',
     hash: 'SHA-256 of this verdict',
     hashNote:
-      'Change one word and the hash no longer matches. In the app the court also signs it with its Ed25519 key and prints a QR code; this demo stops at the hash.',
+      'Change one word and the hash no longer matches. In the app the court also signs it with its Ed25519 key and prints a QR code. This courtroom stops at the hash; try a signed sample under “Verify a verdict” below.',
     finding: {
       evidence: '{side} backed the account with evidence ({n} items).',
       noEvidence: '{side} brought no evidence.',
@@ -318,6 +318,35 @@ export const SIAM_EN = {
     lede: 'Straight from the app, running in the iPhone simulator.',
     empty: 'Screenshots from the first local test runs will appear here.',
   },
+  verify: {
+    title: 'Verify a verdict',
+    lede: 'Every verdict carries a fingerprint and the court’s signature. Change a single character and the check fails. The app’s overseas version will also notarize the fingerprint on Bitcoin, so it stays verifiable for the long run, even without us.',
+    sample: 'Sample verdict',
+    caseNo: 'Case {code}',
+    judge: 'Presiding: {judge}',
+    sentence: 'Sentence (try changing one character)',
+    code: 'Anti-forgery code',
+    check: 'Verify',
+    reset: 'Restore the original',
+    checking: 'Checking…',
+    hashOk: 'Fingerprint matches: {code}. Recomputed in your browser with SHA-256.',
+    hashBad:
+      'Fingerprint doesn’t match. Your browser got {got}, the verdict says {code}. This verdict was changed.',
+    sigOk: 'The signature checks out. Only whoever holds the signing key could have made it.',
+    sigBad: 'The court’s signature doesn’t fit this content.',
+    sigUnsupported:
+      'This browser can’t check Ed25519 signatures yet. Try a current Chrome, Safari or Firefox.',
+    anchorOk: 'Notarized on Bitcoin, block #{height}. Verifiable forever, even without us.',
+    anchorBad: 'The Bitcoin proof is for the original fingerprint, not for this content.',
+    anchorSoon:
+      'Coming to the overseas version: the fingerprint will be notarized on Bitcoin through OpenTimestamps, so anyone can check it, even if Siam is gone.',
+    block: 'See the block',
+    proof: 'Download the proof (.ots)',
+    demoKey:
+      'The sample is signed with a demo key, not the court’s key. It runs entirely in your browser.',
+    legal:
+      'A fingerprint and a timestamp prove where a verdict came from and that it hasn’t changed. They don’t make it legally binding.',
+  },
 };
 
 export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
@@ -446,7 +475,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
     code: '防伪码',
     hash: '本判决书的 SHA-256',
     hashNote:
-      '改动任何一个字，哈希就对不上。App 里法庭还会用 Ed25519 私钥签名并印上二维码；这个演示只做到哈希。',
+      '改动任何一个字，哈希就对不上。App 里法庭还会用 Ed25519 私钥签名并印上二维码；这个法庭演示只做到哈希，签名可以在下面的「验一验判决书」里试。',
     finding: {
       evidence: '{side}提交了证据（{n} 份），说法有据可查。',
       noEvidence: '{side}没有提交任何证据。',
@@ -606,5 +635,29 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
     title: '截图',
     lede: '直接来自 App，在 iPhone 模拟器里运行。',
     empty: '第一批本地测试的截图会放在这里。',
+  },
+  verify: {
+    title: '验一验判决书',
+    lede: '每份判决书都有防伪指纹和法庭签名，改一个字都验不过。海外版之后还会把指纹上链存证：判决书上链，永久存证，就算没有我们也能查验。',
+    sample: '示例判决书',
+    caseNo: '案号 {code}',
+    judge: '主审：{judge}',
+    sentence: '判决（试着改一个字）',
+    code: '防伪码',
+    check: '查验',
+    reset: '恢复原文',
+    checking: '查验中…',
+    hashOk: '指纹一致：{code}。你的浏览器刚用 SHA-256 重新算过。',
+    hashBad: '指纹对不上。浏览器算出的是 {got}，判决书上写的是 {code}。这份判决书被改过。',
+    sigOk: '签名有效。只有持有签名密钥的一方才签得出来。',
+    sigBad: '法庭签名和这份内容对不上。',
+    sigUnsupported: '这个浏览器还不能验 Ed25519 签名，换最新版 Chrome、Safari 或 Firefox 试试。',
+    anchorOk: '海外版：已上链存证，区块 #{height}。就算没有我们，也能查验。',
+    anchorBad: '上链存证的是原文的指纹，不是现在这份内容。',
+    anchorSoon: '海外版之后会上链存证：指纹会写进公共区块链，就算 Siam 不在了，任何人也能查验。',
+    block: '查看区块',
+    proof: '下载存证文件（.ots）',
+    demoKey: '示例用的是演示密钥，不是法庭的密钥。查验全程在你的浏览器里完成。',
+    legal: '防伪指纹和存证只证明判决书出自哪里、有没有被改过，不代表任何法律效力。',
   },
 };

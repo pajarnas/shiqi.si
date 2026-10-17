@@ -1,6 +1,7 @@
 // The verdict fingerprint, as the Siam server computes it: SHA-256 over canonical JSON
 // (keys sorted at every level), shown as a short anti-forgery code. The app also signs
-// the hash with the court's Ed25519 key; the demo has no key, so it stops at the hash.
+// the hash with the court's Ed25519 key. The courtroom demo has no key and stops at the hash;
+// verifySignature checks the server-signed samples in the verify widget.
 
 export function canonicalJSON(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonicalJSON).join(',')}]`;
@@ -28,4 +29,26 @@ export function antiForgeryCode(hex: string): string {
       .match(/.{1,4}/g)
       ?.join('-') ?? ''
   );
+}
+
+/**
+ * Checks the court's Ed25519 signature, which covers the hex hash string (as the server signs it).
+ * Returns null when this browser's WebCrypto has no Ed25519.
+ */
+export async function verifySignature(
+  publicKeyPem: string,
+  hashHex: string,
+  signatureB64: string,
+): Promise<boolean | null> {
+  const der = Uint8Array.from(atob(publicKeyPem.replace(/-----[^-]+-----|\s/g, '')), (c) =>
+    c.charCodeAt(0),
+  );
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey('spki', der, { name: 'Ed25519' }, false, ['verify']);
+  } catch {
+    return null;
+  }
+  const sig = Uint8Array.from(atob(signatureB64), (c) => c.charCodeAt(0));
+  return crypto.subtle.verify({ name: 'Ed25519' }, key, sig, new TextEncoder().encode(hashHex));
 }
