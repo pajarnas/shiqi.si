@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { PageWindow, pageMeta } from '~/components/PageWindow';
 import { JUDGE_IDS } from '~/features/siam/court';
 import { Courtroom, EMPTY_DRAFT, type Draft } from '~/features/siam/Courtroom';
+import { VerifyVerdict } from '~/features/siam/VerifyVerdict';
 import { useI18n, type Strings } from '~/i18n';
 import type { Route } from './+types/siam';
 
@@ -138,6 +139,10 @@ export default function Siam() {
               </Card>
             ))}
           </Grid>
+        </Section>
+
+        <Section eyebrow="VERIFY" title={s.verify.title} description={s.verify.lede}>
+          <VerifyVerdict />
         </Section>
 
         <Section eyebrow="HOW" title={s.steps.title}>
