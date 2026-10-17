@@ -1,6 +1,8 @@
 // Sample verdicts for the "Verify a verdict" widget, sealed by siam-server's own fingerprint.js
 // (canonical JSON -> SHA-256 -> Ed25519 over the hex hash) with a throwaway demo key, not the court key.
 // Regenerate with the server code, never by hand: the hash and signature must match the document.
+// Generator: siam-showcase/verify/seal-samples.js in the project files (makes a fresh demo key;
+// the key used here was discarded). Samples are format 2; update SampleVerdict before using format 3.
 
 export interface SampleVerdict {
   document: {

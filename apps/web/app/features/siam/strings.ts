@@ -150,7 +150,7 @@ export const SIAM_EN = {
     code: 'Anti-forgery code',
     hash: 'SHA-256 of this verdict',
     hashNote:
-      'Change one word and the hash no longer matches. In the app the court also signs it with its Ed25519 key and prints a QR code; this demo stops at the hash.',
+      'Change one word and the hash no longer matches. In the app the court also signs it with its Ed25519 key and prints a QR code. This courtroom stops at the hash; try a signed sample under “Verify a verdict” below.',
     finding: {
       evidence: '{side} backed the account with evidence ({n} items).',
       noEvidence: '{side} brought no evidence.',
@@ -276,7 +276,7 @@ export const SIAM_EN = {
   },
   verify: {
     title: 'Verify a verdict',
-    lede: 'Every verdict carries a fingerprint and the court’s signature. Change a single character and the check fails. The app’s overseas version will also notarize the fingerprint on Bitcoin: verifiable forever, even without us.',
+    lede: 'Every verdict carries a fingerprint and the court’s signature. Change a single character and the check fails. The app’s overseas version will also notarize the fingerprint on Bitcoin, so it stays verifiable for the long run, even without us.',
     sample: 'Sample verdict',
     caseNo: 'Case {code}',
     judge: 'Presiding: {judge}',
@@ -295,7 +295,7 @@ export const SIAM_EN = {
     anchorOk: 'Notarized on Bitcoin, block #{height}. Verifiable forever, even without us.',
     anchorBad: 'The Bitcoin proof is for the original fingerprint, not for this content.',
     anchorSoon:
-      'Coming to the overseas version: the fingerprint is notarized on Bitcoin through OpenTimestamps, so anyone can check it, even if Siam is gone.',
+      'Coming to the overseas version: the fingerprint will be notarized on Bitcoin through OpenTimestamps, so anyone can check it, even if Siam is gone.',
     block: 'See the block',
     proof: 'Download the proof (.ots)',
     demoKey:
@@ -431,7 +431,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
     code: '防伪码',
     hash: '本判决书的 SHA-256',
     hashNote:
-      '改动任何一个字，哈希就对不上。App 里法庭还会用 Ed25519 私钥签名并印上二维码；这个演示只做到哈希。',
+      '改动任何一个字，哈希就对不上。App 里法庭还会用 Ed25519 私钥签名并印上二维码；这个法庭演示只做到哈希，签名可以在下面的「验一验判决书」里试。',
     finding: {
       evidence: '{side}提交了证据（{n} 份），说法有据可查。',
       noEvidence: '{side}没有提交任何证据。',
@@ -572,7 +572,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
     sigUnsupported: '这个浏览器还不能验 Ed25519 签名，换最新版 Chrome、Safari 或 Firefox 试试。',
     anchorOk: '海外版：已上链存证，区块 #{height}。就算没有我们，也能查验。',
     anchorBad: '上链存证的是原文的指纹，不是现在这份内容。',
-    anchorSoon: '海外版之后会上链存证：指纹写进公共区块链，就算 Siam 不在了，任何人也能查验。',
+    anchorSoon: '海外版之后会上链存证：指纹会写进公共区块链，就算 Siam 不在了，任何人也能查验。',
     block: '查看区块',
     proof: '下载存证文件（.ots）',
     demoKey: '示例用的是演示密钥，不是法庭的密钥。查验全程在你的浏览器里完成。',

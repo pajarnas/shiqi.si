@@ -29,31 +29,37 @@ export function VerifyVerdict() {
 
   const run = async () => {
     setBusy(true);
-    const hash = await sha256Hex(canonicalJSON({ ...doc, sentence }));
-    const intact = hash === sample.hash;
-    const sig = await verifySignature(DEMO_PUBLIC_KEY, hash, sample.signature);
-    const out: Check[] = [
-      intact
-        ? { ok: true, text: format(v.hashOk, { code: sample.code }) }
-        : { ok: false, text: format(v.hashBad, { got: antiForgeryCode(hash), code: sample.code }) },
-      sig === null
-        ? { ok: null, text: v.sigUnsupported }
-        : { ok: sig, text: sig ? v.sigOk : v.sigBad },
-      !anchor
-        ? { ok: null, text: v.anchorSoon }
-        : intact
-          ? {
-              ok: true,
-              text: format(v.anchorOk, { height: anchor.blockHeight }),
-              links: [
-                { href: `https://mempool.space/block/${anchor.blockHeight}`, label: v.block },
-                { href: anchor.ots, label: v.proof, download: `siam-${sample.code}.ots` },
-              ],
-            }
-          : { ok: false, text: v.anchorBad },
-    ];
-    setChecks(out);
-    setBusy(false);
+    try {
+      const hash = await sha256Hex(canonicalJSON({ ...doc, sentence }));
+      const intact = hash === sample.hash;
+      const sig = await verifySignature(DEMO_PUBLIC_KEY, hash, sample.signature);
+      const out: Check[] = [
+        intact
+          ? { ok: true, text: format(v.hashOk, { code: sample.code }) }
+          : {
+              ok: false,
+              text: format(v.hashBad, { got: antiForgeryCode(hash), code: sample.code }),
+            },
+        sig === null
+          ? { ok: null, text: v.sigUnsupported }
+          : { ok: sig, text: sig ? v.sigOk : v.sigBad },
+        !anchor
+          ? { ok: null, text: v.anchorSoon }
+          : intact
+            ? {
+                ok: true,
+                text: format(v.anchorOk, { height: anchor.blockHeight }),
+                links: [
+                  { href: `https://mempool.space/block/${anchor.blockHeight}`, label: v.block },
+                  { href: anchor.ots, label: v.proof, download: `siam-${sample.code}.ots` },
+                ],
+              }
+            : { ok: false, text: v.anchorBad },
+      ];
+      setChecks(out);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const edited = sentence !== doc.sentence;

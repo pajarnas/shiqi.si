@@ -1,6 +1,7 @@
 // The verdict fingerprint, as the Siam server computes it: SHA-256 over canonical JSON
 // (keys sorted at every level), shown as a short anti-forgery code. The app also signs
-// the hash with the court's Ed25519 key; the demo has no key, so it stops at the hash.
+// the hash with the court's Ed25519 key. The courtroom demo has no key and stops at the hash;
+// verifySignature checks the server-signed samples in the verify widget.
 
 export function canonicalJSON(v: unknown): string {
   if (Array.isArray(v)) return `[${v.map(canonicalJSON).join(',')}]`;
