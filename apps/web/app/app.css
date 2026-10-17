@@ -1213,3 +1213,349 @@ ul.topic-tags {
   opacity: 0.8;
   overflow-wrap: anywhere;
 }
+
+/* ---------- Siam (Couple Court) showcase ---------- */
+
+.siam-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  color: var(--text-muted);
+}
+
+.siam-scene {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.siam-scene[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
+
+.siam-scene__try {
+  margin-top: auto;
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+}
+
+.siam-scene-pick {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 24rem;
+}
+
+.siam-sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--space-4);
+}
+
+.siam-side {
+  display: grid;
+  gap: var(--space-3);
+  border-top-width: 8px;
+}
+
+/* Plaintiff blue and defendant pink, as in the app. */
+.siam-side--A {
+  border-top-color: #3b82f6;
+}
+
+.siam-side--B {
+  border-top-color: #ff5c8a;
+}
+
+.siam-side__name {
+  margin: 0;
+  font-family: var(--font-pixel);
+  font-size: var(--text-md);
+}
+
+.siam-bench-pick {
+  align-items: end;
+}
+
+.siam-hearing {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.siam-hearing__judge {
+  flex: none;
+  animation: siam-bob 0.84s steps(2) infinite;
+}
+
+@keyframes siam-bob {
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .siam-hearing__judge {
+    animation: none;
+  }
+}
+
+.siam-hearing__now {
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+}
+
+.siam-stages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.siam-stages li {
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--border);
+  color: var(--text-muted);
+}
+
+.siam-stages li[data-state='done'] {
+  background: var(--accent-2);
+  color: var(--accent-2-text);
+}
+
+.siam-stages li[data-state='now'] {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.siam-judgment {
+  position: relative;
+  scroll-margin-top: 5rem;
+  padding: var(--space-5);
+  background: var(--surface);
+  color: var(--text);
+  border: var(--border-width) solid var(--border);
+  outline: var(--border-width) solid var(--border);
+  outline-offset: 4px;
+  box-shadow: calc(var(--shadow-offset) + 4px) calc(var(--shadow-offset) + 4px) 0 var(--shadow);
+}
+
+.siam-judgment h4 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-family: var(--font-pixel);
+  font-size: var(--text-sm);
+}
+
+.siam-judgment__head {
+  text-align: center;
+  border-bottom: var(--border-width) dashed var(--border);
+  padding-bottom: var(--space-3);
+}
+
+.siam-judgment__head h3 {
+  margin: var(--space-1) 0;
+  font-family: var(--font-pixel);
+  font-size: var(--text-xl, 1.5rem);
+  letter-spacing: 0.3em;
+}
+
+.siam-judgment__eyebrow,
+.siam-judgment__meta,
+.siam-judgment__label {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.siam-judgment__meta {
+  margin: 0;
+}
+
+.siam-judgment__judge {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-4);
+}
+
+.siam-judgment__judge p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+}
+
+.siam-judgment__outcome,
+.siam-judgment__ruling {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.siam-findings {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.siam-findings li + li {
+  margin-top: var(--space-1);
+}
+
+.siam-blame {
+  display: flex;
+  border: var(--border-width) solid var(--border);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: #fff;
+}
+
+.siam-blame span {
+  min-width: max-content;
+  padding: var(--space-1) var(--space-2);
+  white-space: nowrap;
+}
+
+.siam-blame__a {
+  background: #2563eb;
+}
+
+.siam-blame__b {
+  background: #db2777;
+  text-align: right;
+}
+
+.siam-judgment__foot {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: var(--border-width) dashed var(--border);
+}
+
+.siam-judgment__foot > div {
+  flex: 1;
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.siam-judgment__code {
+  font-family: var(--font-pixel);
+  font-size: var(--text-lg);
+  letter-spacing: 0.1em;
+}
+
+.siam-judgment__hash {
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.siam-judgment__note {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.siam-seal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border: 3px double var(--danger);
+  border-radius: 50%;
+  color: var(--danger);
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  transform: rotate(-14deg);
+  animation: siam-stamp 0.35s steps(3) both;
+}
+
+@keyframes siam-stamp {
+  from {
+    transform: rotate(-14deg) scale(2);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .siam-seal {
+    animation: none;
+  }
+}
+
+.siam-appeal h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.siam-judge,
+.siam-feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.siam-judge__role {
+  font-family: var(--font-pixel);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.siam-judge q {
+  font-style: italic;
+}
+
+.siam-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  line-height: 1.8;
+}
+
+.siam-medal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.siam-medal__disc {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: var(--space-1);
+  border: var(--border-width) solid var(--border);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6cc, #f2b51b 55%, #c98a0c);
+  color: var(--c-ink);
+  box-shadow: 3px 3px 0 var(--shadow);
+}
+
+.siam-medal span:last-child {
+  color: var(--text-muted);
+}
+
+.siam-shots {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+
+.siam-shots img {
+  flex: none;
+  width: 14rem;
+  height: auto;
+  border: var(--border-width) solid var(--border);
+  box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--shadow);
+}

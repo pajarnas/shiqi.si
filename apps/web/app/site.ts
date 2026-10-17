@@ -100,4 +100,5 @@ export const PAGES = {
   kafka: { file: 'kafka/', eyebrow: 'KAFKA' },
   rabbitmq: { file: 'rabbitmq/', eyebrow: 'RABBITMQ' },
   ui: { file: 'ui/', eyebrow: '@shiqi/ui' },
+  siam: { file: 'siam/', eyebrow: 'SIAM' },
 } as const;
