@@ -2,6 +2,7 @@ import {
   Button,
   Callout,
   Card,
+  Checkbox,
   Cluster,
   Field,
   PixelIcon,
@@ -411,8 +412,12 @@ function Judgment({
   const instanceLabel = instance === 1 ? v.first : instance === 2 ? v.second : s.jury.instance;
   const eyebrow = format(v.court, { instance: instanceLabel });
   const [making, setMaking] = useState(false);
+  const [cardError, setCardError] = useState(false);
+  // The case title is free text and may name real people, so the card leaves it out unless asked.
+  const [showTitle, setShowTitle] = useState(false);
   const download = async (size: CardSize) => {
     setMaking(true);
+    setCardError(false);
     try {
       const code = antiForgeryCode(hash);
       const blob = await renderCard(
@@ -420,7 +425,7 @@ function Judgment({
           brand: v.card.brand,
           // The card names no court: the English name is being changed.
           eyebrow: `${instanceLabel} · ${format(v.caseNo, { code: caseCode })}`,
-          title: draft.title.trim() || v.heading,
+          title: (showTitle && draft.title.trim()) || v.heading,
           judge: format(v.presiding, { judge: j.name }),
           catchphrase: j.catchphrase,
           ruling: v.ruling[verdict.winner],
@@ -447,6 +452,8 @@ function Judgment({
         size,
       );
       saveBlob(blob, `siam-${code}-${size}.png`);
+    } catch {
+      setCardError(true);
     } finally {
       setMaking(false);
     }
@@ -531,6 +538,11 @@ function Judgment({
       </footer>
       <div className="siam-card-share">
         <strong>{v.card.title}</strong>
+        <Checkbox
+          label={v.card.showTitle}
+          checked={showTitle}
+          onChange={(e) => setShowTitle(e.target.checked)}
+        />
         <Cluster gap={2}>
           {(['portrait', 'story'] as const).map((size) => (
             <Button
@@ -543,6 +555,11 @@ function Judgment({
             </Button>
           ))}
         </Cluster>
+        {cardError && (
+          <span className="siam-card-share__error" role="alert">
+            {v.card.error}
+          </span>
+        )}
         <span className="siam-card-share__note">{v.card.note}</span>
       </div>
     </article>

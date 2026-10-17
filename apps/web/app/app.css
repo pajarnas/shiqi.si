@@ -1770,6 +1770,11 @@ ul.topic-tags {
   border-top: var(--border-width) dashed var(--border);
 }
 
+.siam-card-share__error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
 .siam-card-share__note {
   color: var(--text-muted);
   font-size: var(--text-xs);
