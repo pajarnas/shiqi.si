@@ -2,6 +2,7 @@ import {
   Button,
   Callout,
   Card,
+  Checkbox,
   Cluster,
   Field,
   PixelIcon,
@@ -25,6 +26,7 @@ import {
   type Verdict,
   type Winner,
 } from './court';
+import { renderCard, saveBlob, type CardSize } from './card';
 import { antiForgeryCode, canonicalJSON, sha256Hex } from './fingerprint';
 import {
   AUTO_REVERSE,
@@ -407,14 +409,59 @@ function Judgment({
   const v = s.verdict;
   const j = s.judges.items[verdict.judge];
   const sideName = (side: Side) => (side === 'A' ? s.plaintiff : s.defendant);
+  const instanceLabel = instance === 1 ? v.first : instance === 2 ? v.second : s.jury.instance;
+  const eyebrow = format(v.court, { instance: instanceLabel });
+  const [making, setMaking] = useState(false);
+  const [cardError, setCardError] = useState(false);
+  // The case title is free text and may name real people, so the card leaves it out unless asked.
+  const [showTitle, setShowTitle] = useState(false);
+  const download = async (size: CardSize) => {
+    setMaking(true);
+    setCardError(false);
+    try {
+      const code = antiForgeryCode(hash);
+      const blob = await renderCard(
+        {
+          brand: v.card.brand,
+          // The card names no court: the English name is being changed.
+          eyebrow: `${instanceLabel} · ${format(v.caseNo, { code: caseCode })}`,
+          title: (showTitle && draft.title.trim()) || v.heading,
+          judge: format(v.presiding, { judge: j.name }),
+          catchphrase: j.catchphrase,
+          ruling: v.ruling[verdict.winner],
+          outcome,
+          plaintiff: s.plaintiff,
+          defendant: s.defendant,
+          respA: verdict.respA,
+          findingsLabel: opinions ? s.jury.opinions : v.findings,
+          findings: opinions
+            ? opinions.map((o) => `“${o.text}”`)
+            : verdict.findings.map((f) =>
+                format(v.finding[f.key], { side: sideName(f.side), n: f.n }),
+              ),
+          makeupLabel: v.makeup,
+          makeup: makeup ?? v.makeupOwn,
+          codeLabel: v.code,
+          code,
+          aiLabel: v.card.ai,
+          demoLabel: v.card.demo,
+          site: v.card.site,
+          sealSrc: sealSrc(verdict.judge),
+          sealText: v.seal,
+        },
+        size,
+      );
+      saveBlob(blob, `siam-${code}-${size}.png`);
+    } catch {
+      setCardError(true);
+    } finally {
+      setMaking(false);
+    }
+  };
   return (
     <article className="siam-judgment" data-winner={verdict.winner}>
       <header className="siam-judgment__head">
-        <span className="siam-judgment__eyebrow">
-          {format(v.court, {
-            instance: instance === 1 ? v.first : instance === 2 ? v.second : s.jury.instance,
-          })}
-        </span>
+        <span className="siam-judgment__eyebrow">{eyebrow}</span>
         <h3>{v.heading}</h3>
         <p className="siam-judgment__meta">
           {format(v.caseNo, { code: caseCode })}
@@ -489,6 +536,32 @@ function Judgment({
           alt={`${s.judges.items[verdict.judge].name} · ${v.seal}`}
         />
       </footer>
+      <div className="siam-card-share">
+        <strong>{v.card.title}</strong>
+        <Checkbox
+          label={v.card.showTitle}
+          checked={showTitle}
+          onChange={(e) => setShowTitle(e.target.checked)}
+        />
+        <Cluster gap={2}>
+          {(['portrait', 'story'] as const).map((size) => (
+            <Button
+              key={size}
+              variant="secondary"
+              disabled={making}
+              onClick={() => void download(size)}
+            >
+              {making ? v.card.making : v.card[size]}
+            </Button>
+          ))}
+        </Cluster>
+        {cardError && (
+          <span className="siam-card-share__error" role="alert">
+            {v.card.error}
+          </span>
+        )}
+        <span className="siam-card-share__note">{v.card.note}</span>
+      </div>
     </article>
   );
 }
