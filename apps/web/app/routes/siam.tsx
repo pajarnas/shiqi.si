@@ -24,6 +24,7 @@ const MEDALS = [
   { id: 'win_10', icon: 'bolt' },
   { id: 'comeback', icon: 'swap' },
   { id: 'draw', icon: 'heart' },
+  { id: 'accepted', icon: 'flower' },
   { id: 'evidence', icon: 'magnifier' },
   { id: 'hearing', icon: 'note' },
   { id: 'cases_10', icon: 'folder' },
