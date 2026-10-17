@@ -163,7 +163,11 @@ export const SIAM_EN = {
   },
   jury: {
     title: 'The public jury (planned)',
-    text: 'Coming to the app: only if both sides agree, the case goes anonymously to strangers picked at random. Even a final ruling can be reviewed this way, once. Jurors read the judgment, vote and may leave a short opinion. From {quorum} votes the tally counts, and if {pct}% or more disagree, the judge admits error and the ruling is reversed.',
+    text: 'Coming to the app: only if both sides agree, the case goes anonymously to strangers picked at random. Even a final ruling can be reviewed this way. Jurors read the judgment, vote and may leave a short opinion. From {quorum} votes the tally counts, and if {pct}% or more disagree, {outcome}.',
+    outcome: {
+      reverse: 'the judge admits error and the ruling is reversed',
+      flag: 'the ruling stands and the case is flagged for the court to review',
+    },
     button: 'Send to the jury',
     simulated: 'Simulated: these {n} jurors live in your browser.',
     counting: 'Jurors voting: {n} of {total}',
@@ -280,7 +284,7 @@ export const SIAM_EN = {
       },
       {
         title: 'A public jury (planned)',
-        text: 'If both sides agree, let anonymous strangers review the case at random. If 90% of at least 20 jurors disagree, the judge admits error and the ruling is reversed.',
+        text: 'If both sides agree, let anonymous strangers review the case at random. If 90% of at least 20 jurors disagree, {outcome}.',
       },
     ],
   },
@@ -454,7 +458,11 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
   },
   jury: {
     title: '网友陪审团（规划中）',
-    text: 'App 之后会加：双方都同意的话，案子会匿名交给随机挑选的网友复核，终审判决也可以复核一次。陪审员看完判决书投票，还可以留一句意见。满 {quorum} 票才算数；{pct}% 以上不同意判决，法官就认错并改判。',
+    text: 'App 之后会加：双方都同意的话，案子会匿名交给随机挑选的网友复核，终审判决也可以这样复核。陪审员看完判决书投票，还可以留一句意见。满 {quorum} 票才算数；{pct}% 以上不同意判决，{outcome}。',
+    outcome: {
+      reverse: '法官就认错并改判',
+      flag: '原判有效，但案子会被标记、交本庭复查',
+    },
     button: '交给网友陪审',
     simulated: '模拟：这 {n} 位陪审员都在你的浏览器里。',
     counting: '陪审员投票中：{n} / {total}',
@@ -565,7 +573,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
       },
       {
         title: '网友陪审团（规划中）',
-        text: '双方同意后，案子可以匿名交给随机的网友复核。至少 20 人投票、90% 以上不同意时，法官认错并改判。',
+        text: '双方同意后，案子可以匿名交给随机的网友复核。至少 20 人投票、90% 以上不同意时，{outcome}。',
       },
     ],
   },

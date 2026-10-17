@@ -540,7 +540,13 @@ function JuryPanel({
   return (
     <Card padded className="siam-jury">
       <h3>{s.jury.title}</h3>
-      <p>{format(s.jury.text, { quorum: QUORUM, pct: OVERRULE_PCT })}</p>
+      <p>
+        {format(s.jury.text, {
+          quorum: QUORUM,
+          pct: OVERRULE_PCT,
+          outcome: s.jury.outcome[AUTO_REVERSE ? 'reverse' : 'flag'],
+        })}
+      </p>
       {!cast && !result ? (
         <Button variant="secondary" onClick={() => setCast([])}>
           <PixelIcon name="face" size={16} /> {s.jury.button}
