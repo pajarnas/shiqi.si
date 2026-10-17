@@ -1,0 +1,82 @@
+export const frontmatter = {
+  title: 'A fixed-step game loop',
+  date: '2026-10-16',
+  summary:
+    'Why a browser game should advance its physics in equal steps instead of by frame time, the accumulator loop that does it, slow motion for free, and keeping the physics in a module with no DOM so Node can test it.',
+  topics: ['games', 'architecture', 'web'],
+};
+
+[The brake game](/game) runs its physics 120 times per simulated second, whatever the screen's refresh rate. This note is the pattern behind that, and it is the same idea the [Kafka and RabbitMQ labs](/notes/commonplace/replayable-simulations) use for rewind.
+
+## The problem with `dt = frame time`
+
+The simplest loop moves everything by however long the last frame took:
+
+```js
+function frame(now) {
+  const dt = (now - last) / 1000;
+  last = now;
+  v += a * dt;
+  x += v * dt;
+  requestAnimationFrame(frame);
+}
+```
+
+It looks fine and is quietly wrong:
+
+- **Results depend on the machine.** Euler integration with a 1/60 s step and a 1/144 s step gives different stopping distances, so the same input scores differently on a phone and on a gaming monitor.
+- **A long frame breaks things.** Switch tabs for two seconds and `dt` comes back as 2: a car jumps 200 m in one step, straight through a barrier that collision checks never saw.
+- **Nothing can be replayed.** The history depends on frame timings that will never repeat.
+
+## The accumulator
+
+Keep the physics on a fixed step and let rendering run at whatever rate the browser gives:
+
+```js
+const STEP = 1 / 120;
+let acc = 0;
+
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); // clamp a long pause
+  last = now;
+  acc += dt * timeScale;
+  let guard = 0;
+  while (acc >= STEP && guard++ < 400) {
+    acc -= STEP;
+    const events = sim.step(STEP, input); // always the same size
+    handle(events); // sounds, camera, HUD
+  }
+  render(); // once per frame
+  requestAnimationFrame(frame);
+}
+```
+
+| Piece             | Why it is there                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `STEP`            | the only `dt` physics ever sees, so the same inputs give the same run on every device               |
+| `acc`             | carries the leftover time between frames; a 60 Hz screen runs two steps per frame, 144 Hz about one |
+| `Math.min(0.05…)` | after a background tab or a hiccup, the game slows down instead of teleporting                      |
+| `guard`           | an upper bound on steps per frame, so a slow device can't fall into a spiral of ever more catch-up  |
+| `timeScale`       | slow motion: feed less time into the accumulator and the physics stays exactly the same             |
+
+Rendering can additionally interpolate between the last two physics states by `acc / STEP` for perfectly smooth motion; at 120 steps per second the brake game doesn't need to.
+
+## Slow motion without touching physics
+
+The brake game slows time during a jump by easing `timeScale` toward a target each frame (`timeScale += (target - timeScale) * min(1, dt * 7)`), and eases back near the end of the arc. Because only the **amount of time fed in** changes, the jump is the same jump at any speed, and the stopwatch in the result, which counts simulated time, is unaffected.
+
+## Physics with no DOM
+
+`physics.js` imports nothing: no `window`, no three.js. Its `Sim` class takes a step size and the inputs and returns a list of events (`brakeStart`, `flip`, `leap`, `land`, `stopped`). Everything else, sound, camera, particles, vibration, reacts to those events.
+
+That split pays off in three ways:
+
+- **It runs in Node.** A script can import it, drive `sim.step()` with a scripted pedal and print stopping distances and scores, no browser needed.
+- **Scripted drivers.** The loop takes an optional `policy(sim)` that replaces the player's input; the page exposes it as `window.__brake` for the console, so a braking strategy can be tried by code instead of by thumb.
+- **Instant "what if".** When a run ends early (the car has cleared the barrier), the game still needs the time the car would have taken to stop. It runs the remaining steps in a tight loop on the spot, with the same `step`, so the score is the one a full run would give.
+
+## Events, not polling
+
+`step()` returns what happened during the step instead of the renderer comparing old and new state. A countdown tick, the first touch of the brake, a landing: each is emitted once, exactly when the physics crossed it, even when several steps run inside one frame. Polling state once per frame would miss or double-count such moments.
+
+Related: [the day the game was built](/notes/journal/2026-10-16-brake-game).
