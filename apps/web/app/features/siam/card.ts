@@ -73,7 +73,9 @@ export function wrapText(text: string, max: number, measure: (s: string) => numb
   const tokens = text.match(TOKENS) ?? [];
   const lines: string[] = [];
   let line = '';
-  for (const tok of tokens) {
+  // A word wider than the line (a URL, "aaaa…") is split into characters so it can wrap too.
+  const pieces = tokens.flatMap((t) => (measure(t) > max ? Array.from(t) : [t]));
+  for (const tok of pieces) {
     const next = line + tok;
     if (line && measure(next.trimEnd()) > max && !CLOSING.test(tok)) {
       lines.push(line.trimEnd());

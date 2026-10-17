@@ -43,6 +43,13 @@ describe('clampLines', () => {
     for (const l of lines) expect(mono(l)).toBeLessThanOrEqual(20);
   });
 
+  it('clamps a title with no spaces or CJK', () => {
+    const lines = clampLines(wrapText('a'.repeat(300), 20, mono), 2, 20, mono);
+    expect(lines).toHaveLength(2);
+    expect(lines[1]?.endsWith('…')).toBe(true);
+    for (const l of lines) expect(mono(l)).toBeLessThanOrEqual(20);
+  });
+
   it('leaves a short title alone', () => {
     expect(clampLines(['one line'], 2, 20, mono)).toEqual(['one line']);
   });
