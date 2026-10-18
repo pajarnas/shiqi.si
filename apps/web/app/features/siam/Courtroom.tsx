@@ -423,6 +423,7 @@ function Judgment({
       const blob = await renderCard(
         {
           brand: v.card.brand,
+          slogan: s.slogan,
           // The card names no court: the English name is being changed.
           eyebrow: `${instanceLabel} · ${format(v.caseNo, { code: caseCode })}`,
           title: (showTitle && draft.title.trim()) || v.heading,

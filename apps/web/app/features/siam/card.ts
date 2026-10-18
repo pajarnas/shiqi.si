@@ -9,6 +9,7 @@ export type CardSize = keyof typeof CARD_SIZES;
 
 export interface CardData {
   brand: string;
+  slogan: string;
   eyebrow: string;
   title: string;
   judge: string;
@@ -179,13 +180,15 @@ export async function renderCard(data: CardData, size: CardSize): Promise<Blob> 
 
   // Brand and case number sit right under the labels on every size.
   text(data.brand, pad, pad + 84, 30, PURPLE, 700);
-  text(data.eyebrow, pad, pad + 132, 28, '#666');
+  // The slogan wraps like the rest of the copy: English runs wider than Chinese.
+  const sloganEnd = para(data.slogan, pad + 130, 34, INK, 800, 1.3, 2);
+  text(data.eyebrow, pad, sloganEnd + 10, 28, '#666');
 
   // The body is laid out twice: once dry to measure it, then for real. Findings are dropped
   // from the end until it fits above the footer, and a tall card centres what is left.
   const footY = h - pad - 220;
   const limit = footY - 56;
-  const top = pad + 188;
+  const top = sloganEnd + 66;
   const drawBody = (y: number, nFindings: number): number => {
     y = para(data.title, y, 64, INK, 800, 1.2, TITLE_MAX_LINES) + 20;
     y = para(`${data.judge} · “${data.catchphrase}”`, y, 32, '#444') + 28;

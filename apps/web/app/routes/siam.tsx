@@ -66,6 +66,7 @@ export default function Siam() {
   return (
     <div className="desk-wide">
       <PageWindow page="siam" title={s.title} lede={s.lede}>
+        <p className="siam-slogan">{s.slogan}</p>
         <p className="siam-status">
           <Badge>{s.status.label}</Badge> {s.status.text}
         </p>

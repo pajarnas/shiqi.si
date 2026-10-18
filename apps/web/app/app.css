@@ -1216,6 +1216,18 @@ ul.topic-tags {
 
 /* ---------- Siam (Couple Court) showcase ---------- */
 
+.siam-slogan {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border);
+  border-left: calc(var(--border-width) * 4) solid #7b5cff;
+  background: var(--surface);
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  font-weight: 800;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
 .siam-status {
   display: flex;
   flex-wrap: wrap;

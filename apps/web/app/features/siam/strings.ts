@@ -8,6 +8,7 @@ export const SIAM_EN = {
   title: 'Couple Court',
   description:
     'An app where couples and friends settle fights in front of an AI judge: file a case, bring evidence, get a sealed verdict, appeal once. Try a case right here.',
+  slogan: 'Grown-ups don’t do right and wrong? This court does.',
   lede: 'Fighting over the dishes again? Take it to court. Both sides write a statement and bring evidence, an animal judge rules, and the verdict comes with an anti-forgery seal. Try a case below, right in your browser.',
   status: {
     label: 'IN DEVELOPMENT',
@@ -366,6 +367,7 @@ export const SIAM_ZH: DeepPartial<typeof SIAM_EN> = {
   title: '情侣法庭',
   description:
     '情侣和朋友吵架，交给 AI 法官来判：立案、举证、拿到带防伪印章的判决书，不服还能上诉一次。在这一页就能试一个案子。',
+  slogan: '成年人不讲对错？本庭偏要讲。',
   lede: '又为谁洗碗吵起来了？上法庭吧。双方各写诉状、各交证据，动物法官当庭宣判，判决书带防伪印章。下面就能在浏览器里试一个案子。',
   status: {
     label: '开发中',

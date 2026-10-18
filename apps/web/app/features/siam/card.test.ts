@@ -61,6 +61,11 @@ describe('card labels', () => {
     expect(SIAM_ZH.verdict?.card?.ai).toBe('AI 生成·仅供娱乐');
   });
 
+  it('has a slogan in both languages', () => {
+    expect(SIAM_EN.slogan.trim()).not.toBe('');
+    expect(SIAM_ZH.slogan?.trim()).toBeTruthy();
+  });
+
   it('falls back when a label is empty', () => {
     expect(cardLabels({ aiLabel: '  ', demoLabel: '' })).toEqual({
       ai: AI_LABEL_DEFAULT,
