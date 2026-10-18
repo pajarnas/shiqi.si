@@ -26,7 +26,7 @@ describe('wrapText', () => {
   });
 
   it('never starts a line with closing punctuation', () => {
-    expect(wrapText('本庭判决：原告胜诉。', 4, mono)).toEqual(['本庭判决：', '原告胜诉。']);
+    expect(wrapText('本喵判决：原告胜诉。', 4, mono)).toEqual(['本喵判决：', '原告胜诉。']);
   });
 
   it('keeps a line that already fits', () => {
