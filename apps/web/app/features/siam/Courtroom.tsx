@@ -93,6 +93,9 @@ const capEvidence = (text: string) => {
     .join('\n');
 };
 
+/** Capitalises a sentence that starts with a placeholder ("the court finds"). */
+const upperFirst = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 const caseCodeOf = (hash: string) =>
   `SIAM-${hash.slice(52, 56).toUpperCase()}-${hash.slice(56, 60).toUpperCase()}`;
 
@@ -363,6 +366,7 @@ export function Courtroom({
                 opinions={jury.opinions}
                 outcome={format(s.jury.admits, {
                   judge: s.judges.items[jury.ruling.verdict.judge].name,
+                  self: s.judges.items[jury.ruling.verdict.judge].self,
                   pct: 100 - jury.tally.agreePct,
                   n: jury.tally.votes,
                 })}
@@ -409,6 +413,10 @@ function Judgment({
   const v = s.verdict;
   const j = s.judges.items[verdict.judge];
   const sideName = (side: Side) => (side === 'A' ? s.plaintiff : s.defendant);
+  // Each judge speaks as itself: 本喵 for the cat, 本熊 for the bear; English says "the court".
+  const self = { self: j.self };
+  const findingsLabel = upperFirst(format(v.findings, self));
+  const ruling = upperFirst(format(v.ruling[verdict.winner], self));
   const instanceLabel = instance === 1 ? v.first : instance === 2 ? v.second : s.jury.instance;
   const eyebrow = format(v.court, { instance: instanceLabel });
   const [making, setMaking] = useState(false);
@@ -429,16 +437,16 @@ function Judgment({
           title: (showTitle && draft.title.trim()) || v.heading,
           judge: format(v.presiding, { judge: j.name }),
           catchphrase: j.catchphrase,
-          ruling: v.ruling[verdict.winner],
+          ruling,
           outcome,
           plaintiff: s.plaintiff,
           defendant: s.defendant,
           respA: verdict.respA,
-          findingsLabel: opinions ? s.jury.opinions : v.findings,
+          findingsLabel: opinions ? s.jury.opinions : findingsLabel,
           findings: opinions
             ? opinions.map((o) => `“${o.text}”`)
             : verdict.findings.map((f) =>
-                format(v.finding[f.key], { side: sideName(f.side), n: f.n }),
+                format(v.finding[f.key], { side: sideName(f.side), n: f.n, ...self }),
               ),
           makeupLabel: v.makeup,
           makeup: makeup ?? v.makeupOwn,
@@ -488,17 +496,17 @@ function Judgment({
         </>
       ) : (
         <>
-          <h4>{v.findings}</h4>
+          <h4>{findingsLabel}</h4>
           <ol className="siam-findings">
             {verdict.findings.map((f) => (
               <li key={`${f.side}-${f.key}`}>
-                {format(v.finding[f.key], { side: sideName(f.side), n: f.n })}
+                {format(v.finding[f.key], { side: sideName(f.side), n: f.n, ...self })}
               </li>
             ))}
           </ol>
         </>
       )}
-      <p className="siam-judgment__ruling">{v.ruling[verdict.winner]}</p>
+      <p className="siam-judgment__ruling">{ruling}</p>
       <h4>{v.blame}</h4>
       <div
         className="siam-blame"
@@ -602,6 +610,7 @@ function JuryPanel({
 }) {
   const { t } = useI18n();
   const s = t.siam;
+  const judgeSelf = s.judges.items[effective.verdict.judge].self;
   const [cast, setCast] = useState<Winner[] | null>(null);
   const all = useMemo(
     () =>
@@ -659,7 +668,11 @@ function JuryPanel({
           </div>
           <p className="siam-jury__count" aria-live="polite">
             {result
-              ? format(s.jury.agree, { pct: result.tally.agreePct, n: result.tally.votes })
+              ? format(s.jury.agree, {
+                  pct: result.tally.agreePct,
+                  n: result.tally.votes,
+                  self: judgeSelf,
+                })
               : format(s.jury.counting, { n: shown.length, total: JURY_SIZE })}
           </p>
           <p className="siam-jury__legend">
@@ -670,13 +683,14 @@ function JuryPanel({
             ))}
           </p>
           {result && !result.tally.overruled && (
-            <p className="siam-jury__verdict">{s.jury.upheld}</p>
+            <p className="siam-jury__verdict">{format(s.jury.upheld, { self: judgeSelf })}</p>
           )}
           {result?.tally.overruled && !result.ruling && (
             <Callout>
               {format(s.jury.flagged, {
                 pct: 100 - result.tally.agreePct,
                 n: result.tally.votes,
+                self: judgeSelf,
               })}
             </Callout>
           )}
