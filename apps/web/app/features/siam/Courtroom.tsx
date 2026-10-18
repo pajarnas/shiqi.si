@@ -19,10 +19,17 @@ import {
   judgeCase,
   JUDGE_IDS,
   MAX_EVIDENCE,
+  resolveSnack,
+  SNACK_EMOJI,
+  SNACK_OUTCOMES,
+  takesSnacks,
   type AppealOutcome,
   type Filing,
   type JudgeId,
   type Side,
+  type Snack,
+  type SnackOffers,
+  type SnackOutcome,
   type Verdict,
   type Winner,
 } from './court';
@@ -93,9 +100,6 @@ const capEvidence = (text: string) => {
     .join('\n');
 };
 
-/** Capitalises a sentence that starts with a placeholder ("the court finds"). */
-const upperFirst = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
-
 const caseCodeOf = (hash: string) =>
   `SIAM-${hash.slice(52, 56).toUpperCase()}-${hash.slice(56, 60).toUpperCase()}`;
 
@@ -103,6 +107,15 @@ interface Sealed {
   verdict: Verdict;
   hash: string;
 }
+
+/** What happened at snack time, kept beside the first judgment for the demo peek. */
+type SnackTime = Snack | 'both' | null;
+
+const NO_OFFERS: SnackOffers = { A: false, B: false };
+
+/** Seeds the snack outcome from the filings, so the same case always lands the same way. */
+const snackSeed = (draft: Draft) =>
+  [draft.title, draft.a, draft.aEvidence, draft.b, draft.bEvidence].join('\u0000');
 
 /** Hash exactly what the judgment says, the way the app fingerprints a ruling. */
 type Instance = 1 | 2 | 'jury';
@@ -138,6 +151,9 @@ export function Courtroom({
   const [appealJudge, setAppealJudge] = useState<JudgeId>('bear');
   const [missing, setMissing] = useState(false);
   const [jury, setJury] = useState<JuryResult | null>(null);
+  const [offers, setOffers] = useState<SnackOffers>(NO_OFFERS);
+  const [luck, setLuck] = useState<SnackOutcome | 'seed'>('seed');
+  const [snackTime, setSnackTime] = useState<SnackTime>(null);
   const verdictRef = useRef<HTMLDivElement>(null);
 
   // Any edit reopens the case.
@@ -156,14 +172,22 @@ export function Courtroom({
     }
     let live = true;
     const id = setTimeout(() => {
+      const snack = resolveSnack(
+        judge,
+        offers,
+        snackSeed(draft),
+        luck === 'seed' ? undefined : luck,
+      );
       const v = judgeCase(
         judge,
         toFiling(draft.a, draft.aEvidence),
         toFiling(draft.b, draft.bEvidence),
+        snack,
       );
       void seal(draft, v, 1).then((sealed) => {
         if (!live) return;
         setFirst(sealed);
+        setSnackTime(snack ?? (takesSnacks(judge) && offers.A && offers.B ? 'both' : null));
         setStage(null);
         const next = appealJudges(judge);
         setAppealJudge(next.includes('bear') ? 'bear' : next[0]!);
@@ -173,7 +197,7 @@ export function Courtroom({
       live = false;
       clearTimeout(id);
     };
-  }, [stage, judge, draft, s.demo.stages.length]);
+  }, [stage, judge, draft, offers, luck, s.demo.stages.length]);
 
   useEffect(() => {
     if (first) verdictRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -188,6 +212,7 @@ export function Courtroom({
     setFirst(null);
     setSecond(null);
     setJury(null);
+    setSnackTime(null);
     setStage(0);
   };
 
@@ -205,6 +230,16 @@ export function Courtroom({
 
   const hearing = stage !== null;
   const judgeName = (id: JudgeId) => s.judges.items[id].name;
+  const snackName = (id: JudgeId) =>
+    takesSnacks(id) ? `${SNACK_EMOJI[id]} ${s.snack.items[id]}` : '';
+  const sideName = (side: Side) => (side === 'A' ? s.plaintiff : s.defendant);
+  // Snack offers are made before the ruling; changing them reopens the case.
+  const offer = (patch: Partial<SnackOffers>) => {
+    setOffers({ ...offers, ...patch });
+    setFirst(null);
+    setSecond(null);
+    setJury(null);
+  };
 
   return (
     <Stack gap={5}>
@@ -280,6 +315,46 @@ export function Courtroom({
           <PixelIcon name="gavel" size={16} /> {s.demo.start}
         </Button>
       </Cluster>
+      <Card padded className="siam-snack">
+        <h3>{s.snack.title}</h3>
+        <p>{s.snack.text}</p>
+        {takesSnacks(judge) ? (
+          <Cluster gap={4} className="siam-snack__pick">
+            {(['A', 'B'] as const).map((side) => (
+              <Checkbox
+                key={side}
+                label={`${sideName(side)} · ${format(s.snack.offer, { snack: snackName(judge) })}`}
+                checked={offers[side]}
+                disabled={hearing}
+                onChange={(e) => offer({ [side]: e.target.checked })}
+              />
+            ))}
+            <Field label={s.snack.luck}>
+              {(p) => (
+                <Select
+                  {...p}
+                  value={luck}
+                  disabled={hearing}
+                  onChange={(e) => {
+                    setLuck(e.target.value as SnackOutcome | 'seed');
+                    setFirst(null);
+                    setSecond(null);
+                    setJury(null);
+                  }}
+                >
+                  {(['seed', ...SNACK_OUTCOMES] as const).map((o) => (
+                    <option key={o} value={o}>
+                      {s.snack.luckOptions[o]}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </Field>
+          </Cluster>
+        ) : (
+          <p className="siam-snack__none">{s.snack.bear}</p>
+        )}
+      </Card>
       {missing && <Callout>{s.demo.needStatements}</Callout>}
       {hearing && (
         <Card padded className="siam-hearing" aria-live="polite">
@@ -308,6 +383,16 @@ export function Courtroom({
               instance={1}
               makeup={makeup}
             />
+            {snackTime && (
+              <Callout>
+                <strong>{s.snack.peekLabel}</strong>{' '}
+                {format(s.snack.peek[snackTime === 'both' ? 'both' : snackTime.outcome], {
+                  side: snackTime === 'both' ? '' : sideName(snackTime.side),
+                  judge: judgeName(first.verdict.judge),
+                  snack: snackName(first.verdict.judge),
+                })}
+              </Callout>
+            )}
             {!second && !jury?.ruling && (
               <Card padded className="siam-appeal">
                 <h3>{s.appeal.title}</h3>
@@ -315,7 +400,9 @@ export function Courtroom({
                   <p>{s.appeal.draw}</p>
                 ) : (
                   <>
-                    <p>{s.appeal.text}</p>
+                    <p>
+                      {s.appeal.text} {snackTime && s.snack.appeal}
+                    </p>
                     <Cluster gap={4}>
                       <Field label={s.appeal.judge}>
                         {(p) => (
@@ -412,13 +499,18 @@ function Judgment({
   const s = t.siam;
   const v = s.verdict;
   const j = s.judges.items[verdict.judge];
+  const voice = j.voice;
   const sideName = (side: Side) => (side === 'A' ? s.plaintiff : s.defendant);
-  // Each judge speaks as itself: 本喵 for the cat, 本熊 for the bear; English says "the court".
-  const self = { self: j.self };
-  const findingsLabel = upperFirst(format(v.findings, self));
-  const ruling = upperFirst(format(v.ruling[verdict.winner], self));
+  // Each judge speaks in its own voice: 本喵 for the cat, 本汪 for the dog, 本庭 only for the bear.
   const instanceLabel = instance === 1 ? v.first : instance === 2 ? v.second : s.jury.instance;
   const eyebrow = format(v.court, { instance: instanceLabel });
+  const findingText = (f: Verdict['findings'][number]) =>
+    format(v.finding[f.key], { side: sideName(f.side), n: f.n, self: j.self });
+  // Said out loud only when a snack backfired in public; the bear has no snack line.
+  const stamp =
+    verdict.snackStamp && 'stamp' in voice
+      ? format(voice.stamp, { side: sideName(verdict.snackStamp) })
+      : null;
   const [making, setMaking] = useState(false);
   const [cardError, setCardError] = useState(false);
   // The case title is free text and may name real people, so the card leaves it out unless asked.
@@ -437,17 +529,18 @@ function Judgment({
           title: (showTitle && draft.title.trim()) || v.heading,
           judge: format(v.presiding, { judge: j.name }),
           catchphrase: j.catchphrase,
-          ruling,
+          ruling: voice.ruling[verdict.winner],
           outcome,
           plaintiff: s.plaintiff,
           defendant: s.defendant,
           respA: verdict.respA,
-          findingsLabel: opinions ? s.jury.opinions : findingsLabel,
+          findingsLabel: opinions ? s.jury.opinions : voice.findings,
           findings: opinions
             ? opinions.map((o) => `“${o.text}”`)
-            : verdict.findings.map((f) =>
-                format(v.finding[f.key], { side: sideName(f.side), n: f.n, ...self }),
-              ),
+            : [
+                ...(stamp ? [`【${s.snack.stamp}】${stamp}`] : []),
+                ...verdict.findings.map(findingText),
+              ],
           makeupLabel: v.makeup,
           makeup: makeup ?? v.makeupOwn,
           codeLabel: v.code,
@@ -484,6 +577,7 @@ function Judgment({
           <p>“{j.catchphrase}”</p>
         </div>
       </div>
+      {!opinions && <p className="siam-judgment__opener">{voice.opener}</p>}
       {outcome && <p className="siam-judgment__outcome">{outcome}</p>}
       {opinions ? (
         <>
@@ -496,17 +590,20 @@ function Judgment({
         </>
       ) : (
         <>
-          <h4>{findingsLabel}</h4>
+          <h4>{voice.findings}</h4>
           <ol className="siam-findings">
             {verdict.findings.map((f) => (
-              <li key={`${f.side}-${f.key}`}>
-                {format(v.finding[f.key], { side: sideName(f.side), n: f.n, ...self })}
-              </li>
+              <li key={`${f.side}-${f.key}`}>{findingText(f)}</li>
             ))}
           </ol>
+          {stamp && (
+            <p className="siam-judgment__stamp">
+              <span className="siam-stamp">{s.snack.stamp}</span> {stamp}
+            </p>
+          )}
         </>
       )}
-      <p className="siam-judgment__ruling">{ruling}</p>
+      <p className="siam-judgment__ruling">{voice.ruling[verdict.winner]}</p>
       <h4>{v.blame}</h4>
       <div
         className="siam-blame"
@@ -594,7 +691,8 @@ function juryVerdict(effective: Verdict, t: Tally): Verdict {
     winner === 'draw'
       ? 50
       : Math.min(90, Math.max(10, round5(((t.B + t.draw / 2) / t.votes) * 100)));
-  return { ...effective, winner, respA };
+  // The jury rules on the votes alone, so no snack line carries over.
+  return { ...effective, winner, respA, snackStamp: undefined };
 }
 
 function JuryPanel({

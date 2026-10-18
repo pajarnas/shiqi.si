@@ -2,6 +2,7 @@
 // The real app sends both filings to an AI judge; here every judge reads the same few
 // signals (evidence, detail, sweeping words, admissions, agreements) and weighs them in
 // their own way, so the demo is instant, free and deterministic.
+import { hash, rng } from '@shiqi/pixel';
 
 export const JUDGE_IDS = ['tortoise', 'hare', 'cat', 'dog', 'bird', 'bear'] as const;
 export type JudgeId = (typeof JUDGE_IDS)[number];
@@ -48,7 +49,76 @@ export interface Verdict {
   /** Plaintiff's share of the blame, 0–100, in steps of 5. Defendant's is 100 - respA. */
   respA: number;
   findings: Finding[];
+  /**
+   * Set only when a snack backfired in public: the side that tried to butter up the judge,
+   * which the judgment then says out loud. Accepted and hidden snacks leave no trace here.
+   */
+  snackStamp?: Side;
 }
+
+/**
+ * Snack time. Before the first-instance ruling each side may slip the judge a snack once
+ * (just a game: no money changes hands). The bear takes none. Mirrors siam-server#27.
+ */
+export const SNACK_JUDGES = ['tortoise', 'hare', 'cat', 'dog', 'bird'] as const;
+export type SnackJudge = (typeof SNACK_JUDGES)[number];
+
+export const SNACK_EMOJI: Record<SnackJudge, string> = {
+  tortoise: '🥬',
+  hare: '🥕',
+  cat: '🐟',
+  dog: '🦴',
+  bird: '🌾',
+};
+
+export const takesSnacks = (judge: JudgeId): judge is SnackJudge =>
+  (SNACK_JUDGES as readonly JudgeId[]).includes(judge);
+
+export const SNACK_OUTCOMES = ['accepted', 'backfire_public', 'backfire_hidden'] as const;
+export type SnackOutcome = (typeof SNACK_OUTCOMES)[number];
+
+/** A snack that counts: exactly one side offered it, and this is how it landed. */
+export interface Snack {
+  side: Side;
+  outcome: SnackOutcome;
+}
+
+/** Who offered a snack before the ruling. */
+export interface SnackOffers {
+  A: boolean;
+  B: boolean;
+}
+
+/** How a snack lands, picked from a seed at odds 2:1:1 (accepted : public : hidden). */
+export function snackOutcome(seed: string): SnackOutcome {
+  const r = rng(hash(`${seed}:snack`))();
+  return r < 0.5 ? 'accepted' : r < 0.75 ? 'backfire_public' : 'backfire_hidden';
+}
+
+/**
+ * The snack the judge reacts to, if any. Nothing happens when the bear sits, when nobody
+ * offered, or when both sides did (the snacks cancel out and nobody mentions them).
+ * `pick` lets the demo visitor force an outcome; otherwise the seed decides.
+ */
+export function resolveSnack(
+  judge: JudgeId,
+  offers: SnackOffers,
+  seed: string,
+  pick?: SnackOutcome,
+): Snack | null {
+  if (!takesSnacks(judge) || offers.A === offers.B) return null;
+  const side: Side = offers.A ? 'A' : 'B';
+  return { side, outcome: pick ?? snackOutcome(`${seed}:${judge}:${side}`) };
+}
+
+/**
+ * A snack moves the score by this much, which is 10 points of blame (respA = 50 - gap * 8).
+ * It is mild on purpose: it can only change the winner when the case is close anyway.
+ */
+const SNACK_BLAME = 10;
+const SNACK_GAP = SNACK_BLAME / 8;
+/** Fair score gaps up to this (blame between about 35% and 65%) count as a close case. */
+const CLOSE_GAP = 2;
 
 export type AppealOutcome = 'upheld' | 'partial' | 'reversed';
 
@@ -138,16 +208,34 @@ export function jurorLean(a: Filing, b: Filing): number {
   return weigh('juror', a, b).gap;
 }
 
-export function judgeCase(judge: JudgeId, a: Filing, b: Filing): Verdict {
-  const { w, all, gap } = weigh(judge, a, b);
-  const winner: Winner = Math.abs(gap) <= w.drawBand ? 'draw' : gap > 0 ? 'A' : 'B';
-  const respA = winner === 'draw' ? 50 : clamp(round5(50 - gap * 8), 10, 90);
+export function judgeCase(
+  judge: JudgeId,
+  a: Filing,
+  b: Filing,
+  snack: Snack | null = null,
+): Verdict {
+  const { w, all, gap: fair } = weigh(judge, a, b);
+  // Accepted: a lean toward whoever brought the snack; a backfire: a lean against them.
+  const lean = snack && takesSnacks(judge) ? (snack.outcome === 'accepted' ? 1 : -1) : 0;
+  // +1 favours the plaintiff, -1 the defendant.
+  const toward = lean * (snack?.side === 'B' ? -1 : 1);
+  const gap = fair + toward * SNACK_GAP;
+  const winnerOf = (g: number): Winner => (Math.abs(g) <= w.drawBand ? 'draw' : g > 0 ? 'A' : 'B');
+  // A snack only gets a say in who wins when the fair reading is close anyway.
+  const winner = Math.abs(fair) <= CLOSE_GAP ? winnerOf(gap) : winnerOf(fair);
+  // The snack moves blame 10 points from the fair figure, so it shows even in a lopsided case,
+  // and blame stays on the loser however the snack landed.
+  const shifted = clamp(round5(50 - fair * 8), 10, 90) - toward * SNACK_BLAME;
+  const respA =
+    winner === 'draw' ? 50 : winner === 'A' ? clamp(shifted, 10, 45) : clamp(shifted, 55, 90);
   // Weak "no evidence" notes only matter when the other side had some.
   const findings = all
     .filter((f) => f.key !== 'noEvidence' || all.some((g) => g.key === 'evidence'))
     .sort((x, y) => Math.abs(y.weight) - Math.abs(x.weight))
     .slice(0, w.findings);
-  return { judge, winner, respA, findings };
+  const verdict: Verdict = { judge, winner, respA, findings };
+  if (lean && snack?.outcome === 'backfire_public') verdict.snackStamp = snack.side;
+  return verdict;
 }
 
 /** The second instance must use a different judge, and only the losing side may appeal. */
