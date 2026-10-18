@@ -78,4 +78,10 @@ For long content you won't translate by hand, translate on the server and cache:
 
 Hand-written translations stay better for short UI text; use machine translation to fill gaps and for long content.
 
-Related: the day it was built, [Afternoon on the live site](/notes/journal/2026-10-09-visitors-i18n-auto-deploy); eight languages from one registry, [Evening: MySQL for visits, a pixel world map, eight languages](/notes/journal/2026-10-09-mysql-world-map-languages).
+## Placeholders and tests that pin the words
+
+- **Put variable words in placeholders, not in shared strings.** On /siam each animal judge refers to itself differently in Chinese (本喵 for the cat, 本汪 for the dog, the formal 本庭 for the bear). The first version wrote 本喵 into the shared verdict text, so the bear's verdict said 本喵 too. The fix: shared strings take `{self}` and each judge supplies its own word.
+- **Lock decisions about wording with a test.** When a phrase must never appear in one language (the Chinese /siam page says nothing about on-chain notarization), a test that scans every string in that language for the forbidden words stops a later edit from bringing it back. Other tests check that each judge's verdict renders its own word.
+- **Keep a feature switch out of the copy.** Where behaviour is still undecided (does a jury reverse a ruling or only flag it?), one constant picks the behaviour and the strings for both outcomes live side by side, so flipping it needs no copy edits.
+
+Related: the day it was built, [Afternoon on the live site](/notes/journal/2026-10-09-visitors-i18n-auto-deploy); eight languages from one registry, [Evening: MySQL for visits, a pixel world map, eight languages](/notes/journal/2026-10-09-mysql-world-map-languages). Placeholders and wording tests: [Couple Court at /siam](/notes/journal/2026-10-17-siam-showcase).

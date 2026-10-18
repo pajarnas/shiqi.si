@@ -1,0 +1,75 @@
+export const frontmatter = {
+  title: 'Couple Court at /siam: a courtroom in the browser',
+  date: '2026-10-17',
+  summary:
+    'A showcase page for the Siam app with a pocket courtroom that rules in the page, then in one afternoon: a public jury, a verdict you can verify with WebCrypto, paw-print seals, share cards drawn on a canvas, and each judge speaking in its own voice.',
+  topics: ['web', 'security', 'i18n', 'design'],
+};
+
+All times are UTC: 20:44 on 2026-10-17 to 01:41 on 2026-10-18, which was 13:44 to 18:41 on 2026-10-17 in Fremont. It covers PRs #58 to #67, all on one page.
+
+## The page (20:44, PR #58)
+
+Siam (情侣法庭, Couple Court) is an app where a couple's argument goes to an AI judge. Its server and iOS app live in their own repositories; shiqi.si got a showcase page at [/siam](/siam): everyday scenarios, the six animal judges (tortoise, hare, cat, dog, bird, bear), features, how a case goes, medals, and a slot for app screenshots. It isn't in the nav yet.
+
+The centre of it is a **pocket courtroom**: type both sides' filings and a judge rules right in the page, with a sealed judgment, a blame split, findings, a make-up plan and one appeal.
+
+- **No AI on the page.** The demo judges are deterministic functions that run in the browser. Each weighs the same signals (evidence, detail, sweeping words like "always" and "never", admissions, agreements) with its own weights, so judges disagree in recognisable ways.
+- **The same fingerprint as the app.** The judgment's anti-forgery code is SHA-256 over canonical JSON, the app's own scheme. Signing stays in the app: the demo has no key.
+
+Review fixes before merging: the code is shown as 16 hex digits in four groups, as the server shows it; each evidence box is capped at 9 lines so the hash covers only what the app would accept; the page says which judges are free and which are a one-time unlock; and the blame bar's names moved under it so it fits a 320 px screen.
+
+The app had also dropped its stakes and five payment medals for one new medal, **Good sport**: the losing side lets the first ruling stand without appealing.
+
+## A public jury (21:34, PR #59)
+
+Saige added a public jury to the app: random anonymous people review a case, and if at least 20 vote and 90% or more disagree with the ruling, the judge admits error. The demo seats 25 simulated jurors after any ruling. They read the same signals as the bench but **forgive an honest admission**, so they can part ways with the court ("40 minutes late to dinner" shows it).
+
+```ts
+export const QUORUM = 20;
+export const OVERRULE_PCT = 90;
+overruled: votes.length >= QUORUM && 100 - agreePct >= OVERRULE_PCT,
+```
+
+Whether an overruling **reverses** the ruling or only **flags** it for review is still Saige's open call, so it is one constant, `AUTO_REVERSE`, with the copy for both outcomes in the strings. Two review fixes: an appeal now clears the old jury tally so it never shows stale numbers, and `toSorted` was replaced with a copy and `sort` for older browsers.
+
+## Verify a verdict (21:39, PR #60)
+
+A sample verdict sealed by the server's own fingerprint code, with a throwaway demo key. The page recomputes the SHA-256 fingerprint and checks the Ed25519 signature with WebCrypto; edit the sentence and both checks fail. The Bitcoin timestamp step says "coming" until a real OpenTimestamps proof exists. How each step works: [Making a document verifiable](/notes/commonplace/verifiable-documents).
+
+## Seals (21:59, PR #61)
+
+Each verdict is stamped with its judge's paw-print seal, one SVG per judge in red ink and in the judge's colour; one constant, `SEAL_INK`, switches sets once Saige picks. The SVGs carried a C2PA `<metadata>` block from the tool that made them; stripping it took each file from about 10 KB to about 2 KB. If a seal image fails to load, the old text stamp is drawn instead, and a test checks every judge has both files.
+
+## No on-chain wording in Chinese (23:03, PR #62)
+
+Saige decided the Chinese page shows only the fingerprint and signature checks; on-chain notarization stays on the English page. The on-chain row is now built for English only, and a test scans the Chinese copy so the wording can't come back. Later PRs widened the test to all Chinese copy.
+
+## Share cards (23:11 to 23:16, PRs #63 and #64)
+
+"Download card" buttons draw a PNG in the browser, 1080 × 1440 (3:4, Xiaohongshu) or 1080 × 1920 (9:16, Douyin and TikTok), with the seal, ruling, blame split, findings, make-up plan and anti-forgery code. Every card carries "AI-generated" and "web demo" labels, and an empty label falls back to the default. The visitor's case title appears only if they tick a box, clamped to two lines.
+
+Five minutes later, a bug: the wrapper split only at spaces and between Chinese characters, so a long URL or a run of one letter stayed one line, wider than the card, and the two-line clamp never applied. Tokens wider than the line are now split into characters. Everything about it is in [Drawing a share card on a canvas](/notes/commonplace/canvas-share-cards).
+
+## A tagline and a voice (01:10 to 01:41, PRs #65 to #67)
+
+- The tagline 成年人不讲对错？本庭偏要讲。 ("Grown-ups don't do right and wrong? This court does.") went under the page title and onto the card. The English one can run wider than a line in some fonts, so it goes through the same wrap-and-clamp, and the rest of the card header is laid out from its real height.
+- Saige wanted a lighter voice: 本喵 instead of 本庭, so the tagline became 成年人不讲对错？本喵偏要讲。 ("…This cat does."), and it still reads that way. The first pass put 本喵 into the shared verdict and jury text, so the bear's verdict said 本喵 under the bear's own catchphrase. The fix was a `{self}` placeholder and a self-word per judge.
+- Then each judge got its own opener, findings heading and ruling line. The tortoise, hare, cat, dog and bird use playful self-words (本龟, 本兔, 本喵, 本汪, 本啾); only the bear keeps the formal 本庭, with the catchphrase 本庭的判决，就是最后的判决。
+- **Snack time**: before the first ruling, each side may slip the judge a snack once (lettuce, carrot, dried fish, bone, millet; the bear takes none, and there are no snacks on appeal). The outcome comes from a hash of the filings at odds 2:1:1: accepted (blame leans 10 points toward that side), a quiet backfire (10 points against them), or a public backfire (the same, and it stamps the judgment 「企图投喂法官」). If both sides offer, the snacks cancel. A snack can only change the winner in a close case, and the copy never says "bribe" and says it is a game with no money. The same feature landed in the server and the iOS app.
+
+## What I learned
+
+- **A demo can be honest without the real backend.** Deterministic judges in the browser show how the app behaves, and sharing the app's fingerprint scheme keeps the demo's codes real.
+- **Canonical JSON before hashing.** Sorted keys at every level, no whitespace, and the same function on server and client, or the same data gets a different fingerprint.
+- **"Unsupported" is not "invalid".** When WebCrypto lacks Ed25519, say the browser can't check, never that the verdict is forged.
+- **Undecided behaviour goes behind one switch** (`AUTO_REVERSE`, `SEAL_INK`), with the copy for each side ready.
+- **Pin wording decisions with tests.** A rule like "no on-chain words in Chinese" survives future edits only if a test enforces it.
+- **Shared strings take placeholders**, or one character's voice leaks into everyone's.
+- **Canvas text is all manual**: wrapping, CJK line-start punctuation, overlong tokens, clamping, and layout from measured heights.
+- **Strip tool metadata from SVGs** before shipping; it can be most of the file.
+
+## General notes from today
+
+- New: [Making a document verifiable: canonical JSON, a hash, a signature](/notes/commonplace/verifiable-documents), [Drawing a share card on a canvas](/notes/commonplace/canvas-share-cards)
+- Updated: [Picking a language and translating a site](/notes/commonplace/i18n-and-translation) (placeholders and tests that pin the words)

@@ -1,0 +1,71 @@
+export const frontmatter = {
+  title: 'Drawing a share card on a canvas',
+  date: '2026-10-17',
+  summary:
+    'Making a downloadable 3:4 or 9:16 PNG in the browser: canvas sizes, text that wraps Chinese without spaces, punctuation that must not start a line, clamping to two lines with an ellipsis, images that may fail, and toBlob.',
+  topics: ['web', 'design', 'i18n'],
+};
+
+Every judgment on [/siam](/siam) has "Download card" buttons that make a PNG ready for a social post: 3:4 for Xiaohongshu, 9:16 for Douyin and TikTok. It is drawn in the browser on a `<canvas>`, so nothing goes to a server.
+
+## Canvas basics for an image file
+
+```ts
+const canvas = document.createElement('canvas');
+canvas.width = w; // real pixels, e.g. 1080 × 1440 for 3:4
+canvas.height = h;
+const g = canvas.getContext('2d')!;
+// … draw …
+const blob = await new Promise<Blob>((resolve, reject) =>
+  canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'),
+);
+```
+
+- `width` and `height` are the **pixel** size of the file. The canvas never needs to be on screen.
+- `toBlob` is asynchronous and can hand back `null`; wrap it in a promise that rejects, and show a one-line error instead of letting the rejection go unhandled.
+- A download is an `<a download="…">` with `URL.createObjectURL(blob)`, revoked afterwards.
+
+## The canvas doesn't wrap text
+
+`fillText` draws one line, however long. Wrapping is your job, using `measureText(s).width`:
+
+```ts
+// One CJK character, a run of other non-space characters, or a run of spaces.
+const TOKENS = /[　-鿿＀-￯]|[^\s　-鿿＀-￯]+|\s+/g;
+```
+
+Breaking text into these tokens handles both languages at once: English breaks between words, Chinese between any two characters (it has no spaces). Then add tokens to the line until the next one would make it wider than `max`, and start a new line.
+
+Three details the first version missed or needed:
+
+| Problem                                          | Fix                                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| A token wider than the line (a URL, "aaaaaaaa…") | split that token into characters before wrapping, or it overflows and never clamps |
+| A line starting with `，` `。` `）` `」`         | closing punctuation never starts a line; let it hang on the previous one           |
+| Hanging punctuation sticks out past the edge     | wrap one glyph short of the edge, so a hanging mark still lands on the card        |
+
+The punctuation rule is the CJK typesetting convention called **kinsoku** (Japanese) or 避头尾 (Chinese): certain marks may not begin a line, others may not end one.
+
+## Clamp with an ellipsis
+
+A title typed by a visitor can be any length. Keep at most `n` lines, then trim the last kept line one character at a time until `line + "…"` fits:
+
+```ts
+while (last.length && measure(`${last.join('').trimEnd()}…`) > max) last = last.slice(0, -1);
+```
+
+`Array.from(str)` splits by code point, so an emoji or a rare character outside the Basic Multilingual Plane isn't cut in half.
+
+## Lay out from measured heights
+
+Once a block can be one or two lines (a slogan that is short in Chinese but may wrap in English), the blocks below it must start from where it **actually** ended, not from a fixed y. Draw top to bottom and carry a running `y`.
+
+## Images that may not load
+
+Seals and icons come in as `Image` objects. Wrap loading in a promise that resolves to `null` on error, and draw a text fallback in that case, so one missing file doesn't stop the whole card. Pick fonts that exist on both platforms (`"PingFang SC", "Noto Sans SC", system-ui…`), because canvas text uses whatever the device has.
+
+## Labels that must always be there
+
+A card that leaves the site loses its context. The /siam cards always carry "AI-generated" and "web demo" labels, and the drawing code falls back to the default labels if a caller passes an empty string, with a test that pins the exact label text in both languages. The visitor's own case title appears only if they tick a box.
+
+Related: [the day /siam was built](/notes/journal/2026-10-17-siam-showcase), [Picking a language and translating a site](/notes/commonplace/i18n-and-translation).
