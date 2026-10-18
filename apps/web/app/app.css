@@ -1538,8 +1538,38 @@ ul.topic-tags {
   }
 }
 
-.siam-appeal h3 {
+.siam-appeal h3,
+.siam-snack h3 {
   margin: 0 0 var(--space-2);
+}
+
+.siam-snack__pick {
+  align-items: end;
+}
+
+.siam-snack__none {
+  color: var(--text-muted);
+}
+
+.siam-judgment__opener {
+  margin: var(--space-3) 0 0;
+  font-style: italic;
+}
+
+/* A snack that backfired in public: the judgment stamps it in red ink. */
+.siam-judgment__stamp {
+  margin: var(--space-3) 0 0;
+}
+
+.siam-stamp {
+  display: inline-block;
+  margin-right: var(--space-1);
+  padding: 0 var(--space-1);
+  border: 2px solid var(--danger);
+  color: var(--danger);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  rotate: -3deg;
 }
 
 .siam-judge,
