@@ -1,5 +1,6 @@
 export * from './agent';
 export * from './crypto';
+export * from './extract';
 export * from './family';
 export * from './knowledge';
 export * from './schema';

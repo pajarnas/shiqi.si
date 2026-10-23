@@ -117,6 +117,11 @@ const zh = {
   thinking: '正在整理…',
   busy: '消息太多了，请过几分钟再试。',
   failed: '刚才没连上，请再发一次。',
+  badFile: '这个文件读不了：只支持照片（JPG、PNG）和 PDF，每个不超过 8MB，一次最多 4 个。',
+  attach: '传照片/PDF',
+  attachNote: '可以拍护照、旧签证、身份证、I-797，助手会读出来帮你填。文件只用来识别，不会保存。',
+  tooManyFiles: '一次最多 4 个文件，多的没加上。',
+  removeFile: '去掉',
   reviewTitle: '核对资料',
   reviewDesc: '这是根据聊天整理的结果，可以直接改。没问题就点「确认无误」。',
   confirm: '确认无误',
@@ -202,6 +207,13 @@ const en: typeof zh = {
   thinking: 'Thinking…',
   busy: 'Too many messages; try again in a few minutes.',
   failed: 'That did not go through; please send it again.',
+  badFile:
+    'Could not use that file: only photos (JPG, PNG) and PDFs up to 8MB, at most 4 at a time.',
+  attach: 'Add photo/PDF',
+  attachNote:
+    'Snap the passport, an old visa, ID card or I-797 and the assistant fills in what it reads. Files are only read, never saved.',
+  tooManyFiles: 'At most 4 files at a time; the rest were left out.',
+  removeFile: 'Remove',
   reviewTitle: 'Review the answers',
   reviewDesc:
     'This is what the chat collected; edit anything here. When it is right, press Confirm.',
